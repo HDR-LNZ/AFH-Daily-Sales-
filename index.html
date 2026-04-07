@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1e2230">
 <title>HealthHub Executive Revenue Summary — Al-Futtaim Health</title>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -12,15 +15,38 @@
 <script crossorigin src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f4f8; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1e2230; color: #e2e8f0; }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .fade-in { animation: fadeIn 0.4s ease-out; }
   table { border-collapse: collapse; }
-  ::-webkit-scrollbar { height: 6px; }
-  ::-webkit-scrollbar-track { background: #f1f5f9; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar { height: 6px; width: 6px; }
+  ::-webkit-scrollbar-track { background: #1e2230; }
+  ::-webkit-scrollbar-thumb { background: #3e4560; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #4e5678; }
+  .dark-popup .leaflet-popup-content-wrapper {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    border: 1px solid #2f3548;
+  }
+  .dark-popup .leaflet-popup-tip { background: #1e293b; }
+  .rev-tooltip {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    font-family: Inter, -apple-system, sans-serif;
+  }
+  .rev-tooltip::before { display: none; }
+  .leaflet-container { background: #1e2230 !important; }
+  @media (max-width: 768px) {
+    .leaflet-control-zoom { transform: scale(0.8); }
+  }
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -29,6 +55,7 @@ const { useState, useCallback, useMemo, useRef } = React;
 const {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Cell, PieChart, Pie, RadialBarChart, RadialBar,
+  LineChart, Line, AreaChart, Area,
 } = Recharts;
 
 // ─── Utility Helpers ─────────────────────────────────────────────────────────
@@ -50,65 +77,359 @@ const pct = (n) => {
   const v = (n * 100).toFixed(1);
   return `${v > 0 ? "+" : ""}${v}%`;
 };
-const varColor = (n) => (n == null || isNaN(n)) ? "#64748b" : n >= 0 ? "#059669" : "#dc2626";
-const varBg = (n) => (n == null || isNaN(n)) ? "transparent" : n >= 0 ? "#ecfdf5" : "#fef2f2";
+const varColor = (n) => (n == null || isNaN(n)) ? "#64748b" : n >= 0 ? "#10b981" : "#ef4444";
+const varBg = (n) => (n == null || isNaN(n)) ? "transparent" : n >= 0 ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)";
 
 const C = {
-  primary: "#0369a1", primaryLight: "#38bdf8", primaryDark: "#0c4a6e",
-  accent: "#0ea5e9", success: "#059669", successLight: "#34d399",
-  danger: "#dc2626", dangerLight: "#f87171", warning: "#d97706",
-  warningLight: "#fbbf24", slate: "#64748b", slateLight: "#94a3b8",
+  pageBg: "#1e2230",
+  sidebarBg: "#171b26",
+  cardBg: "#252a3a",
+  cardBorder: "#2f3548",
+  cardHover: "#2d3347",
+  primary: "#3b82f6",
+  primaryLight: "#60a5fa",
+  primaryDark: "#2563eb",
+  accent: "#06b6d4",
+  success: "#10b981",
+  successLight: "#34d399",
+  danger: "#ef4444",
+  dangerLight: "#f87171",
+  warning: "#f59e0b",
+  warningLight: "#fbbf24",
+  text: "#e2e8f0",
+  textSecondary: "#94a3b8",
+  textMuted: "#64748b",
+  border: "#2f3548",
 };
-const PALETTE = ["#0369a1","#0ea5e9","#38bdf8","#06b6d4","#14b8a6","#10b981","#059669","#0d9488","#0891b2","#0284c7","#6366f1","#8b5cf6","#a855f7","#d946ef","#ec4899"];
+const PALETTE = ["#3b82f6","#06b6d4","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#f97316","#14b8a6","#6366f1","#a855f7","#d946ef","#84cc16","#0ea5e9","#e11d48"];
+
+// ─── Dubai Map Constants ────────────────────────────────────────────────────
+
+const CLINIC_COORDS = {
+  "Staff DIP": { lat: 24.9790, lng: 55.1762, label: "Staff DIP" },
+  "DG":        { lat: 25.0390, lng: 55.1445, label: "Discovery Gardens" },
+  "Fest Plaza":{ lat: 25.0270, lng: 55.1175, label: "Festival Plaza" },
+  "JVC":       { lat: 25.0566, lng: 55.2080, label: "JVC" },
+  "Tecom":     { lat: 25.0977, lng: 55.1755, label: "Tecom" },
+  "Silicon":   { lat: 25.1214, lng: 55.3753, label: "Silicon Oasis" },
+  "Intl City": { lat: 25.1419, lng: 55.4047, label: "Intl City" },
+  "Warqa":     { lat: 25.1885, lng: 55.4095, label: "Al Warqa" },
+  "Stationed": { lat: 25.2048, lng: 55.2708, label: "Stationed" },
+  "DSU":       { lat: 25.2219, lng: 55.3527, label: "DSU" },
+  "Staff DFC": { lat: 25.2230, lng: 55.3540, label: "Staff DFC" },
+  "Arabian":   { lat: 25.2346, lng: 55.4364, label: "Arabian Center" },
+  "Karama":    { lat: 25.2414, lng: 55.3025, label: "Karama" },
+  "Qusais":    { lat: 25.2770, lng: 55.3721, label: "Qusais" },
+  "Nahda":     { lat: 25.2940, lng: 55.3720, label: "Nahda" },
+};
+
+const DEFAULT_LOCATIONS = [
+  { location:"DSU", totalToday:67727, totalRevenueMTD:401136, mtdBudget:434099, totalRevenueYTD:6503743, ytdBudget:6481415, specialties:[] },
+  { location:"Silicon", totalToday:39584, totalRevenueMTD:224606, mtdBudget:284163, totalRevenueYTD:3820211, ytdBudget:4242753, specialties:[] },
+  { location:"Qusais", totalToday:30908, totalRevenueMTD:219636, mtdBudget:289239, totalRevenueYTD:3260831, ytdBudget:4318604, specialties:[] },
+  { location:"DG", totalToday:41495, totalRevenueMTD:156350, mtdBudget:206759, totalRevenueYTD:2565326, ytdBudget:3087089, specialties:[] },
+  { location:"Nahda", totalToday:25306, totalRevenueMTD:116676, mtdBudget:160368, totalRevenueYTD:1746063, ytdBudget:2394434, specialties:[] },
+  { location:"Intl City", totalToday:27080, totalRevenueMTD:113699, mtdBudget:158493, totalRevenueYTD:1919249, ytdBudget:2366436, specialties:[] },
+  { location:"Warqa", totalToday:19203, totalRevenueMTD:113372, mtdBudget:122492, totalRevenueYTD:1754438, ytdBudget:1828922, specialties:[] },
+  { location:"Karama", totalToday:16040, totalRevenueMTD:81720, mtdBudget:93312, totalRevenueYTD:1217098, ytdBudget:1393241, specialties:[] },
+  { location:"Tecom", totalToday:11319, totalRevenueMTD:80503, mtdBudget:113555, totalRevenueYTD:1130286, ytdBudget:1695453, specialties:[] },
+  { location:"Arabian", totalToday:20824, totalRevenueMTD:74988, mtdBudget:126354, totalRevenueYTD:1242680, ytdBudget:1886557, specialties:[] },
+  { location:"Fest Plaza", totalToday:5995, totalRevenueMTD:58699, mtdBudget:87375, totalRevenueYTD:1028769, ytdBudget:1304570, specialties:[] },
+  { location:"JVC", totalToday:3610, totalRevenueMTD:35105, mtdBudget:84277, totalRevenueYTD:484718, ytdBudget:1258311, specialties:[] },
+  { location:"Stationed", totalToday:4310, totalRevenueMTD:16229, mtdBudget:45376, totalRevenueYTD:254127, ytdBudget:677511, specialties:[] },
+  { location:"Staff DIP", totalToday:1502, totalRevenueMTD:7933, mtdBudget:2407, totalRevenueYTD:103018, ytdBudget:35937, specialties:[] },
+  { location:"Staff DFC", totalToday:0, totalRevenueMTD:0, mtdBudget:0, totalRevenueYTD:0, ytdBudget:0, specialties:[] },
+];
 
 // ─── Default Data ────────────────────────────────────────────────────────────
 
-const DEFAULT_REPORT_DATE = "Apr 5, 2026";
+const DEFAULT_DAILY_REVENUE = [
+  { day:1, total:225691, label:"Wed 1", fullLabel:"Wed, Apr 1" },
+  { day:2, total:293467, label:"Thu 2", fullLabel:"Thu, Apr 2" },
+  { day:3, total:276841, label:"Fri 3", fullLabel:"Fri, Apr 3" },
+  { day:4, total:385513, label:"Sat 4", fullLabel:"Sat, Apr 4" },
+  { day:5, total:204238, label:"Sun 5", fullLabel:"Sun, Apr 5" },
+  { day:6, total:314906, label:"Mon 6", fullLabel:"Mon, Apr 6" },
+];
+
+const DEFAULT_REPORT_DATE = "Apr 6, 2026";
+
+const DEFAULT_DSR_TOTALS = {
+  todayRev: 548941, mtdActual: 2724642, mtdBudget: 3538000,
+  mtdLY: 2430000, ytdActual: 44186871, ytdBudget: 51321420, ytdLY: 45298606,
+  daysElapsed: 6,
+  opMtdVolume: 5794, opMtdRevenue: 1700655, opMtdPPC: 0,
+  opMtdLYRevenue: 1517454, opMtdLYVolume: 5100, opMtdLYPPC: 0
+};
+
+const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed"]);
+
+const DEFAULT_DOCTOR_LOCATIONS = {
+  "Dr. Madiha Rashid": "DG",
+  "Dr. Mohammed Abul Hassan Boopathy": "Arabian,DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa",
+  "Dr. Shila Waghmare": "DG,DSU,Intl City,Karama,Nahda,Qusais,Warqa",
+  "Dr. George Thachil": "DSU,Fest Plaza,Intl City,Nahda,Qusais,Silicon,Warqa",
+  "Dr. Srinivasan Ravindranath": "DG,DSU,Qusais",
+  "Dr. Deepthi Balakrishnan": "DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa",
+  "Dr. Zainab Ali Asghar": "DSU,Nahda,Qusais,Tecom",
+  "Dr. Rakesh Maggon": "DSU,Qusais",
+  "Dr. Ghoufran Mohideen": "Arabian,DSU,JVC,Tecom",
+  "Dr. Shajahan Abdulkhader": "DSU,Nahda,Qusais",
+  "Dr. Shweta Jaiswal": "DSU,Intl City,Karama,Nahda,Qusais,Warqa",
+  "Dr. Ali Akbar Thirkannur": "DSU",
+  "Dr. Khaldun Alshaheen": "DG,DSU,Fest Plaza,Intl City,Karama,Qusais,Silicon",
+  "Dr. Venkateswara Gorthi": "DG,DSU,Qusais",
+  "Dr. Inderpal Deshwal": "DSU,Nahda,Qusais",
+};
 
 const DEFAULT_DOCTORS = [
-  { name: "Dr. Ahmed Al Mansouri", specialty: "Internal Medicine", today: 18200, mtdActual: 185600, mtdBudget: 170000, mtdLY: 172400, ytdActual: 1856000, ytdBudget: 1700000, ytdLY: 1724000 },
-  { name: "Dr. Fatima Hassan", specialty: "Cardiology", today: 21500, mtdActual: 218400, mtdBudget: 200000, mtdLY: 195800, ytdActual: 2184000, ytdBudget: 2000000, ytdLY: 1958000 },
-  { name: "Dr. Khalid Ibrahim", specialty: "Dermatology", today: 15800, mtdActual: 162300, mtdBudget: 155000, mtdLY: 148200, ytdActual: 1623000, ytdBudget: 1550000, ytdLY: 1482000 },
-  { name: "Dr. Sara Nasser", specialty: "Gynecology", today: 19400, mtdActual: 198500, mtdBudget: 185000, mtdLY: 182300, ytdActual: 1985000, ytdBudget: 1850000, ytdLY: 1823000 },
-  { name: "Dr. Mohammed Ali", specialty: "Orthopedics", today: 16700, mtdActual: 172400, mtdBudget: 180000, mtdLY: 168500, ytdActual: 1724000, ytdBudget: 1800000, ytdLY: 1685000 },
-  { name: "Dr. Layla Qasim", specialty: "Dentistry", today: 22300, mtdActual: 228100, mtdBudget: 210000, mtdLY: 215600, ytdActual: 2281000, ytdBudget: 2100000, ytdLY: 2156000 },
-  { name: "Dr. Omar Farooq", specialty: "Neurology", today: 14200, mtdActual: 146800, mtdBudget: 150000, mtdLY: 142300, ytdActual: 1468000, ytdBudget: 1500000, ytdLY: 1423000 },
-  { name: "Dr. Amina Rashid", specialty: "Pediatrics", today: 11600, mtdActual: 118200, mtdBudget: 125000, mtdLY: 128400, ytdActual: 1182000, ytdBudget: 1250000, ytdLY: 1284000 },
-  { name: "Dr. Yusuf Bakr", specialty: "Ophthalmology", today: 13100, mtdActual: 135400, mtdBudget: 130000, mtdLY: 124600, ytdActual: 1354000, ytdBudget: 1300000, ytdLY: 1246000 },
-  { name: "Dr. Nour El Din", specialty: "ENT", today: 10500, mtdActual: 108300, mtdBudget: 115000, mtdLY: 112400, ytdActual: 1083000, ytdBudget: 1150000, ytdLY: 1124000 },
-  { name: "Dr. Hassan Mahmoud", specialty: "Radiology", today: 17300, mtdActual: 176500, mtdBudget: 165000, mtdLY: 158900, ytdActual: 1765000, ytdBudget: 1650000, ytdLY: 1589000 },
-  { name: "Dr. Rania Shukri", specialty: "General Surgery", today: 12400, mtdActual: 128600, mtdBudget: 140000, mtdLY: 138200, ytdActual: 1286000, ytdBudget: 1400000, ytdLY: 1382000 },
-  { name: "Dr. Tariq Jaber", specialty: "Internal Medicine", today: 14800, mtdActual: 152300, mtdBudget: 145000, mtdLY: 148600, ytdActual: 1523000, ytdBudget: 1450000, ytdLY: 1486000 },
-  { name: "Dr. Huda Saleh", specialty: "Cardiology", today: 12600, mtdActual: 130200, mtdBudget: 135000, mtdLY: 128400, ytdActual: 1302000, ytdBudget: 1350000, ytdLY: 1284000 },
-  { name: "Dr. Imad Khalil", specialty: "Psychiatry", today: 8200, mtdActual: 84500, mtdBudget: 90000, mtdLY: 82100, ytdActual: 845000, ytdBudget: 900000, ytdLY: 821000 },
-  { name: "Dr. Dina Fawzi", specialty: "Dermatology", today: 9800, mtdActual: 101200, mtdBudget: 105000, mtdLY: 98400, ytdActual: 1012000, ytdBudget: 1050000, ytdLY: 984000 },
-  { name: "Dr. Walid Harb", specialty: "Orthopedics", today: 11200, mtdActual: 3800, mtdBudget: 12000, mtdLY: 108600, ytdActual: 1148000, ytdBudget: 1200000, ytdLY: 1086000 },
-  { name: "Dr. Mona Issa", specialty: "Physiotherapy", today: 7600, mtdActual: 78400, mtdBudget: 82000, mtdLY: 85200, ytdActual: 784000, ytdBudget: 820000, ytdLY: 852000 },
-  { name: "Dr. Ziad Sabbagh", specialty: "Urology", today: 9100, mtdActual: 94200, mtdBudget: 95000, mtdLY: 97600, ytdActual: 942000, ytdBudget: 950000, ytdLY: 976000 },
-  { name: "Dr. Samir Najem", specialty: "Dentistry", today: 10400, mtdActual: 4200, mtdBudget: 11000, mtdLY: 102800, ytdActual: 982000, ytdBudget: 1050000, ytdLY: 1028000 },
-  { name: "Dr. Reem Khoury", specialty: "Gynecology", today: 8900, mtdActual: 5100, mtdBudget: 9500, mtdLY: 88600, ytdActual: 910000, ytdBudget: 950000, ytdLY: 886000 },
-  { name: "Dr. Faisal Darwish", specialty: "General Surgery", today: 6800, mtdActual: 3200, mtdBudget: 8500, mtdLY: 72400, ytdActual: 668000, ytdBudget: 850000, ytdLY: 724000 },
-  { name: "Dr. Lina Abed", specialty: "Pediatrics", today: 7200, mtdActual: 74600, mtdBudget: 78000, mtdLY: 76800, ytdActual: 746000, ytdBudget: 780000, ytdLY: 768000 },
-  { name: "Dr. Adel Rizk", specialty: "Neurology", today: 8400, mtdActual: 86200, mtdBudget: 88000, mtdLY: 84500, ytdActual: 862000, ytdBudget: 880000, ytdLY: 845000 },
-].map((d) => ({ ...d, mtdVarBudget: d.mtdBudget ? (d.mtdActual - d.mtdBudget) / d.mtdBudget : 0, ytdVarBudget: d.ytdBudget ? (d.ytdActual - d.ytdBudget) / d.ytdBudget : 0 }));
+  { name:"Dr. Gada Abdelhamid", specialty:"Anesthesia", today:1543, mtdActual:2645, mtdBudget:0, mtdLY:0, ytdActual:19520, ytdBudget:0, ytdLY:67, locations:"DSU" },
+  { name:"Dr. Elaheh Allahyari", specialty:"Anesthesia", today:0, mtdActual:1054, mtdBudget:0, mtdLY:0, ytdActual:12301, ytdBudget:0, ytdLY:67, locations:"DSU" },
+  { name:"Dr. Chuchendra Shadakshari", specialty:"Anesthesia", today:0, mtdActual:-35, mtdBudget:0, mtdLY:0, ytdActual:9018, ytdBudget:0, ytdLY:0, locations:"DSU" },
+  { name:"Dr. Srinivasan Ravindranath", specialty:"Cardiology", today:3502, mtdActual:29772, mtdBudget:41798, mtdLY:-872, ytdActual:432080, ytdBudget:624078, ytdLY:386221, locations:"DG,DSU,Qusais" },
+  { name:"Dr. Seyed Mohammad Kasaei", specialty:"Cardiology", today:733, mtdActual:10096, mtdBudget:11477, mtdLY:0, ytdActual:132014, ytdBudget:171356, ytdLY:0, locations:"DG,DSU,Fest Plaza,Tecom" },
+  { name:"Dr. Jabraan Shaikh", specialty:"Cardiology", today:2680, mtdActual:11118, mtdBudget:20107, mtdLY:7577, ytdActual:186063, ytdBudget:300213, ytdLY:195110, locations:"DSU,Intl City,Silicon" },
+  { name:"Dr. Ibraheem Basher", specialty:"Cardiology", today:1910, mtdActual:6362, mtdBudget:14134, mtdLY:870, ytdActual:95966, ytdBudget:211030, ytdLY:72442, locations:"Arabian,DSU,Tecom" },
+  { name:"Dr. Fatima Qurratulain", specialty:"Cardiology", today:104, mtdActual:10778, mtdBudget:18175, mtdLY:9797, ytdActual:284561, ytdBudget:271363, ytdLY:167940, locations:"DSU" },
+  { name:"Dr. Abhay Pande", specialty:"Cardiology", today:0, mtdActual:-102, mtdBudget:12798, mtdLY:18487, ytdActual:158585, ytdBudget:191080, ytdLY:141218, locations:"DG,DSU,Silicon,Tecom" },
+  { name:"Dr. Abdalla Alhajeri", specialty:"Cardiology", today:530, mtdActual:2052, mtdBudget:0, mtdLY:0, ytdActual:2539, ytdBudget:0, ytdLY:0, locations:"DSU" },
+  { name:"Dr. Zahra Fazal", specialty:"Dentist", today:2216, mtdActual:15279, mtdBudget:23336, mtdLY:7424, ytdActual:270363, ytdBudget:348420, ytdLY:223807, locations:"Qusais" },
+  { name:"Dr. Fernaz Behlim", specialty:"Dentist", today:0, mtdActual:6104, mtdBudget:1178, mtdLY:1814, ytdActual:36725, ytdBudget:17590, ytdLY:28524, locations:"DSU,Silicon,Tecom,Warqa" },
+  { name:"Dr. Aby John", specialty:"Dentist", today:2246, mtdActual:8083, mtdBudget:14502, mtdLY:11222, ytdActual:186910, ytdBudget:216525, ytdLY:189266, locations:"DSU" },
+  { name:"Dr. Alanoud Shatat", specialty:"Dentist", today:1464, mtdActual:7797, mtdBudget:6108, mtdLY:980, ytdActual:97197, ytdBudget:91194, ytdLY:60367, locations:"Arabian,DSU,Warqa" },
+  { name:"Dr. Shaima Alnaqbi", specialty:"Dentist", today:0, mtdActual:1687, mtdBudget:0, mtdLY:268, ytdActual:6107, ytdBudget:0, ytdLY:7852, locations:"Arabian" },
+  { name:"Dr. Saritha Shetty", specialty:"Dentist", today:2463, mtdActual:15431, mtdBudget:3634, mtdLY:0, ytdActual:208908, ytdBudget:54265, ytdLY:0, locations:"Arabian,Silicon,Warqa" },
+  { name:"Dr. Farah Al Mulla", specialty:"Dentist", today:853, mtdActual:9417, mtdBudget:19341, mtdLY:8195, ytdActual:162111, ytdBudget:288771, ytdLY:183392, locations:"Silicon" },
+  { name:"Dr. Yasameen Alamer", specialty:"Dentist", today:2563, mtdActual:11965, mtdBudget:10688, mtdLY:9735, ytdActual:125919, ytdBudget:159582, ytdLY:128189, locations:"Warqa" },
+  { name:"Dr. Madiha Rashid", specialty:"Dentist", today:11465, mtdActual:55053, mtdBudget:30352, mtdLY:20104, ytdActual:572392, ytdBudget:453184, ytdLY:399574, locations:"DG" },
+  { name:"Dr. Vinu Rajashekar", specialty:"Dentist", today:1085, mtdActual:6634, mtdBudget:10702, mtdLY:6965, ytdActual:150169, ytdBudget:159796, ytdLY:132491, locations:"Nahda" },
+  { name:"Dr. Husna Karikuzhi", specialty:"Dentist", today:668, mtdActual:8879, mtdBudget:8227, mtdLY:2442, ytdActual:103417, ytdBudget:122829, ytdLY:101482, locations:"DG,Tecom,Warqa" },
+  { name:"Dr. Ghoufran Mohideen", specialty:"Dermatology", today:9284, mtdActual:22712, mtdBudget:19147, mtdLY:7647, ytdActual:303847, ytdBudget:285881, ytdLY:209505, locations:"Arabian,DSU,JVC,Tecom" },
+  { name:"Dr. Varsha Arun", specialty:"Dermatology", today:3598, mtdActual:16618, mtdBudget:13528, mtdLY:11507, ytdActual:237444, ytdBudget:201978, ytdLY:144945, locations:"DSU,Qusais" },
+  { name:"Dr. Dimple Tiwari", specialty:"Dermatology", today:1862, mtdActual:6659, mtdBudget:14154, mtdLY:10257, ytdActual:128957, ytdBudget:211332, ytdLY:146454, locations:"DG,Fest Plaza" },
+  { name:"Dr. Moutusi Audhya", specialty:"Dermatology", today:5231, mtdActual:11659, mtdBudget:8153, mtdLY:7588, ytdActual:149001, ytdBudget:121734, ytdLY:145228, locations:"Silicon,Warqa" },
+  { name:"Dr. Mohan Kudur", specialty:"Dermatology", today:3896, mtdActual:12105, mtdBudget:15320, mtdLY:6062, ytdActual:176111, ytdBudget:228735, ytdLY:121544, locations:"Karama,Qusais" },
+  { name:"Dr. Aneesh Kunnath Parambath", specialty:"Dermatology", today:0, mtdActual:12220, mtdBudget:11356, mtdLY:10318, ytdActual:135688, ytdBudget:169555, ytdLY:95408, locations:"DG,Tecom" },
+  { name:"Ms. Samar Bou Antoun", specialty:"Dietician", today:0, mtdActual:0, mtdBudget:1584, mtdLY:0, ytdActual:5460, ytdBudget:23648, ytdLY:4283, locations:"Arabian,DSU,Fest Plaza,JVC" },
+  { name:"Dr. Mohammed Abul Hassan Boopathy", specialty:"Endocrinology", today:3325, mtdActual:48357, mtdBudget:39727, mtdLY:25611, ytdActual:474049, ytdBudget:593154, ytdLY:414510, locations:"Arabian,DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Mhd Amer Dardari", specialty:"Endocrinology", today:2339, mtdActual:23225, mtdBudget:19456, mtdLY:17670, ytdActual:242435, ytdBudget:290489, ytdLY:228273, locations:"DG,DSU,Karama,Nahda,Qusais,Silicon,Tecom" },
+  { name:"Dr. Layla Askar Alsalama", specialty:"Endocrinology", today:2919, mtdActual:11859, mtdBudget:12925, mtdLY:4187, ytdActual:109953, ytdBudget:192986, ytdLY:65534, locations:"Arabian,DG,DSU,Intl City,Nahda,Silicon,Tecom,Warqa" },
+  { name:"Dr. Prashanth Prabhu", specialty:"ENT", today:2310, mtdActual:10125, mtdBudget:15791, mtdLY:18902, ytdActual:195152, ytdBudget:235772, ytdLY:244641, locations:"DSU,Qusais,Silicon,Warqa" },
+  { name:"Dr. Muhammed  Shafi Shamsu", specialty:"ENT", today:2958, mtdActual:6858, mtdBudget:5769, mtdLY:10233, ytdActual:91469, ytdBudget:86140, ytdLY:143363, locations:"DG,DSU,Qusais,Tecom" },
+  { name:"Dr. Archana Babanagare", specialty:"ENT", today:2137, mtdActual:7098, mtdBudget:12573, mtdLY:20644, ytdActual:170655, ytdBudget:187728, ytdLY:274117, locations:"DG,DSU,Tecom" },
+  { name:"Dr. Nidhi Maggon", specialty:"ENT", today:4667, mtdActual:13115, mtdBudget:15415, mtdLY:9466, ytdActual:179830, ytdBudget:230159, ytdLY:168199, locations:"Arabian,DSU,Intl City,Karama,Silicon" },
+  { name:"Dr. Rajan Sachdeva", specialty:"ENT", today:0, mtdActual:0, mtdBudget:0, mtdLY:11829, ytdActual:458, ytdBudget:0, ytdLY:139944, locations:"Arabian,DSU,Silicon,Warqa" },
+  { name:"Dr. Sourabh Soni", specialty:"ENT", today:921, mtdActual:3600, mtdBudget:7982, mtdLY:0, ytdActual:145224, ytdBudget:119181, ytdLY:0, locations:"DG,DSU,Silicon,Warqa" },
+  { name:"Dr. Abhay Vyankatrao Inamdar", specialty:"ENT", today:960, mtdActual:3728, mtdBudget:10466, mtdLY:0, ytdActual:114793, ytdBudget:156260, ytdLY:0, locations:"DSU,Silicon,Warqa" },
+  { name:"Dr. Rinku  Alex", specialty:"ENT", today:2419, mtdActual:10455, mtdBudget:10870, mtdLY:0, ytdActual:142714, ytdBudget:162296, ytdLY:0, locations:"DSU,Qusais,Warqa" },
+  { name:"Dr. Nirmal Sumitha Jerald", specialty:"Family medicine", today:4526, mtdActual:12624, mtdBudget:18552, mtdLY:17499, ytdActual:240203, ytdBudget:276990, ytdLY:271860, locations:"DSU,Qusais,Silicon,Warqa" },
+  { name:"Dr. Zainab Ali Asghar", specialty:"Family Medicine", today:4214, mtdActual:23720, mtdBudget:29922, mtdLY:32095, ytdActual:325239, ytdBudget:446755, ytdLY:430864, locations:"DSU,Nahda,Qusais,Tecom" },
+  { name:"Dr. Safaa Alawi", specialty:"Family medicine", today:-416, mtdActual:19144, mtdBudget:24240, mtdLY:15769, ytdActual:383151, ytdBudget:361920, ytdLY:317178, locations:"DSU,Intl City,Silicon,Warqa" },
+  { name:"Dr. Omar Eissa Abdelshafy Habo", specialty:"Family medicine", today:215, mtdActual:3547, mtdBudget:13418, mtdLY:17422, ytdActual:126531, ytdBudget:200336, ytdLY:234891, locations:"DG,DSU,Tecom" },
+  { name:"Dr. Libey Joy", specialty:"Family Medicine", today:3855, mtdActual:7364, mtdBudget:14807, mtdLY:18262, ytdActual:198906, ytdBudget:221075, ytdLY:203088, locations:"DG,DSU,Fest Plaza,Karama,Tecom" },
+  { name:"Dr. Omar Farooq Abdul Kadir", specialty:"Family Medicine", today:0, mtdActual:0, mtdBudget:16490, mtdLY:15118, ytdActual:91365, ytdBudget:246204, ytdLY:209499, locations:"DSU,Warqa" },
+  { name:"Dr. Divya Mangal", specialty:"Family Medicine", today:4360, mtdActual:16837, mtdBudget:22282, mtdLY:15947, ytdActual:352479, ytdBudget:332681, ytdLY:228763, locations:"DSU,Intl City,Karama,Qusais,Silicon,Tecom" },
+  { name:"Dr. Malak Wehbe", specialty:"Family Medicine", today:0, mtdActual:6296, mtdBudget:0, mtdLY:0, ytdActual:61388, ytdBudget:0, ytdLY:0, locations:"Fest Plaza,JVC" },
+  { name:"Dr. Nisha Narayanankutty", specialty:"Family Medicine", today:955, mtdActual:12087, mtdBudget:8708, mtdLY:0, ytdActual:167171, ytdBudget:130013, ytdLY:0, locations:"DSU,Intl City,Karama" },
+  { name:"Dr. Rebecca Najem", specialty:"Family Medicine", today:0, mtdActual:15663, mtdBudget:7868, mtdLY:0, ytdActual:240129, ytdBudget:117473, ytdLY:0, locations:"DSU,Karama,Tecom" },
+  { name:"Dr. Hind Alaa Majeed Abodaka", specialty:"Family medicine", today:748, mtdActual:4522, mtdBudget:9331, mtdLY:0, ytdActual:100318, ytdBudget:139314, ytdLY:0, locations:"DG,DSU,Fest Plaza,Tecom" },
+  { name:"Dr. Rasha Alani", specialty:"Family medicine", today:0, mtdActual:-445, mtdBudget:14516, mtdLY:0, ytdActual:138545, ytdBudget:216732, ytdLY:0, locations:"Arabian" },
+  { name:"Dr. Vineetha Oommen Kottakkattu", specialty:"Family medicine", today:733, mtdActual:12903, mtdBudget:7713, mtdLY:0, ytdActual:138632, ytdBudget:115165, ytdLY:0, locations:"DSU,Intl City,Nahda,Qusais" },
+  { name:"Dr. Nevra Batur", specialty:"Family medicine", today:0, mtdActual:0, mtdBudget:9914, mtdLY:0, ytdActual:62326, ytdBudget:148024, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Tecom" },
+  { name:"Dr. Fareeha Younis", specialty:"Family Medicine", today:155, mtdActual:12352, mtdBudget:17478, mtdLY:20898, ytdActual:238592, ytdBudget:260956, ytdLY:288433, locations:"DG,DSU,Intl City,Qusais,Silicon" },
+  { name:"Dr. Shailesh Kumar", specialty:"Gastroenterology", today:779, mtdActual:6804, mtdBudget:10638, mtdLY:6541, ytdActual:111687, ytdBudget:158836, ytdLY:119283, locations:"DG,DSU,Intl City,Karama,Qusais,Silicon,Tecom" },
+  { name:"Dr. ALI  SHORBAGI", specialty:"Gastroenterology", today:0, mtdActual:1086, mtdBudget:2689, mtdLY:1776, ytdActual:22170, ytdBudget:40146, ytdLY:44993, locations:"DSU,Intl City,Nahda,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Khaldun  Alshaheen", specialty:"Gastroenterology", today:4824, mtdActual:18532, mtdBudget:11442, mtdLY:9292, ytdActual:198302, ytdBudget:170839, ytdLY:148553, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Qusais,Silicon" },
+  { name:"Dr. Riham Abdelaal", specialty:"Gastroenterology", today:0, mtdActual:0, mtdBudget:17316, mtdLY:7937, ytdActual:267206, ytdBudget:258540, ytdLY:158723, locations:"Arabian,DG,DSU,Intl City,Karama,Nahda,Silicon,Tecom" },
+  { name:"Dr. Hasan Odeh", specialty:"Gastroenterology", today:512, mtdActual:3992, mtdBudget:2897, mtdLY:0, ytdActual:20298, ytdBudget:43254, ytdLY:0, locations:"Arabian,DSU,Intl City,JVC,Silicon" },
+  { name:"Dr. Ihsan Kommouna", specialty:"Gastroenterology", today:0, mtdActual:0, mtdBudget:2992, mtdLY:0, ytdActual:13481, ytdBudget:44669, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Karama,Silicon,Tecom" },
+  { name:"Dr. Ali Aleddey", specialty:"Gastroenterology", today:2442, mtdActual:5954, mtdBudget:6919, mtdLY:0, ytdActual:78908, ytdBudget:103307, ytdLY:0, locations:"Arabian,DSU,Intl City,JVC,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Manish Mulchandani", specialty:"General Practice", today:1502, mtdActual:7933, mtdBudget:2407, mtdLY:6561, ytdActual:99529, ytdBudget:35937, ytdLY:112572, locations:"DG,DSU,Qusais,Staff DFC,Staff DIP,Stationed,Warqa" },
+  { name:"Dr. Uma Bilgi", specialty:"General Practice", today:3317, mtdActual:3317, mtdBudget:20428, mtdLY:6700, ytdActual:209470, ytdBudget:305010, ytdLY:124078, locations:"DSU,Staff DFC,Stationed" },
+  { name:"Dr. Lubna Malek", specialty:"Family Medicine", today:1227, mtdActual:12486, mtdBudget:15207, mtdLY:-4, ytdActual:192110, ytdBudget:227048, ytdLY:202120, locations:"DSU,Staff DFC,Stationed,Warqa" },
+  { name:"Dr. Rasha Alsaoud Resha", specialty:"General Practice", today:0, mtdActual:0, mtdBudget:16356, mtdLY:10287, ytdActual:137930, ytdBudget:244203, ytdLY:173797, locations:"Arabian,DSU,Intl City" },
+  { name:"Dr. Renju Dominic", specialty:"General Practice", today:0, mtdActual:8150, mtdBudget:8748, mtdLY:7672, ytdActual:74524, ytdBudget:130612, ytdLY:103302, locations:"Arabian,DG,DSU,Intl City,Karama,Qusais,Silicon,Staff DIP,Stationed,Tecom,Warqa" },
+  { name:"Dr. Sandeep Kumar", specialty:"General Practice", today:55, mtdActual:4702, mtdBudget:4840, mtdLY:7084, ytdActual:40468, ytdBudget:72270, ytdLY:115848, locations:"Arabian,DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Qusais,Silicon,Staff DFC,Staff DIP,Stationed,Tecom,Warqa" },
+  { name:"Dr. Nazar Khowaja", specialty:"General Practice", today:396, mtdActual:7346, mtdBudget:11651, mtdLY:0, ytdActual:125613, ytdBudget:173965, ytdLY:202906, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Tecom" },
+  { name:"Dr. Surya Senapathy", specialty:"General Practice", today:1145, mtdActual:5269, mtdBudget:11526, mtdLY:4698, ytdActual:117397, ytdBudget:172092, ytdLY:170882, locations:"DSU,Fest Plaza,Karama,Nahda,Qusais,Tecom" },
+  { name:"Dr. Musarat Ali", specialty:"General Practice", today:281, mtdActual:6692, mtdBudget:6313, mtdLY:6468, ytdActual:50942, ytdBudget:94255, ytdLY:91089, locations:"Arabian,DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Qusais,Silicon,Staff DFC,Staff DIP,Stationed,Tecom,Warqa" },
+  { name:"Dr. Pyari Jahan", specialty:"General Practice", today:3232, mtdActual:9595, mtdBudget:15102, mtdLY:0, ytdActual:167190, ytdBudget:225485, ytdLY:180820, locations:"DSU,Nahda,Qusais,Stationed,Warqa" },
+  { name:"Dr. Isteer Nashed Makhaly Wahba", specialty:"General Practice", today:2409, mtdActual:11629, mtdBudget:11257, mtdLY:6696, ytdActual:139125, ytdBudget:168078, ytdLY:158729, locations:"Arabian,DG,DSU,Fest Plaza,Intl City,Karama,Silicon,Stationed,Tecom,Warqa" },
+  { name:"Dr. Lana Hassan", specialty:"General Practice", today:5573, mtdActual:13602, mtdBudget:12901, mtdLY:11279, ytdActual:138318, ytdBudget:192626, ytdLY:184004, locations:"Arabian,DSU,Intl City,Qusais,Warqa" },
+  { name:"Dr. Girisankar Gangadharan", specialty:"General Practice", today:2871, mtdActual:11662, mtdBudget:19030, mtdLY:16579, ytdActual:177985, ytdBudget:284133, ytdLY:298359, locations:"DSU,Intl City,Qusais,Silicon" },
+  { name:"Dr. Sundas Maaz", specialty:"General Practice", today:515, mtdActual:5946, mtdBudget:7864, mtdLY:5567, ytdActual:62034, ytdBudget:117423, ytdLY:148939, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Qusais,Silicon,Staff DFC,Stationed,Tecom,Warqa" },
+  { name:"Dr. Ali Raza", specialty:"General Practice", today:0, mtdActual:3312, mtdBudget:15103, mtdLY:17999, ytdActual:102395, ytdBudget:225507, ytdLY:217636, locations:"DG,Fest Plaza,Karama,Nahda,Tecom" },
+  { name:"Dr. Alvin Clavert Casono", specialty:"General Practice", today:592, mtdActual:8428, mtdBudget:18533, mtdLY:6059, ytdActual:139901, ytdBudget:276709, ytdLY:45783, locations:"DG,DSU,Nahda,Qusais" },
+  { name:"Dr. Jay Edwarde Hontanosas", specialty:"General Practice", today:4715, mtdActual:12831, mtdBudget:16235, mtdLY:13294, ytdActual:179268, ytdBudget:242397, ytdLY:249648, locations:"DSU,Karama,Silicon,Tecom" },
+  { name:"Dr. Cecil  Kunnappilly", specialty:"General Surgeon", today:911, mtdActual:7097, mtdBudget:5817, mtdLY:2646, ytdActual:104404, ytdBudget:86853, ytdLY:111984, locations:"Arabian,DSU,Intl City,Karama,Silicon,Warqa" },
+  { name:"Dr. Siva  Malikireddy", specialty:"General Surgeon", today:1100, mtdActual:4894, mtdBudget:7569, mtdLY:5661, ytdActual:69162, ytdBudget:113005, ytdLY:94803, locations:"DSU,Nahda,Qusais,Silicon" },
+  { name:"Dr. Sachin Lohra", specialty:"General Surgeon", today:635, mtdActual:7118, mtdBudget:4718, mtdLY:5113, ytdActual:70261, ytdBudget:70450, ytdLY:116524, locations:"DG,DSU,Fest Plaza,Tecom" },
+  { name:"Dr. Mouhsen  Hosein", specialty:"General Surgeon", today:0, mtdActual:1017, mtdBudget:901, mtdLY:570, ytdActual:6322, ytdBudget:13456, ytdLY:25216, locations:"DSU,Intl City" },
+  { name:"Dr. Shashikanth Jadhav", specialty:"General Surgeon", today:2230, mtdActual:4490, mtdBudget:1782, mtdLY:3986, ytdActual:33427, ytdBudget:26614, ytdLY:30055, locations:"DG,DSU,Nahda,Qusais,Silicon" },
+  { name:"Dr. Nagendra Prasad  Anipindi", specialty:"General Surgeon", today:2013, mtdActual:5591, mtdBudget:3366, mtdLY:0, ytdActual:61891, ytdBudget:50250, ytdLY:0, locations:"DG,DSU,Intl City,Qusais,Silicon,Warqa" },
+  { name:"Dr. Lateefa Alnuaimi", specialty:"General Surgeon", today:0, mtdActual:0, mtdBudget:462, mtdLY:0, ytdActual:-470, ytdBudget:6897, ytdLY:0, locations:"Arabian,DSU" },
+  { name:"Dr. Sudheer Kutty", specialty:"General Surgeon", today:0, mtdActual:0, mtdBudget:3637, mtdLY:0, ytdActual:18895, ytdBudget:54306, ytdLY:0, locations:"DSU,JVC,Qusais" },
+  { name:"Dr. Mohammed Taha", specialty:"General Surgeon", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:211, ytdBudget:0, ytdLY:0, locations:"Warqa" },
+  { name:"Dr. Haitham Sawalmeh", specialty:"General Surgeon", today:497, mtdActual:5837, mtdBudget:661, mtdLY:0, ytdActual:25780, ytdBudget:9870, ytdLY:0, locations:"DSU" },
+  { name:"Dr. Ponnusamy Tamilvendan", specialty:"Internal Medicine", today:-186, mtdActual:6527, mtdBudget:15532, mtdLY:11608, ytdActual:143674, ytdBudget:231913, ytdLY:182346, locations:"DG,DSU,Karama,Qusais,Silicon" },
+  { name:"Dr. Abdul Raoof Thacharakkal", specialty:"Internal Medicine", today:3511, mtdActual:14015, mtdBudget:14590, mtdLY:12072, ytdActual:209113, ytdBudget:217833, ytdLY:235213, locations:"DSU,Intl City,Nahda,Silicon,Tecom,Warqa" },
+  { name:"Dr. Ola Alsheikh", specialty:"Internal Medicine", today:1158, mtdActual:17670, mtdBudget:21751, mtdLY:16957, ytdActual:305779, ytdBudget:324762, ytdLY:256161, locations:"Arabian,DSU,Silicon,Warqa" },
+  { name:"Dr. George Thachil", specialty:"Internal Medicine", today:5814, mtdActual:33555, mtdBudget:31936, mtdLY:26361, ytdActual:525203, ytdBudget:476830, ytdLY:501127, locations:"DSU,Fest Plaza,Intl City,Nahda,Qusais,Silicon,Warqa" },
+  { name:"Dr. Hans Mohammed Hanif", specialty:"Internal Medicine", today:2028, mtdActual:13248, mtdBudget:12259, mtdLY:15757, ytdActual:233778, ytdBudget:183035, ytdLY:284758, locations:"DG,DSU,Fest Plaza,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Shajahan Abdulkhader", specialty:"Internal Medicine", today:5310, mtdActual:22340, mtdBudget:19872, mtdLY:22593, ytdActual:306307, ytdBudget:296709, ytdLY:313860, locations:"DSU,Nahda,Qusais" },
+  { name:"Dr. Abithraj Kallikadavil", specialty:"Internal Medicine", today:4351, mtdActual:17236, mtdBudget:20564, mtdLY:20051, ytdActual:234731, ytdBudget:307042, ytdLY:249778, locations:"DG,DSU,Karama,Nahda" },
+  { name:"Dr. George Cherian", specialty:"Internal Medicine", today:3753, mtdActual:12478, mtdBudget:15034, mtdLY:12767, ytdActual:240718, ytdBudget:224466, ytdLY:102516, locations:"DSU,Karama,Nahda,Qusais,Silicon" },
+  { name:"Dr. Jacob George", specialty:"Internal Medicine", today:478, mtdActual:7483, mtdBudget:9163, mtdLY:8526, ytdActual:133555, ytdBudget:136807, ytdLY:68901, locations:"DG,DSU,Nahda,Qusais,Tecom" },
+  { name:"Dr. Ali Akbar Thirkannur Pilathottathil", specialty:"Internal Medicine", today:3578, mtdActual:20580, mtdBudget:21001, mtdLY:11790, ytdActual:359026, ytdBudget:313563, ytdLY:203949, locations:"DSU,Karama" },
+  { name:"Dr. Sameh Elgouhari", specialty:"Internal Medicine", today:1811, mtdActual:9254, mtdBudget:10816, mtdLY:0, ytdActual:101824, ytdBudget:161490, ytdLY:0, locations:"Arabian,DG,DSU,Fest Plaza,JVC,Qusais,Tecom" },
+  { name:"Dr. Viji George", specialty:"Internal Medicine", today:494, mtdActual:6798, mtdBudget:10816, mtdLY:0, ytdActual:75149, ytdBudget:161490, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Tecom" },
+  { name:"Dr. George Simon", specialty:"Internal Medicine", today:2203, mtdActual:8881, mtdBudget:17959, mtdLY:13488, ytdActual:224567, ytdBudget:268141, ytdLY:24120, locations:"DSU,Silicon,Warqa" },
+  { name:"Ms. Sharifa solomon", specialty:"Laser Technician", today:0, mtdActual:3731, mtdBudget:2663, mtdLY:357, ytdActual:28380, ytdBudget:39762, ytdLY:25264, locations:"Arabian" },
+  { name:"Dr. Naseem Palakkuzhiyil", specialty:"Neurology", today:3901, mtdActual:17356, mtdBudget:16700, mtdLY:4088, ytdActual:254478, ytdBudget:249345, ytdLY:207323, locations:"DSU,Fest Plaza,Qusais" },
+  { name:"Dr. Mohammed Al Jumaily", specialty:"Neurology", today:0, mtdActual:4262, mtdBudget:0, mtdLY:0, ytdActual:17730, ytdBudget:0, ytdLY:0, locations:"DSU,Silicon" },
+  { name:"Dr. Ramika Mittal", specialty:"Obstetrics & Gynaecology", today:2441, mtdActual:18400, mtdBudget:30589, mtdLY:8232, ytdActual:370915, ytdBudget:456726, ytdLY:273892, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Qusais,Silicon,Warqa" },
+  { name:"Dr. Shila Waghmare", specialty:"Obstetrics & Gynaecology", today:8095, mtdActual:36247, mtdBudget:20489, mtdLY:20493, ytdActual:333801, ytdBudget:305922, ytdLY:315616, locations:"DG,DSU,Intl City,Karama,Nahda,Qusais,Warqa" },
+  { name:"Dr. Sobana  Bilhanan", specialty:"Obstetrics & Gynaecology", today:7676, mtdActual:36150, mtdBudget:26870, mtdLY:18373, ytdActual:358093, ytdBudget:401194, ytdLY:381493, locations:"Arabian,DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Sai Soujanya", specialty:"Obstetrics & Gynaecology", today:592, mtdActual:9128, mtdBudget:11022, mtdLY:4985, ytdActual:171438, ytdBudget:164571, ytdLY:199981, locations:"DSU,Intl City,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Deepthi  Balakrishnan", specialty:"Obstetrics & Gynaecology", today:63, mtdActual:25407, mtdBudget:24084, mtdLY:21624, ytdActual:290490, ytdBudget:359596, ytdLY:293695, locations:"DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Ojusvini Amit Kumar", specialty:"Obstetrics & Gynaecology", today:0, mtdActual:7011, mtdBudget:10316, mtdLY:14272, ytdActual:130513, ytdBudget:154032, ytdLY:193793, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Marjan Movassaghi", specialty:"Obstetrics & Gynaecology", today:3087, mtdActual:20443, mtdBudget:16302, mtdLY:5504, ytdActual:267876, ytdBudget:243404, ytdLY:237477, locations:"DG,DSU,Karama,Silicon" },
+  { name:"Dr. Preeti Sahu", specialty:"Obstetrics & Gynaecology", today:3612, mtdActual:20430, mtdBudget:23612, mtdLY:16909, ytdActual:316011, ytdBudget:352551, ytdLY:308422, locations:"DG,DSU,Intl City,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Nivedita M C", specialty:"Obstetrics & Gynaecology", today:6730, mtdActual:16819, mtdBudget:25427, mtdLY:20229, ytdActual:235225, ytdBudget:379640, ytdLY:297626, locations:"DG,DSU,Fest Plaza,Qusais,Tecom" },
+  { name:"Dr. Eman  El Toukhi", specialty:"Obstetrics & Gynaecology", today:2478, mtdActual:23767, mtdBudget:26677, mtdLY:21517, ytdActual:284709, ytdBudget:398313, ytdLY:365613, locations:"DG,DSU,Fest Plaza,Intl City,JVC,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Nada Altabara", specialty:"Obstetrics & Gynaecology", today:2016, mtdActual:5497, mtdBudget:2025, mtdLY:2571, ytdActual:43912, ytdBudget:30235, ytdLY:47359, locations:"DSU,Intl City,JVC,Silicon,Tecom,Warqa" },
+  { name:"Dr. Shilpa Suryawanshi", specialty:"Obstetrics & Gynaecology", today:3165, mtdActual:15247, mtdBudget:21132, mtdLY:14805, ytdActual:281623, ytdBudget:315512, ytdLY:218061, locations:"Arabian,DG,DSU,Intl City,JVC,Qusais,Silicon,Warqa" },
+  { name:"Dr. Sunitha Mary Mathew", specialty:"Obstetrics & Gynaecology", today:0, mtdActual:0, mtdBudget:6557, mtdLY:0, ytdActual:72041, ytdBudget:97907, ytdLY:0, locations:"DSU,Nahda,Qusais,Silicon" },
+  { name:"Dr. Shweta Jaiswal", specialty:"Obstetrics & Gynaecology", today:8508, mtdActual:21773, mtdBudget:17141, mtdLY:16421, ytdActual:244805, ytdBudget:255933, ytdLY:139208, locations:"DSU,Intl City,Karama,Nahda,Qusais,Warqa" },
+  { name:"Dr. Priti Mishra", specialty:"Obstetrics & Gynaecology", today:448, mtdActual:1594, mtdBudget:5553, mtdLY:0, ytdActual:89227, ytdBudget:82915, ytdLY:0, locations:"DG,DSU,Karama,Qusais,Tecom" },
+  { name:"Dr. Benish Khanzda", specialty:"Obstetrics & Gynaecology", today:125, mtdActual:9126, mtdBudget:11683, mtdLY:0, ytdActual:115638, ytdBudget:174442, ytdLY:0, locations:"DSU,Intl City,Nahda,Silicon,Warqa" },
+  { name:"Dr. Ghada Shate", specialty:"Obstetrics & Gynaecology", today:1441, mtdActual:3952, mtdBudget:7087, mtdLY:0, ytdActual:119263, ytdBudget:105811, ytdLY:0, locations:"Arabian,DSU,Warqa" },
+  { name:"Dr. Rekha Pandita", specialty:"Obstetrics & Gynaecology", today:19, mtdActual:3058, mtdBudget:7300, mtdLY:0, ytdActual:65915, ytdBudget:108992, ytdLY:0, locations:"DSU,JVC,Tecom" },
+  { name:"Dr. Ebtessam  Hassanin", specialty:"Obstetrics & Gynaecology", today:322, mtdActual:2507, mtdBudget:0, mtdLY:0, ytdActual:61958, ytdBudget:0, ytdLY:0, locations:"DSU,Warqa" },
+  { name:"Dr. Rakesh Maggon", specialty:"Opthalmology", today:4144, mtdActual:23382, mtdBudget:18077, mtdLY:17512, ytdActual:276952, ytdBudget:269909, ytdLY:201688, locations:"DSU,Qusais" },
+  { name:"Dr. Rahul  Verma", specialty:"Opthalmology", today:0, mtdActual:0, mtdBudget:9104, mtdLY:8456, ytdActual:29855, ytdBudget:135929, ytdLY:124927, locations:"DSU,Qusais" },
+  { name:"Dr. Shaji  Kuzhiyil", specialty:"Orthopaedics", today:2468, mtdActual:6755, mtdBudget:10614, mtdLY:4883, ytdActual:141183, ytdBudget:158477, ytdLY:164592, locations:"DSU,Karama" },
+  { name:"Dr. Mohsin E Azam", specialty:"Orthopaedics", today:5021, mtdActual:17318, mtdBudget:31153, mtdLY:19701, ytdActual:307268, ytdBudget:465135, ytdLY:308381, locations:"DG,DSU,Qusais,Silicon" },
+  { name:"Dr. Venkateswara Gorthi", specialty:"Orthopaedics", today:3804, mtdActual:18273, mtdBudget:18578, mtdLY:19043, ytdActual:300686, ytdBudget:277379, ytdLY:338133, locations:"DG,DSU,Qusais" },
+  { name:"Dr. Somshekhar Mallappa", specialty:"Orthopaedics", today:4329, mtdActual:15582, mtdBudget:16298, mtdLY:18261, ytdActual:285339, ytdBudget:243338, ytdLY:274321, locations:"DSU,Intl City,Karama,Silicon,Warqa" },
+  { name:"Dr. Jitendra Khachariya", specialty:"Orthopaedics", today:6102, mtdActual:6102, mtdBudget:18117, mtdLY:11707, ytdActual:199200, ytdBudget:270504, ytdLY:221478, locations:"DSU,Intl City,Silicon,Warqa" },
+  { name:"Dr. Bhaskar  Rao Murari", specialty:"Orthopaedics", today:2788, mtdActual:10184, mtdBudget:13585, mtdLY:9616, ytdActual:158405, ytdBudget:202836, ytdLY:238759, locations:"DG,DSU,Fest Plaza" },
+  { name:"Dr. Prashant Agarkar", specialty:"Orthopaedics", today:39, mtdActual:17913, mtdBudget:9576, mtdLY:0, ytdActual:168968, ytdBudget:142976, ytdLY:0, locations:"DSU,Silicon,Warqa" },
+  { name:"Dr. Ahmed Almousa", specialty:"Orthopaedics", today:0, mtdActual:0, mtdBudget:4319, mtdLY:0, ytdActual:44663, ytdBudget:64487, ytdLY:0, locations:"Arabian,DSU,Silicon" },
+  { name:"Dr. Ankit Mudgal", specialty:"Orthopaedics", today:1711, mtdActual:8687, mtdBudget:8200, mtdLY:0, ytdActual:103168, ytdBudget:122433, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Silicon,Tecom" },
+  { name:"Dr. Hassan Al Rifai", specialty:"Orthopaedics", today:536, mtdActual:805, mtdBudget:0, mtdLY:0, ytdActual:27913, ytdBudget:0, ytdLY:0, locations:"DSU" },
+  { name:"Dr. Jubin Abraham Raju", specialty:"Orthopaedics", today:1314, mtdActual:5374, mtdBudget:9526, mtdLY:0, ytdActual:114361, ytdBudget:142229, ytdLY:0, locations:"Arabian,DG,DSU,JVC,Tecom" },
+  { name:"Dr. Krishna Amith Kumar", specialty:"Orthopaedics", today:2463, mtdActual:14349, mtdBudget:0, mtdLY:0, ytdActual:110762, ytdBudget:0, ytdLY:0, locations:"DSU,Nahda" },
+  { name:"Dr. Chaula Sangani", specialty:"Paediatrics", today:1292, mtdActual:6372, mtdBudget:5418, mtdLY:2527, ytdActual:85727, ytdBudget:80896, ytdLY:76681, locations:"DG,DSU,Fest Plaza,Intl City,Nahda,Tecom" },
+  { name:"Dr. Inderpal Deshwal", specialty:"Paediatrics", today:3863, mtdActual:16289, mtdBudget:26475, mtdLY:15590, ytdActual:310128, ytdBudget:395297, ytdLY:342668, locations:"DSU,Nahda,Qusais" },
+  { name:"Dr. Nesmal Musaliar", specialty:"Paediatrics", today:1366, mtdActual:13354, mtdBudget:20413, mtdLY:5441, ytdActual:221915, ytdBudget:304783, ytdLY:235755, locations:"DG,DSU,Intl City,Qusais,Silicon,Warqa" },
+  { name:"Dr. Razan Taef", specialty:"Paediatrics", today:976, mtdActual:12432, mtdBudget:16009, mtdLY:7124, ytdActual:183288, ytdBudget:239030, ytdLY:208566, locations:"Intl City,Silicon,Warqa" },
+  { name:"Dr. Rehab  Abdelrazig", specialty:"Paediatrics", today:676, mtdActual:6723, mtdBudget:16257, mtdLY:8017, ytdActual:157939, ytdBudget:242730, ytdLY:223005, locations:"DSU" },
+  { name:"Dr. Swagata Mallick", specialty:"Paediatrics", today:0, mtdActual:0, mtdBudget:24534, mtdLY:25738, ytdActual:66975, ytdBudget:366308, ytdLY:341299, locations:"DG,DSU" },
+  { name:"Dr. Sujatha Chella Rajesh", specialty:"Paediatrics", today:998, mtdActual:10004, mtdBudget:17195, mtdLY:9397, ytdActual:138607, ytdBudget:256729, ytdLY:222840, locations:"DG,DSU,Fest Plaza" },
+  { name:"Dr. Simna Rajan", specialty:"Paediatrics", today:1064, mtdActual:5265, mtdBudget:19172, mtdLY:8490, ytdActual:161085, ytdBudget:286251, ytdLY:285043, locations:"DSU,Intl City,Silicon" },
+  { name:"Dr. Abdul Manaf", specialty:"Paediatrics", today:404, mtdActual:4562, mtdBudget:15866, mtdLY:13779, ytdActual:181528, ytdBudget:236893, ytdLY:218790, locations:"DSU,Qusais,Silicon" },
+  { name:"Dr. Tusharkumar Deepak Sinhal", specialty:"Paediatrics", today:598, mtdActual:7412, mtdBudget:11647, mtdLY:7043, ytdActual:153526, ytdBudget:173898, ytdLY:22946, locations:"Arabian,DSU,Intl City,Silicon" },
+  { name:"Dr. Rimzim Gupta", specialty:"Paediatrics", today:0, mtdActual:0, mtdBudget:9830, mtdLY:10133, ytdActual:121845, ytdBudget:146767, ytdLY:47248, locations:"DSU,Intl City,Warqa" },
+  { name:"Dr. Simikiruthiga Senthilkumar", specialty:"Paediatrics", today:2795, mtdActual:7831, mtdBudget:0, mtdLY:8284, ytdActual:108188, ytdBudget:0, ytdLY:166842, locations:"DG,Fest Plaza,Tecom" },
+  { name:"Dr. Hussain Syed Mohammad Sarwar", specialty:"Paediatrics", today:130, mtdActual:1524, mtdBudget:0, mtdLY:0, ytdActual:55429, ytdBudget:0, ytdLY:0, locations:"Arabian,Tecom,Warqa" },
+  { name:"Dr. Jimmy John", specialty:"Paediatrics", today:148, mtdActual:2720, mtdBudget:12295, mtdLY:0, ytdActual:106275, ytdBudget:183579, ytdLY:0, locations:"DSU,Warqa" },
+  { name:"Dr. Mohammed Alsabbah", specialty:"Paediatrics", today:299, mtdActual:1129, mtdBudget:0, mtdLY:0, ytdActual:35677, ytdBudget:0, ytdLY:0, locations:"Arabian,Tecom" },
+  { name:"Dr. Deepthi Reddy", specialty:"Paediatrics", today:0, mtdActual:1096, mtdBudget:8974, mtdLY:0, ytdActual:15628, ytdBudget:133994, ytdLY:0, locations:"JVC,Tecom" },
+  { name:"Dr. Ashraf Demiry", specialty:"Paediatrics", today:250, mtdActual:1012, mtdBudget:0, mtdLY:0, ytdActual:29588, ytdBudget:0, ytdLY:0, locations:"Arabian,DSU" },
+  { name:"Dr. Bashar Alhasan", specialty:"Paediatrics", today:180, mtdActual:763, mtdBudget:8974, mtdLY:0, ytdActual:10444, ytdBudget:133994, ytdLY:0, locations:"JVC" },
+  { name:"Ms. Sara Johnson", specialty:"Physiotherapy", today:244, mtdActual:5961, mtdBudget:3782, mtdLY:4454, ytdActual:89635, ytdBudget:56473, ytdLY:84548, locations:"DSU" },
+  { name:"Ms. Gayathri Rajeesh", specialty:"Physiotherapy", today:0, mtdActual:6368, mtdBudget:6166, mtdLY:4644, ytdActual:60664, ytdBudget:92061, ytdLY:38375, locations:"Nahda,Qusais" },
+  { name:"Ms. Princy Varghese", specialty:"Physiotherapy", today:1493, mtdActual:4797, mtdBudget:9082, mtdLY:3195, ytdActual:125259, ytdBudget:135609, ytdLY:122981, locations:"Karama" },
+  { name:"Ms. Richa Saklani", specialty:"Physiotherapy", today:654, mtdActual:4170, mtdBudget:5095, mtdLY:2719, ytdActual:69769, ytdBudget:76071, ytdLY:71129, locations:"Fest Plaza" },
+  { name:"Ms. Anusha Veettil", specialty:"Physiotherapy", today:0, mtdActual:5114, mtdBudget:4928, mtdLY:4382, ytdActual:78379, ytdBudget:73584, ytdLY:96741, locations:"Intl City,Qusais" },
+  { name:"Ms. Amala Aji", specialty:"Physiotherapy", today:458, mtdActual:1466, mtdBudget:7305, mtdLY:6104, ytdActual:71213, ytdBudget:109072, ytdLY:96638, locations:"DG,DSU,Fest Plaza,Karama,Nahda,Qusais" },
+  { name:"Mr. Jahfar Latheef", specialty:"Physiotherapy", today:547, mtdActual:616, mtdBudget:5862, mtdLY:2380, ytdActual:57418, ytdBudget:87522, ytdLY:93501, locations:"DG" },
+  { name:"Ms. Ashly Abin", specialty:"Physiotherapy", today:1159, mtdActual:5611, mtdBudget:3739, mtdLY:5408, ytdActual:83563, ytdBudget:55820, ytdLY:112392, locations:"Silicon" },
+  { name:"Mr. John Apuyan", specialty:"Physiotherapy", today:905, mtdActual:3079, mtdBudget:6410, mtdLY:4376, ytdActual:73172, ytdBudget:95714, ytdLY:59447, locations:"Nahda" },
+  { name:"Mr. Simple Markose", specialty:"Physiotherapy", today:2743, mtdActual:8123, mtdBudget:0, mtdLY:448, ytdActual:140737, ytdBudget:0, ytdLY:156783, locations:"Qusais" },
+  { name:"Ms. Elizabeth Joy", specialty:"Physiotherapy", today:1460, mtdActual:6132, mtdBudget:8231, mtdLY:7687, ytdActual:108658, ytdBudget:122896, ytdLY:131980, locations:"Nahda,Qusais" },
+  { name:"Ms. Mehreen Memon", specialty:"Physiotherapy", today:2371, mtdActual:9273, mtdBudget:6919, mtdLY:5304, ytdActual:111322, ytdBudget:103309, ytdLY:89077, locations:"Warqa" },
+  { name:"Ms. Shahana Kunhiraman", specialty:"Physiotherapy", today:962, mtdActual:5436, mtdBudget:5062, mtdLY:4159, ytdActual:94437, ytdBudget:75585, ytdLY:80114, locations:"Arabian,Intl City,Nahda,Warqa" },
+  { name:"Ms. Juwairia Ejaz", specialty:"Physiotherapy", today:1628, mtdActual:8454, mtdBudget:7398, mtdLY:4324, ytdActual:84581, ytdBudget:110455, ytdLY:79395, locations:"DSU,Qusais" },
+  { name:"Mr. Rakesh Jayakrishnan", specialty:"Physiotherapy", today:1045, mtdActual:5052, mtdBudget:5792, mtdLY:7265, ytdActual:119393, ytdBudget:86485, ytdLY:101835, locations:"Intl City,Qusais" },
+  { name:"Ms. Hadel Radwan", specialty:"Physiotherapy", today:0, mtdActual:4002, mtdBudget:8289, mtdLY:0, ytdActual:70952, ytdBudget:123758, ytdLY:117871, locations:"Silicon" },
+  { name:"Ms. Sarah Ahmed", specialty:"Physiotherapy", today:0, mtdActual:5088, mtdBudget:6475, mtdLY:6307, ytdActual:84332, ytdBudget:96670, ytdLY:89951, locations:"Silicon" },
+  { name:"Mr. Mohammed Riyaz", specialty:"Physiotherapy", today:0, mtdActual:0, mtdBudget:3970, mtdLY:0, ytdActual:87190, ytdBudget:59282, ytdLY:0, locations:"DSU,Tecom,Warqa" },
+  { name:"Ms. Nikhila Ramakrishnan", specialty:"Physiotherapy", today:0, mtdActual:0, mtdBudget:5231, mtdLY:0, ytdActual:24081, ytdBudget:78099, ytdLY:0, locations:"Karama,Nahda" },
+  { name:"Mr. Saino Thomas", specialty:"Physiotherapy", today:746, mtdActual:5071, mtdBudget:4523, mtdLY:0, ytdActual:61752, ytdBudget:67538, ytdLY:0, locations:"Tecom" },
+  { name:"Ms. Sonia Jamil Khan", specialty:"Physiotherapy", today:0, mtdActual:2745, mtdBudget:0, mtdLY:0, ytdActual:37486, ytdBudget:0, ytdLY:0, locations:"Fest Plaza,Karama,Nahda,Tecom" },
+  { name:"Ms. Ella Francisco", specialty:"Physiotherapy", today:272, mtdActual:2725, mtdBudget:7395, mtdLY:4397, ytdActual:37001, ytdBudget:110408, ytdLY:81770, locations:"Fest Plaza,JVC,Tecom" },
+  { name:"Ms. Asmaa Ahmed", specialty:"Physiotherapy", today:629, mtdActual:1041, mtdBudget:0, mtdLY:0, ytdActual:19345, ytdBudget:0, ytdLY:0, locations:"Arabian" },
+  { name:"Mr. Mostafa Mohamed", specialty:"Physiotherapy", today:855, mtdActual:2073, mtdBudget:0, mtdLY:0, ytdActual:26442, ytdBudget:0, ytdLY:0, locations:"DSU,JVC,Tecom" },
+  { name:"Dr. Jamil Aljamali", specialty:"Plastic Surgeon", today:0, mtdActual:0, mtdBudget:55, mtdLY:0, ytdActual:701, ytdBudget:827, ytdLY:0, locations:"DSU,Fest Plaza" },
+  { name:"Dr. Yasir Malik", specialty:"Psychiatry", today:546, mtdActual:1146, mtdBudget:2775, mtdLY:0, ytdActual:38134, ytdBudget:41430, ytdLY:0, locations:"Arabian,DSU,Qusais,Silicon" },
+  { name:"Dr. Mariam Javaid", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:1709, ytdBudget:0, ytdLY:872, locations:"Fest Plaza,Qusais" },
+  { name:"Dr. Hilda Atallah", specialty:"Radiology", today:0, mtdActual:1297, mtdBudget:0, mtdLY:0, ytdActual:1505, ytdBudget:0, ytdLY:85, locations:"DSU,Intl City,Silicon,Warqa" },
+  { name:"Dr. Tripti Nitin Pathare", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:226, ytdBudget:0, ytdLY:0, locations:"DSU,Karama,Tecom" },
+  { name:"Dr. Ashita Rastogi", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:1198, ytdBudget:0, ytdLY:0, locations:"DG,DSU,Silicon,Warqa" },
+  { name:"Ms. Rowena Dela Cruz", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:-250, ytdBudget:0, ytdLY:0, locations:"Arabian,Warqa" },
+  { name:"Dr. Tagawa Alnaim", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:3656, ytdBudget:0, ytdLY:0, locations:"DSU,JVC,Tecom" },
+  { name:"Ms. Angelie Princesa", specialty:"Sonographer", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:142, ytdBudget:0, ytdLY:113, locations:"DG,Karama,Nahda,Silicon,Warqa" },
+  { name:"Dr. Mohamed Elhelbawy", specialty:"Urology", today:1475, mtdActual:6481, mtdBudget:12115, mtdLY:13775, ytdActual:78538, ytdBudget:180882, ytdLY:126019, locations:"DSU,Silicon,Tecom,Warqa" },
+  { name:"Dr. Aleksandar Miladinovic", specialty:"Urology", today:0, mtdActual:0, mtdBudget:1784, mtdLY:2770, ytdActual:36832, ytdBudget:26633, ytdLY:53667, locations:"DSU,Intl City,Nahda,Silicon,Tecom,Warqa" },
+  { name:"Dr. Karthikesh Omkaram", specialty:"Urology", today:3955, mtdActual:15120, mtdBudget:18198, mtdLY:11816, ytdActual:217448, ytdBudget:271714, ytdLY:219520, locations:"Arabian,DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Manaf Kandakji", specialty:"Urology", today:375, mtdActual:6082, mtdBudget:2889, mtdLY:675, ytdActual:24048, ytdBudget:43130, ytdLY:5998, locations:"DG,DSU,Fest Plaza,Silicon,Tecom" },
+  { name:"Dr. Mosaddeq Al Yousif", specialty:"Urology", today:0, mtdActual:3548, mtdBudget:7901, mtdLY:0, ytdActual:46284, ytdBudget:117963, ytdLY:0, locations:"DSU" },
+  { name:"Dr. Anurag Kumar", specialty:"Urology", today:3449, mtdActual:12062, mtdBudget:13731, mtdLY:0, ytdActual:194984, ytdBudget:205022, ytdLY:0, locations:"Arabian,DG,DSU,Intl City,Karama,Qusais,Silicon,Tecom,Warqa" },
+  { name:"Dr. Rami Ismail", specialty:"Urology", today:0, mtdActual:5592, mtdBudget:15625, mtdLY:0, ytdActual:85203, ytdBudget:233298, ytdLY:0, locations:"DSU,JVC,Nahda,Tecom" },
+  { name:"Dr. Dani Abboud", specialty:"Urology", today:0, mtdActual:0, mtdBudget:1937, mtdLY:155, ytdActual:7477, ytdBudget:28918, ytdLY:155, locations:"Arabian,DSU,Intl City,Silicon" },
+  { name:"Dr. Ibrahim Riza", specialty:"Vascular Surgeon", today:0, mtdActual:2332, mtdBudget:0, mtdLY:0, ytdActual:5463, ytdBudget:0, ytdLY:0, locations:"DSU" },
+  { name:"Dr. Firas David", specialty:"Vascular Surgeon", today:184, mtdActual:1757, mtdBudget:1969, mtdLY:352, ytdActual:27598, ytdBudget:29393, ytdLY:27391, locations:"DSU,JVC,Qusais,Silicon" },
+  { name:"Nursing Care calendar", specialty:"Nursing Care", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:1324, ytdBudget:0, ytdLY:0, locations:"DSU,JVC" },
+  { name:"Dr. Maemun Alkhosin", specialty:"Hair Transplant", today:0, mtdActual:15271, mtdBudget:39711, mtdLY:0, ytdActual:403401, ytdBudget:592912, ytdLY:0, locations:"Arabian,DSU,Silicon" },
+  { name:"Mr. Musab Henno", specialty:"Hair Transplant", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:953, ytdBudget:0, ytdLY:0, locations:"DSU" }
+].map((d) => ({ ...d, mtdVarBudget: d.mtdBudget ? (d.mtdActual - d.mtdBudget) / d.mtdBudget : 0, ytdVarBudget: d.ytdBudget ? (d.ytdActual - d.ytdBudget) / d.ytdBudget : 0, mtdVarLY: d.mtdLY ? (d.mtdActual - d.mtdLY) / d.mtdLY : 0, ytdVarLY: d.ytdLY ? (d.ytdActual - d.ytdLY) / d.ytdLY : 0 }));
 
 const DEFAULT_SPECIALTIES = [
-  { name: "Dermatology", today: 38520, mtdActual: 412580, mtdBudget: 395000, mtdLY: 378200, ytdActual: 4125800, ytdBudget: 3950000, ytdLY: 3782000 },
-  { name: "Cardiology", today: 52340, mtdActual: 538900, mtdBudget: 510000, mtdLY: 495600, ytdActual: 5389000, ytdBudget: 5100000, ytdLY: 4956000 },
-  { name: "Internal Medicine", today: 61200, mtdActual: 625400, mtdBudget: 600000, mtdLY: 612300, ytdActual: 6254000, ytdBudget: 6000000, ytdLY: 6123000 },
-  { name: "Orthopedics", today: 45600, mtdActual: 467200, mtdBudget: 480000, mtdLY: 445100, ytdActual: 4672000, ytdBudget: 4800000, ytdLY: 4451000 },
-  { name: "Pediatrics", today: 33400, mtdActual: 342100, mtdBudget: 355000, mtdLY: 358900, ytdActual: 3421000, ytdBudget: 3550000, ytdLY: 3589000 },
-  { name: "Ophthalmology", today: 28700, mtdActual: 298500, mtdBudget: 290000, mtdLY: 275400, ytdActual: 2985000, ytdBudget: 2900000, ytdLY: 2754000 },
-  { name: "ENT", today: 22100, mtdActual: 231600, mtdBudget: 240000, mtdLY: 228900, ytdActual: 2316000, ytdBudget: 2400000, ytdLY: 2289000 },
-  { name: "Gynecology", today: 41800, mtdActual: 428500, mtdBudget: 415000, mtdLY: 402300, ytdActual: 4285000, ytdBudget: 4150000, ytdLY: 4023000 },
-  { name: "Urology", today: 18900, mtdActual: 195200, mtdBudget: 200000, mtdLY: 201500, ytdActual: 1952000, ytdBudget: 2000000, ytdLY: 2015000 },
-  { name: "Neurology", today: 36200, mtdActual: 372400, mtdBudget: 360000, mtdLY: 348700, ytdActual: 3724000, ytdBudget: 3600000, ytdLY: 3487000 },
-  { name: "Dentistry", today: 47500, mtdActual: 486300, mtdBudget: 470000, mtdLY: 462100, ytdActual: 4863000, ytdBudget: 4700000, ytdLY: 4621000 },
-  { name: "General Surgery", today: 29800, mtdActual: 305400, mtdBudget: 310000, mtdLY: 312800, ytdActual: 3054000, ytdBudget: 3100000, ytdLY: 3128000 },
-  { name: "Psychiatry", today: 15600, mtdActual: 162800, mtdBudget: 170000, mtdLY: 155200, ytdActual: 1628000, ytdBudget: 1700000, ytdLY: 1552000 },
-  { name: "Physiotherapy", today: 21300, mtdActual: 218600, mtdBudget: 225000, mtdLY: 232400, ytdActual: 2186000, ytdBudget: 2250000, ytdLY: 2324000 },
-  { name: "Radiology", today: 34100, mtdActual: 348900, mtdBudget: 340000, mtdLY: 325600, ytdActual: 3489000, ytdBudget: 3400000, ytdLY: 3256000 },
-].map((s) => ({ ...s, mtdVarBudget: (s.mtdActual - s.mtdBudget) / s.mtdBudget, mtdVarLY: (s.mtdActual - s.mtdLY) / s.mtdLY, ytdVarBudget: (s.ytdActual - s.ytdBudget) / s.ytdBudget, ytdVarLY: (s.ytdActual - s.ytdLY) / s.ytdLY }));
+  { name:"Anesthesia", today:0, mtdActual:3665, mtdBudget:0, mtdLY:0, ytdActual:40839, ytdBudget:0, ytdLY:133 },
+  { name:"Cardiology", today:3502, mtdActual:70076, mtdBudget:118488, mtdLY:36875, ytdActual:1291809, ytdBudget:1769120, ytdLY:1046553 },
+  { name:"Dentist", today:25025, mtdActual:146330, mtdBudget:128068, mtdLY:69148, ytdActual:1920220, ytdBudget:1912157, ytdLY:1482290 },
+  { name:"Dermatology", today:23871, mtdActual:81973, mtdBudget:92254, mtdLY:87371, ytdActual:1131049, ytdBudget:1377431, ytdLY:1288470 },
+  { name:"Dietician", today:0, mtdActual:0, mtdBudget:1584, mtdLY:0, ytdActual:5460, ytdBudget:23648, ytdLY:4283 },
+  { name:"Endocrinology", today:5664, mtdActual:83441, mtdBudget:72108, mtdLY:47468, ytdActual:826437, ytdBudget:1076629, ytdLY:708317 },
+  { name:"ENT", today:16372, mtdActual:54979, mtdBudget:78866, mtdLY:80356, ytdActual:1040295, ytdBudget:1177537, ytdLY:1154044 },
+  { name:"Family Medicine", today:13539, mtdActual:146613, mtdBudget:215235, mtdLY:160429, ytdActual:2864974, ytdBudget:3213637, ytdLY:2378410 },
+  { name:"Gastroenterology", today:4824, mtdActual:36367, mtdBudget:54893, mtdLY:34726, ytdActual:712054, ytdBudget:819592, ytdLY:583221 },
+  { name:"General Practice", today:27828, mtdActual:132898, mtdBudget:213501, mtdLY:179922, ytdActual:2154201, ytdBudget:3187749, ytdLY:4199221 },
+  { name:"General Surgeon", today:0, mtdActual:36044, mtdBudget:28913, mtdLY:19254, ytdActual:389884, ytdBudget:431701, ytdLY:407657 },
+  { name:"Internal Medicine", today:34305, mtdActual:190067, mtdBudget:231110, mtdLY:171969, ytdActual:3093425, ytdBudget:3450660, ytdLY:2551045 },
+  { name:"Laser Technician", today:0, mtdActual:3731, mtdBudget:2663, mtdLY:357, ytdActual:28380, ytdBudget:39762, ytdLY:25264 },
+  { name:"Neurology", today:3901, mtdActual:21618, mtdBudget:16700, mtdLY:25312, ytdActual:272208, ytdBudget:249345, ytdLY:454720 },
+  { name:"Obstetrics & Gynaecology", today:50817, mtdActual:276555, mtdBudget:304989, mtdLY:204657, ytdActual:3853454, ytdBudget:4553741, ytdLY:3544924 },
+  { name:"Opthalmology", today:0, mtdActual:23382, mtdBudget:27181, mtdLY:25968, ytdActual:306807, ytdBudget:405837, ytdLY:326615 },
+  { name:"Orthopaedics", today:30576, mtdActual:121343, mtdBudget:148998, mtdLY:126098, ytdActual:1961916, ytdBudget:2224667, ytdLY:2459477 },
+  { name:"Paediatrics", today:15040, mtdActual:98489, mtdBudget:220285, mtdLY:132959, ytdActual:2143793, ytdBudget:3289041, ytdLY:2800676 },
+  { name:"Physiotherapy", today:18171, mtdActual:102397, mtdBudget:121655, mtdLY:77554, ytdActual:1816781, ytdBudget:1816411, ytdLY:1704528 },
+  { name:"Psychiatry", today:0, mtdActual:1146, mtdBudget:2775, mtdLY:0, ytdActual:38134, ytdBudget:41430, ytdLY:0 },
+  { name:"Urology", today:4500, mtdActual:48885, mtdBudget:85371, mtdLY:36679, ytdActual:690816, ytdBudget:1274656, ytdLY:518617 },
+  { name:"Vascular Surgeon", today:0, mtdActual:4089, mtdBudget:2863, mtdLY:352, ytdActual:33061, ytdBudget:42740, ytdLY:27391 },
+  { name:"Hair Transplant", today:0, mtdActual:15271, mtdBudget:39711, mtdLY:0, ytdActual:404354, ytdBudget:592912, ytdLY:0 },
+].map((s) => ({ ...s, mtdVarBudget: s.mtdBudget ? (s.mtdActual - s.mtdBudget) / s.mtdBudget : 0, mtdVarLY: s.mtdLY ? (s.mtdActual - s.mtdLY) / s.mtdLY : 0, ytdVarBudget: s.ytdBudget ? (s.ytdActual - s.ytdBudget) / s.ytdBudget : 0, ytdVarLY: s.ytdLY ? (s.ytdActual - s.ytdLY) / s.ytdLY : 0 }));
+
+const DEFAULT_IP_SPECIALTIES = [
+  { name:"General Surgeon", mtdActual:53294, mtdLY:7393, mtdBudget:46527, mtdVolume:8, mtdVolLY:3, ytdActual:522991, ytdLY:590661, ytdBudget:769418, ytdVolume:78, ytdVolLY:109 },
+  { name:"Obstetrics & Gynaecology", mtdActual:25000, mtdLY:18012, mtdBudget:42821, mtdVolume:5, mtdVolLY:3, ytdActual:422062, ytdLY:422966, ytdBudget:708140, ytdVolume:72, ytdVolLY:84 },
+  { name:"Urology", mtdActual:26095, mtdLY:55568, mtdBudget:31860, mtdVolume:2, mtdVolLY:4, ytdActual:402756, ytdLY:444634, ytdBudget:526877, ytdVolume:40, ytdVolLY:54 },
+  { name:"Gastroenterology", mtdActual:2793, mtdLY:21607, mtdBudget:0, mtdVolume:1, mtdVolLY:4, ytdActual:342498, ytdLY:308050, ytdBudget:132789, ytdVolume:63, ytdVolLY:95 },
+  { name:"ENT", mtdActual:14245, mtdLY:19541, mtdBudget:17966, mtdVolume:2, mtdVolLY:2, ytdActual:252212, ytdLY:156957, ytdBudget:297108, ytdVolume:27, ytdVolLY:19 },
+  { name:"Orthopaedics", mtdActual:10164, mtdLY:11088, mtdBudget:26632, mtdVolume:2, mtdVolLY:0, ytdActual:328195, ytdLY:399561, ytdBudget:440414, ytdVolume:48, ytdVolLY:64 },
+  { name:"Ophthalmology", mtdActual:10372, mtdLY:5953, mtdBudget:12636, mtdVolume:1, mtdVolLY:1, ytdActual:144013, ytdLY:209270, ytdBudget:208958, ytdVolume:15, ytdVolLY:32 },
+  { name:"Vascular Surgeon", mtdActual:0, mtdLY:23409, mtdBudget:11344, mtdVolume:0, mtdVolLY:2, ytdActual:166792, ytdLY:153308, ytdBudget:187591, ytdVolume:12, ytdVolLY:16 },
+];
+
+const DEFAULT_IP_DOCTORS = [
+  { name:"Dr. Muhammed Shafi Shamsu", specialty:"ENT", mtdRevenue:10426, mtdCount:1 },
+  { name:"Dr. Deepak Dubey", specialty:"General Surgeon", mtdRevenue:19850, mtdCount:3 },
+  { name:"Dr. Mohamed Elfarash", specialty:"General Surgeon", mtdRevenue:16200, mtdCount:2 },
+  { name:"Dr. Aashish Deshpande", specialty:"Orthopaedics", mtdRevenue:10164, mtdCount:2 },
+  { name:"Dr. Ahmad Al Taher", specialty:"Urology", mtdRevenue:26095, mtdCount:2 },
+];
 
 // ─── Excel Parser ────────────────────────────────────────────────────────────
 
@@ -131,13 +452,202 @@ function parseExcelFile(data) {
       const name = colB.replace(/\s*Total\s*/i,"").trim(); if (!name) continue;
       specialties.push({ name, today, mtdActual, mtdBudget, mtdLY, mtdVarBudget: mtdBudget ? mtdVBR||(mtdActual-mtdBudget)/mtdBudget : 0, mtdVarLY: mtdLY ? mtdVLR||(mtdActual-mtdLY)/mtdLY : 0, ytdActual, ytdBudget, ytdLY, ytdVarBudget: ytdBudget ? (ytdActual-ytdBudget)/ytdBudget : 0, ytdVarLY: ytdLY ? (ytdActual-ytdLY)/ytdLY : 0 });
     } else if (colA && typeof colA === "string" && colA.trim()) {
-      doctors.push({ name: colA.trim(), specialty: colB.trim(), today, mtdActual, mtdBudget, mtdLY, ytdActual, ytdBudget, ytdLY, mtdVarBudget: mtdBudget ? (mtdActual-mtdBudget)/mtdBudget : 0, ytdVarBudget: ytdBudget ? (ytdActual-ytdBudget)/ytdBudget : 0 });
+      doctors.push({ name: colA.trim(), specialty: colB.trim(), today, mtdActual, mtdBudget, mtdLY, ytdActual, ytdBudget, ytdLY, mtdVarBudget: mtdBudget ? (mtdActual-mtdBudget)/mtdBudget : 0, ytdVarBudget: ytdBudget ? (ytdActual-ytdBudget)/ytdBudget : 0, mtdVarLY: mtdLY ? (mtdActual-mtdLY)/mtdLY : 0, ytdVarLY: ytdLY ? (ytdActual-ytdLY)/ytdLY : 0 });
     }
   }
+  // Compute Today per specialty from doctor data
+  const specTodayMap = {};
+  doctors.forEach(d => {
+    if (!specTodayMap[d.specialty]) specTodayMap[d.specialty] = 0;
+    specTodayMap[d.specialty] += d.today;
+  });
+  specialties.forEach(s => { s.today = specTodayMap[s.name] || s.today || 0; });
+
   let reportDate = DEFAULT_REPORT_DATE;
+  let dsrTotals = null;
   const dsrName = wb.SheetNames.find((n) => n.toUpperCase().includes("DSR"));
-  if (dsrName) { const dsRows = XLSX.utils.sheet_to_json(wb.Sheets[dsrName], { header:1, defval:null }); for (let i=0;i<6;i++) { const r=dsRows[i]; if(!r) continue; for (const cell of r) { if (cell instanceof Date) { reportDate=cell.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); break; } if (typeof cell==="string" && /apr|may|jun|mar|feb|jan/i.test(cell)) { reportDate=cell; break; } } } }
-  return { specialties, doctors, reportDate };
+  if (dsrName) {
+    const dsRows = XLSX.utils.sheet_to_json(wb.Sheets[dsrName], { header:1, defval:null });
+    for (let i=0;i<6;i++) { const r=dsRows[i]; if(!r) continue; for (const cell of r) { if (cell instanceof Date) { reportDate=cell.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); break; } if (typeof cell==="string" && /apr|may|jun|mar|feb|jan/i.test(cell)) { reportDate=cell; break; } } }
+    const numK = (r, c) => { const v = dsRows[r] && dsRows[r][c]; return typeof v === 'number' ? Math.round(v * 1000) : 0; };
+    const specMtdActual = specialties.reduce((a,s) => a + s.mtdActual, 0) || 1;
+    const specMtdBudget = specialties.reduce((a,s) => a + s.mtdBudget, 0);
+    const specMtdLY = specialties.reduce((a,s) => a + s.mtdLY, 0);
+    const dsrMtdActual = numK(10, 7);
+    const scaleFactor = dsrMtdActual / specMtdActual;
+    dsrTotals = {
+      todayRev: numK(9, 7),
+      mtdActual: dsrMtdActual,
+      mtdBudget: Math.round(specMtdBudget * scaleFactor),
+      mtdLY: Math.round(specMtdLY * scaleFactor),
+      ytdActual: numK(10, 19),
+      ytdLY: numK(10, 20),
+      ytdBudget: numK(10, 22),
+    };
+    dsrTotals.daysElapsed = (dsRows[11] && typeof dsRows[11][3] === 'number') ? dsRows[11][3] : 6;
+    // OP volume and PPC from DSR R76
+    const rawNum = (r, c) => { const v = dsRows[r] && dsRows[r][c]; return typeof v === 'number' ? Math.round(v) : 0; };
+    const opMtdVol = rawNum(75, 12); // R76 C13 (0-indexed: row 75, col 12)
+    const opMtdRev = specialties.reduce((a,s) => a + s.mtdActual, 0);
+    const opMtdLYRev = specialties.reduce((a,s) => a + s.mtdLY, 0);
+    dsrTotals.opMtdVolume = opMtdVol;
+    dsrTotals.opMtdRevenue = opMtdRev;
+    dsrTotals.opMtdPPC = 0; // computed in App using (DSR total - IP) / OP volume
+    dsrTotals.opMtdLYRevenue = opMtdLYRev;
+    // Estimate LY volume from YTD ratio
+    const ytdVol = rawNum(7, 13); // R8 C14 = YTD volume
+    const ytdVolLY = rawNum(7, 14); // R8 C15 = YTD volume LY
+    const volRatio = ytdVol && ytdVolLY ? ytdVolLY / ytdVol : 1;
+    const opMtdLYVol = Math.round(opMtdVol * volRatio);
+    dsrTotals.opMtdLYVolume = opMtdLYVol;
+    dsrTotals.opMtdLYPPC = opMtdLYVol ? Math.round(opMtdLYRev / opMtdLYVol) : 0;
+  }
+  let locations = null;
+  const locSheetName = wb.SheetNames.find((n) => n.toLowerCase().includes("location"));
+  if (locSheetName) {
+    const locWs = wb.Sheets[locSheetName];
+    const locRows = XLSX.utils.sheet_to_json(locWs, { header: 1, defval: null });
+    const rawLocs = [];
+    for (let i = 6; i < locRows.length; i++) {
+      const r = locRows[i]; if (!r) continue;
+      const loc = r[1], doc = r[2], spec = r[3];
+      if (!loc || typeof loc !== "string" || loc.toLowerCase().includes("total") || loc.toLowerCase().includes("grand")) continue;
+      if (!doc || typeof doc !== "string" || !doc.trim()) continue;
+      rawLocs.push({ location: loc.trim(), doctor: doc.trim(), specialty: (spec && typeof spec === "string") ? spec.trim() : "Other", today: num(r[5]), mtdBudget: num(r[6]), mtdActual: num(r[7]), ytdBudget: num(r[10]), ytdActual: num(r[11]) });
+    }
+    locations = aggregateLocationData(rawLocs);
+  }
+
+  // Parse IP Analysis
+  let ipSpecialties = null;
+  const ipAnalysisName = wb.SheetNames.find(n => n.toLowerCase().includes("ip analysis"));
+  if (ipAnalysisName) {
+    const ipWs = wb.Sheets[ipAnalysisName];
+    const ipRows = XLSX.utils.sheet_to_json(ipWs, { header: 1, defval: null });
+    ipSpecialties = [];
+    for (let i = 5; i < 20; i++) {
+      const r = ipRows[i]; if (!r) continue;
+      const name = r[1]; if (!name || typeof name !== "string" || name.toLowerCase() === "total") continue;
+      const mtdActual = num(r[3]), mtdLY = num(r[2]), mtdBudget = num(r[4]);
+      const mtdVolume = num(r[9]), mtdVolLY = num(r[8]);
+      if (mtdActual === 0 && mtdLY === 0) continue;
+      ipSpecialties.push({ name: name.trim(), mtdActual, mtdLY, mtdBudget, mtdVolume, mtdVolLY });
+    }
+    // Parse YTD (rows 18-31)
+    const ytdMap = {};
+    for (let i = 18; i < 32; i++) {
+      const r = ipRows[i]; if (!r) continue;
+      const name = r[1]; if (!name || typeof name !== "string" || name.trim().toLowerCase() === "total") continue;
+      ytdMap[name.trim()] = { ytdActual: num(r[3]), ytdLY: num(r[2]), ytdBudget: num(r[4]), ytdVolume: num(r[9]), ytdVolLY: num(r[8]) };
+    }
+    ipSpecialties.forEach(s => {
+      const ytd = ytdMap[s.name];
+      if (ytd) Object.assign(s, ytd);
+    });
+  }
+
+  // Parse IP Dr Wise Daily
+  let ipDoctors = null;
+  const ipDrName = wb.SheetNames.find(n => n.toLowerCase().includes("ip dr"));
+  if (ipDrName) {
+    const ipDrWs = wb.Sheets[ipDrName];
+    const ipDrRows = XLSX.utils.sheet_to_json(ipDrWs, { header: 1, defval: null });
+    ipDoctors = [];
+    for (let i = 5; i < ipDrRows.length; i++) {
+      const r = ipDrRows[i]; if (!r) continue;
+      const name = r[0], spec = r[1], rev = num(r[2]), count = num(r[3]);
+      if (!name || typeof name !== "string" || !name.trim()) continue;
+      if (rev === 0 && count === 0) continue;
+      ipDoctors.push({ name: name.trim(), specialty: spec?.trim() || "Other", mtdRevenue: rev, mtdCount: count });
+    }
+    ipDoctors.sort((a, b) => b.mtdRevenue - a.mtdRevenue);
+  }
+
+  // Parse daily revenue from "OP Dr Wise Daily" sheet
+  let dailyRevenue = [];
+  const opDrName = wb.SheetNames.find(n => n.toLowerCase().includes("op dr"));
+  if (opDrName) {
+    const opWs = wb.Sheets[opDrName];
+    const opRows = XLSX.utils.sheet_to_json(opWs, { header: 1, defval: null });
+    for (let day = 1; day <= 31; day++) {
+      const col = 5 + (day - 1) * 3;
+      let total = 0, hasData = false;
+      for (let i = 5; i < opRows.length; i++) {
+        // ONLY count rows with a doctor name in column 0
+        const name = opRows[i] && opRows[i][0];
+        if (!name || typeof name !== 'string' || !name.trim()) continue;
+        const v = opRows[i][col];
+        if (typeof v === 'number') { total += v; hasData = true; }
+      }
+      if (!hasData) break;
+      dailyRevenue.push({ day, total: Math.round(total) });
+    }
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    dailyRevenue = dailyRevenue.map((d, i) => {
+      const date = new Date(2026, 3, d.day); // April = month 3
+      const dow = dayNames[date.getDay()];
+      return { ...d, label: dow + ' ' + d.day, fullLabel: dow + ', Apr ' + d.day };
+    });
+  }
+
+  // Build doctor locations map from Location sheet
+  const doctorLocations = {};
+  if (locations) {
+    locations.forEach(loc => {
+      loc.specialties.forEach(spec => {
+        spec.doctors.forEach(doc => {
+          if (!doctorLocations[doc.name]) doctorLocations[doc.name] = [];
+          if (!doctorLocations[doc.name].includes(loc.location)) doctorLocations[doc.name].push(loc.location);
+        });
+      });
+    });
+  }
+  // Enrich doctors with location data
+  doctors.forEach(d => {
+    const locs = doctorLocations[d.name];
+    if (locs && locs.length) d.locations = locs.join(',');
+    else d.locations = DEFAULT_DOCTOR_LOCATIONS[d.name] || '';
+  });
+
+  return { specialties, doctors, reportDate, locations, dsrTotals, ipSpecialties, ipDoctors, dailyRevenue, doctorLocations };
+}
+
+function aggregateLocationData(rawRows) {
+  const map = {};
+  for (const r of rawRows) {
+    if (!map[r.location]) map[r.location] = {};
+    if (!map[r.location][r.specialty]) map[r.location][r.specialty] = [];
+    map[r.location][r.specialty].push(r);
+  }
+  return Object.keys(map).map((loc) => {
+    const specEntries = Object.keys(map[loc]).map((specName) => {
+      const docs = map[loc][specName];
+      return {
+        name: specName,
+        today: docs.reduce((a, d) => a + d.today, 0),
+        mtdActual: docs.reduce((a, d) => a + d.mtdActual, 0),
+        mtdBudget: docs.reduce((a, d) => a + d.mtdBudget, 0),
+        mtdLY: docs.reduce((a, d) => a + (d.mtdLY || 0), 0) || undefined,
+        ytdActual: docs.reduce((a, d) => a + d.ytdActual, 0),
+        ytdBudget: docs.reduce((a, d) => a + d.ytdBudget, 0),
+        ytdLY: docs.reduce((a, d) => a + (d.ytdLY || 0), 0) || undefined,
+        doctors: docs.map((d) => ({ name: d.doctor, today: d.today, mtdActual: d.mtdActual, mtdBudget: d.mtdBudget, mtdLY: d.mtdLY, ytdActual: d.ytdActual, ytdBudget: d.ytdBudget, ytdLY: d.ytdLY })),
+      };
+    }).sort((a, b) => b.mtdActual - a.mtdActual);
+    const hasMtdLY = specEntries.some(s => s.mtdLY);
+    const hasYtdLY = specEntries.some(s => s.ytdLY);
+    return {
+      location: loc,
+      totalToday: specEntries.reduce((a, s) => a + s.today, 0),
+      totalRevenueMTD: specEntries.reduce((a, s) => a + s.mtdActual, 0),
+      mtdBudget: specEntries.reduce((a, s) => a + s.mtdBudget, 0),
+      mtdLY: hasMtdLY ? specEntries.reduce((a, s) => a + (s.mtdLY || 0), 0) : undefined,
+      totalRevenueYTD: specEntries.reduce((a, s) => a + s.ytdActual, 0),
+      ytdBudget: specEntries.reduce((a, s) => a + s.ytdBudget, 0),
+      ytdLY: hasYtdLY ? specEntries.reduce((a, s) => a + (s.ytdLY || 0), 0) : undefined,
+      specialties: specEntries,
+    };
+  }).sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
 }
 
 // ─── Custom Tooltips ─────────────────────────────────────────────────────────
@@ -145,13 +655,13 @@ function parseExcelFile(data) {
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background:"#fff", borderRadius:10, padding:"14px 18px", boxShadow:"0 8px 30px rgba(0,0,0,0.12)", border:"1px solid #e2e8f0" }}>
-      <div style={{ fontWeight:700, fontSize:13, color:"#1e293b", marginBottom:8, borderBottom:"1px solid #f1f5f9", paddingBottom:6 }}>{label}</div>
+    <div style={{ background:"#1e293b", borderRadius:10, padding:"14px 18px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548" }}>
+      <div style={{ fontWeight:700, fontSize:13, color:"#e2e8f0", marginBottom:8, borderBottom:"1px solid #2f3548", paddingBottom:6 }}>{label}</div>
       {payload.map((p,i) => (
         <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
           <div style={{ width:10, height:10, borderRadius:3, background:p.color }} />
-          <span style={{ fontSize:12, color:"#64748b", flex:1 }}>{p.name}</span>
-          <span style={{ fontSize:13, fontWeight:600, color:"#1e293b", fontVariantNumeric:"tabular-nums" }}>AED {fmt(p.value)}</span>
+          <span style={{ fontSize:12, color:"#94a3b8", flex:1 }}>{p.name}</span>
+          <span style={{ fontSize:13, fontWeight:600, color:"#e2e8f0", fontVariantNumeric:"tabular-nums" }}>AED {fmt(p.value)}</span>
         </div>
       ))}
     </div>
@@ -162,17 +672,17 @@ function PieTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0];
   return (
-    <div style={{ background:"#fff", borderRadius:10, padding:"12px 16px", boxShadow:"0 8px 30px rgba(0,0,0,0.12)", border:"1px solid #e2e8f0" }}>
-      <div style={{ fontWeight:700, fontSize:13, color:"#1e293b", marginBottom:4 }}>{d.name}</div>
-      <div style={{ fontSize:13, color:"#64748b" }}>AED {fmt(d.value)} ({(d.payload.pctShare*100).toFixed(1)}%)</div>
+    <div style={{ background:"#1e293b", borderRadius:10, padding:"12px 16px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548" }}>
+      <div style={{ fontWeight:700, fontSize:13, color:"#e2e8f0", marginBottom:4 }}>{d.name}</div>
+      <div style={{ fontSize:13, color:"#94a3b8" }}>AED {fmt(d.value)} ({(d.payload.pctShare*100).toFixed(1)}%)</div>
     </div>
   );
 }
 
 // ─── Budget Gauge ────────────────────────────────────────────────────────────
 
-function BudgetGauge({ label, actual, budget, size = 120 }) {
-  const pctVal = budget ? actual / budget : 0;
+function BudgetGauge({ label, actual, comparison, size = 120 }) {
+  const pctVal = comparison ? actual / comparison : 0;
   const capped = Math.min(pctVal, 1.2);
   const color = pctVal >= 1 ? C.success : pctVal >= 0.9 ? C.warning : C.danger;
   const data = [{ name: label, value: capped * 100, fill: color }];
@@ -180,12 +690,12 @@ function BudgetGauge({ label, actual, budget, size = 120 }) {
     <div style={{ textAlign: "center" }}>
       <ResponsiveContainer width={size} height={size}>
         <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" startAngle={210} endAngle={-30} data={data} barSize={10}>
-          <RadialBar background={{ fill:"#f1f5f9" }} dataKey="value" cornerRadius={8} />
+          <RadialBar background={{ fill:"#2f3548" }} dataKey="value" cornerRadius={8} />
         </RadialBarChart>
       </ResponsiveContainer>
       <div style={{ marginTop: -size * 0.45, position: "relative", zIndex: 1 }}>
         <div style={{ fontSize: 20, fontWeight: 800, color, letterSpacing: "-0.02em" }}>{(pctVal*100).toFixed(0)}%</div>
-        <div style={{ fontSize: 10, color: C.slateLight, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginTop: 2 }}>{label}</div>
+        <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginTop: 2 }}>{label}</div>
       </div>
       <div style={{ height: size * 0.15 }} />
     </div>
@@ -194,7 +704,7 @@ function BudgetGauge({ label, actual, budget, size = 120 }) {
 
 // ─── Upload Zone ─────────────────────────────────────────────────────────────
 
-function UploadZone({ onFileLoaded }) {
+function UploadZone({ onFileLoaded, compact }) {
   const [isDrag, setIsDrag] = useState(false);
   const [status, setStatus] = useState(null);
   const inputRef = useRef(null);
@@ -207,31 +717,468 @@ function UploadZone({ onFileLoaded }) {
     };
     reader.readAsArrayBuffer(file);
   }, [onFileLoaded]);
+
+  if (compact) {
+    return (
+      <div onDragOver={(e)=>{e.preventDefault();setIsDrag(true);}} onDragLeave={()=>setIsDrag(false)} onDrop={(e)=>{e.preventDefault();setIsDrag(false);processFile(e.dataTransfer.files[0]);}} onClick={()=>inputRef.current?.click()}
+        style={{ border:`1px dashed ${isDrag ? C.primary : C.border}`, borderRadius:8, padding:"10px 12px", background: isDrag ? "rgba(59,130,246,0.08)" : "transparent", transition:"all 0.25s", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+        <input ref={inputRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={(e)=>processFile(e.target.files[0])} />
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isDrag ? C.primary : C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span style={{ fontWeight:600, color: isDrag ? C.primary : C.textSecondary, fontSize:12 }}>Upload</span>
+        {status==="loading" && <div style={{ width:14, height:14, border:"2px solid "+C.border, borderTopColor:C.primary, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />}
+        {status==="success" && <span style={{ color:C.success, fontSize:11, fontWeight:700 }}>OK</span>}
+        {status==="error" && <span style={{ color:C.danger, fontSize:11, fontWeight:700 }}>Err</span>}
+      </div>
+    );
+  }
+
   return (
     <div onDragOver={(e)=>{e.preventDefault();setIsDrag(true);}} onDragLeave={()=>setIsDrag(false)} onDrop={(e)=>{e.preventDefault();setIsDrag(false);processFile(e.dataTransfer.files[0]);}} onClick={()=>inputRef.current?.click()}
-      style={{ border:`2px dashed ${isDrag ? C.primary : "#cbd5e1"}`, borderRadius:14, padding:"14px 28px", background: isDrag ? "#eff6ff" : "#f8fafc", transition:"all 0.25s", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:14 }}>
+      style={{ border:`2px dashed ${isDrag ? C.primary : C.border}`, borderRadius:14, padding:"14px 28px", background: isDrag ? "rgba(59,130,246,0.08)" : C.cardBg, transition:"all 0.25s", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:14 }}>
       <input ref={inputRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={(e)=>processFile(e.target.files[0])} />
-      <div style={{ width:40, height:40, borderRadius:10, background: isDrag ? "#dbeafe" : "#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center" }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDrag ? C.primary : C.slateLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div style={{ width:40, height:40, borderRadius:10, background:"rgba(59,130,246,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDrag ? C.primary : C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </div>
-      <div><span style={{ fontWeight:700, color:C.primary, fontSize:14 }}>Upload New Report</span><span style={{ color:C.slateLight, fontSize:13, marginLeft:8 }}>Drag & drop .xlsx or click</span></div>
-      {status==="loading" && <div style={{ width:18, height:18, border:"2px solid #e2e8f0", borderTopColor:C.primary, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />}
+      <div><span style={{ fontWeight:700, color:C.primary, fontSize:14 }}>Upload New Report</span><span style={{ color:C.textMuted, fontSize:13, marginLeft:8 }}>Drag & drop .xlsx or click</span></div>
+      {status==="loading" && <div style={{ width:18, height:18, border:"2px solid "+C.border, borderTopColor:C.primary, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />}
       {status==="success" && <span style={{ color:C.success, fontSize:13, fontWeight:700 }}>Updated</span>}
       {status==="error" && <span style={{ color:C.danger, fontSize:13, fontWeight:700 }}>Parse error</span>}
     </div>
   );
 }
 
-// ─── Table Styles ────────────────────────────────────────────────────────────
+// ─── Table & Card Styles ────────────────────────────────────────────────────
 
-const thS = { padding:"10px 14px", textAlign:"left", fontSize:10, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", borderBottom:"2px solid #e2e8f0", background:"#f8fafc" };
-const thSub = { padding:"6px 14px", textAlign:"right", fontSize:10, fontWeight:600, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.04em", borderBottom:"2px solid #e2e8f0", background:"#f8fafc" };
-const tdS = { padding:"10px 14px", fontSize:13 };
-const tdN = { padding:"10px 14px", textAlign:"right", fontSize:13, fontVariantNumeric:"tabular-nums", color:"#334155" };
-const dth = { padding:"8px 14px", textAlign:"left", fontSize:10, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.04em", borderBottom:"2px solid #e2e8f0" };
-const dtd = { padding:"9px 14px", fontSize:12 };
-const dtn = { padding:"9px 14px", textAlign:"right", fontSize:12, fontVariantNumeric:"tabular-nums", color:"#334155" };
-const card = { background:"#fff", borderRadius:14, boxShadow:"0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)" };
+const thS = { padding:"10px 14px", textAlign:"left", fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.05em", borderBottom:"2px solid "+C.border, background:"#1e293b" };
+const thSub = { padding:"6px 14px", textAlign:"right", fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.04em", borderBottom:"2px solid "+C.border, background:"#1e293b" };
+const tdS = { padding:"10px 14px", fontSize:13, color:C.text };
+const tdN = { padding:"10px 14px", textAlign:"right", fontSize:13, fontVariantNumeric:"tabular-nums", color:C.text };
+const dth = { padding:"8px 14px", textAlign:"left", fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.04em", borderBottom:"2px solid "+C.border };
+const dtd = { padding:"9px 14px", fontSize:12, color:C.text };
+const dtn = { padding:"9px 14px", textAlign:"right", fontSize:12, fontVariantNumeric:"tabular-nums", color:C.text };
+const card = { background:C.cardBg, borderRadius:14, border:"1px solid "+C.border };
+const fmtLocs = (locs) => {
+  if (!locs) return "\u2014";
+  const arr = locs.split(',').map(s => s.trim()).filter(Boolean);
+  if (arr.length <= 3) return arr.join(', ');
+  return arr.slice(0,3).join(', ') + " +" + (arr.length - 3) + " more";
+};
+
+// ─── Sidebar Component ─────────────────────────────────────────────────────
+
+function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarOpen, setSidebarOpen, isMobile }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navItems = [
+    { id: "overview", label: "Overview", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> },
+    { id: "map", label: "Clinic Map", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> },
+    { id: "specialties", label: "Specialties", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
+    { id: "doctors", label: "Doctors", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+    { id: "inpatient", label: "Inpatient", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
+    { id: "underperformers", label: "Underperformers", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg> },
+  ];
+
+  if (isMobile) {
+    return (
+      <React.Fragment>
+        {/* Mobile Top Header Bar */}
+        <div style={{ position:"fixed", top:0, left:0, right:0, height:56, background:C.sidebarBg, borderBottom:"1px solid "+C.border, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 16px", zIndex:100 }}>
+          <button onClick={() => setMobileMenuOpen(true)} style={{ width:36, height:36, borderRadius:8, background:"transparent", border:"none", color:C.textSecondary, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <img src="https://www.healthhubalfuttaim.com/wp-content/uploads/sites/17/2020/11/Logo.png" alt="HealthHub" style={{ height:28, objectFit:"contain" }} />
+          <div style={{ fontSize:11, fontWeight:600, color:C.primaryLight, textAlign:"right", minWidth:70 }}>{reportDate}</div>
+        </div>
+
+        {/* Mobile Full-Screen Overlay Menu */}
+        <div style={{ position:"fixed", inset:0, background:"rgba(10,15,25,0.85)", zIndex:200, opacity: mobileMenuOpen ? 1 : 0, pointerEvents: mobileMenuOpen ? "auto" : "none", transition:"opacity 0.3s", backdropFilter:"blur(4px)" }} onClick={() => setMobileMenuOpen(false)}>
+          <div style={{ position:"fixed", top:0, left:0, bottom:0, width:280, background:C.sidebarBg, transform: mobileMenuOpen ? "translateX(0)" : "translateX(-100%)", transition:"transform 0.3s ease-out", display:"flex", flexDirection:"column", boxShadow:"4px 0 30px rgba(0,0,0,0.4)" }} onClick={(e) => e.stopPropagation()}>
+            {/* Menu Header */}
+            <div style={{ padding:"16px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid "+C.border, minHeight:56 }}>
+              <img src="https://www.healthhubalfuttaim.com/wp-content/uploads/sites/17/2020/11/Logo.png" alt="HealthHub" style={{ height:32, objectFit:"contain" }} />
+              <button onClick={() => setMobileMenuOpen(false)} style={{ width:36, height:36, borderRadius:8, background:"transparent", border:"none", color:C.textSecondary, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>{"\u2715"}</button>
+            </div>
+            {/* Nav Items */}
+            <div style={{ flex:1, padding:"16px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+              {navItems.map((item) => {
+                const isActive = activeSection === item.id;
+                return (
+                  <button key={item.id} onClick={() => { onNavigate(item.id); setMobileMenuOpen(false); }}
+                    style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 16px", borderRadius:10, border:"none", cursor:"pointer", transition:"all 0.2s", background: isActive ? C.primary : "transparent", color: isActive ? "#fff" : C.textMuted, width:"100%", textAlign:"left", fontSize:14, fontWeight: isActive ? 600 : 500 }}>
+                    <span style={{ flexShrink:0, display:"flex", alignItems:"center" }}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Bottom: Upload + Date */}
+            <div style={{ padding:"16px", borderTop:"1px solid "+C.border, display:"flex", flexDirection:"column", gap:10 }}>
+              <UploadZone onFileLoaded={onFileLoaded} compact />
+              <div style={{ padding:"8px 10px", borderRadius:6, background:"rgba(59,130,246,0.08)", textAlign:"center" }}>
+                <div style={{ fontSize:9, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Report</div>
+                <div style={{ fontSize:12, fontWeight:600, color:C.primaryLight }}>{reportDate}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </React.Fragment>
+    );
+  }
+
+  const w = sidebarOpen ? 220 : 64;
+
+  return (
+    <div style={{ position:"fixed", top:0, left:0, bottom:0, width:w, background:C.sidebarBg, borderRight:"1px solid "+C.border, display:"flex", flexDirection:"column", transition:"width 0.3s", zIndex:100, overflow:"hidden" }}>
+      {/* Toggle + Brand */}
+      <div style={{ padding:"16px 14px", display:"flex", alignItems:"center", gap:12, borderBottom:"1px solid "+C.border, minHeight:64 }}>
+        <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ width:36, height:36, borderRadius:8, background:"transparent", border:"none", color:C.textSecondary, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        {sidebarOpen ? (
+          <img src="https://www.healthhubalfuttaim.com/wp-content/uploads/sites/17/2020/11/Logo.png" alt="HealthHub" style={{ height:32, objectFit:"contain" }} />
+        ) : (
+          <img src="https://www.healthhubalfuttaim.com/wp-content/uploads/sites/17/2020/11/Logo.png" alt="HealthHub" style={{ height:28, objectFit:"contain", objectPosition:"right" }} />
+        )}
+      </div>
+
+      {/* Nav Items */}
+      <div style={{ flex:1, padding:"12px 8px", display:"flex", flexDirection:"column", gap:4 }}>
+        {navItems.map((item) => {
+          const isActive = activeSection === item.id;
+          return (
+            <button key={item.id} onClick={() => onNavigate(item.id)}
+              style={{ display:"flex", alignItems:"center", gap:12, padding: sidebarOpen ? "10px 14px" : "10px 14px", borderRadius:10, border:"none", cursor:"pointer", transition:"all 0.2s", background: isActive ? C.primary : "transparent", color: isActive ? "#fff" : C.textMuted, width:"100%", textAlign:"left", fontSize:13, fontWeight: isActive ? 600 : 500 }}>
+              <span style={{ flexShrink:0, display:"flex", alignItems:"center" }}>{item.icon}</span>
+              {sidebarOpen && <span style={{ overflow:"hidden", whiteSpace:"nowrap" }}>{item.label}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Bottom: Upload + Date */}
+      <div style={{ padding:"12px 10px", borderTop:"1px solid "+C.border, display:"flex", flexDirection:"column", gap:8 }}>
+        {sidebarOpen && <UploadZone onFileLoaded={onFileLoaded} compact />}
+        {sidebarOpen && (
+          <div style={{ padding:"6px 10px", borderRadius:6, background:"rgba(59,130,246,0.08)", textAlign:"center" }}>
+            <div style={{ fontSize:9, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Report</div>
+            <div style={{ fontSize:12, fontWeight:600, color:C.primaryLight }}>{reportDate}</div>
+          </div>
+        )}
+        {!sidebarOpen && (
+          <div style={{ textAlign:"center" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ cursor:"pointer" }} onClick={() => setSidebarOpen(true)}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Dubai Map Component ────────────────────────────────────────────────────
+
+function DubaiMap({ locations, onClinicClick, isMobile }) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
+  const { useEffect } = React;
+
+  const displayLocations = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location));
+
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
+    } else {
+      const map = L.map(mapRef.current, {
+        center: [25.15, 55.25],
+        zoom: 11,
+        zoomControl: true,
+        attributionControl: false,
+        doubleClickZoom: false,
+      });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+      mapInstanceRef.current = map;
+    }
+
+    const map = mapInstanceRef.current;
+    const revs = displayLocations.map(l => l.totalRevenueMTD || 0);
+    const maxRev = Math.max(...revs, 1);
+    const minRev = Math.min(...revs, 0);
+    const range = maxRev - minRev || 1;
+
+    displayLocations.forEach((loc) => {
+      const coords = CLINIC_COORDS[loc.location];
+      if (!coords) return;
+
+      const t = (loc.totalRevenueMTD - minRev) / range;
+      const radius = 8 + t * 22;
+      const color = '#3b82f6';
+      const mtdLY = loc.mtdLY || 0;
+      const lyVar = mtdLY ? (loc.totalRevenueMTD - mtdLY) / mtdLY : null;
+      const budgetVar = loc.mtdBudget ? (loc.totalRevenueMTD - loc.mtdBudget) / loc.mtdBudget : null;
+
+      const circle = L.circleMarker([coords.lat, coords.lng], {
+        radius: radius,
+        fillColor: color,
+        color: '#60a5fa',
+        weight: 2,
+        opacity: 0.9,
+        fillOpacity: 0.65,
+      }).addTo(map);
+
+      const varLine = lyVar !== null
+        ? '<span style="color:' + (lyVar >= 0 ? '#34d399' : '#f87171') + '">vs LY: ' + (lyVar >= 0 ? '+' : '') + (lyVar * 100).toFixed(1) + '%</span>'
+        : (budgetVar !== null ? '<span style="color:' + (budgetVar >= 0 ? '#34d399' : '#f87171') + '">vs Budget: ' + (budgetVar >= 0 ? '+' : '') + (budgetVar * 100).toFixed(1) + '%</span>' : '');
+
+      circle.bindPopup(
+        '<div style="font-family:Inter,sans-serif;font-size:12px;min-width:140px">' +
+        '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#e2e8f0">' + (coords.label || loc.location) + '</div>' +
+        '<div style="color:#94a3b8">MTD Revenue</div>' +
+        '<div style="font-weight:700;font-size:15px;color:#60a5fa;margin:2px 0">AED ' + fmt(loc.totalRevenueMTD) + '</div>' +
+        varLine +
+        '<div style="color:#64748b;font-size:10px;margin-top:6px;border-top:1px solid #2f3548;padding-top:4px">Double-click to drill down</div>' +
+        '</div>',
+        { className: 'dark-popup', closeButton: false, offset: [0, -5] }
+      );
+
+      circle.bindTooltip(
+        '<div style="font-size:10px;font-weight:700;color:#1e293b;text-align:center;line-height:1.4;text-shadow:0 0 4px rgba(255,255,255,0.9)">' +
+        (coords.label || loc.location) +
+        '<br/><span style="color:#2563eb;font-weight:800">' + fmtK(loc.totalRevenueMTD) + '</span></div>',
+        { permanent: true, direction: 'top', offset: [0, -radius - 4], className: 'rev-tooltip' }
+      );
+
+      circle.on('dblclick', () => onClinicClick(loc));
+      markersRef.current.push(circle);
+    });
+
+    if (markersRef.current.length > 0) {
+      const group = L.featureGroup(markersRef.current);
+      map.fitBounds(group.getBounds().pad(0.15));
+    }
+  }, [displayLocations, onClinicClick]);
+
+  return (
+    <div style={{ ...card, background:C.sidebarBg, padding:0, marginTop:20, overflow:"hidden" }}>
+      <div style={{ padding:"18px 28px 14px", borderBottom:"1px solid "+C.border }}>
+        <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Clinic Revenue Map</h2>
+        <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Dubai locations — bubble size = MTD revenue — double-click to drill down</p>
+      </div>
+      <div ref={mapRef} style={{ height: isMobile ? 350 : 600, width:"100%" }} />
+    </div>
+  );
+}
+
+// ─── Clinic Drill-Down Modal ────────────────────────────────────────────────
+
+function ClinicDrillDown({ clinic, onClose }) {
+  const { useEffect } = React;
+  const modalMobile = window.innerWidth < 768;
+  useEffect(() => { const h = (e) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h); }, [onClose]);
+  if (!clinic) return null;
+  const mtdVar = clinic.mtdBudget ? (clinic.totalRevenueMTD - clinic.mtdBudget) / clinic.mtdBudget : 0;
+  const ytdVar = clinic.ytdBudget ? (clinic.totalRevenueYTD - clinic.ytdBudget) / clinic.ytdBudget : 0;
+  const mtdVarLY = clinic.mtdLY ? (clinic.totalRevenueMTD - clinic.mtdLY) / clinic.mtdLY : null;
+  const ytdVarLY = clinic.ytdLY ? (clinic.totalRevenueYTD - clinic.ytdLY) / clinic.ytdLY : null;
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(10,15,25,0.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, backdropFilter:"blur(4px)" }} onClick={onClose}>
+      <div className="fade-in" style={{ background:C.pageBg, borderRadius: modalMobile ? 0 : 16, width: modalMobile ? "100%" : "92%", maxWidth: modalMobile ? "100%" : 960, maxHeight: modalMobile ? "100vh" : "85vh", height: modalMobile ? "100vh" : "auto", overflow:"auto", boxShadow:"0 25px 60px rgba(0,0,0,0.5)", border: modalMobile ? "none" : "1px solid "+C.border }} onClick={(e) => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ padding: modalMobile ? "16px" : "20px 28px", background:"linear-gradient(135deg, "+C.primaryDark+", "+C.primary+")", borderRadius: modalMobile ? 0 : "16px 16px 0 0", color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", opacity:0.7 }}>Clinic Location</div>
+            <h2 style={{ margin:"4px 0 0", fontSize: modalMobile ? 18 : 22, fontWeight:800 }}>{clinic.location}</h2>
+          </div>
+          <button onClick={onClose} style={{ width: modalMobile ? 40 : 36, height: modalMobile ? 40 : 36, borderRadius:10, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", fontSize: modalMobile ? 20 : 18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>{"\u2715"}</button>
+        </div>
+
+        {/* Mini KPIs */}
+        <div style={{ display:"grid", gridTemplateColumns: modalMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: modalMobile ? 8 : 12, padding: modalMobile ? "12px 16px" : "16px 28px" }}>
+          <div style={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:10, padding:"12px 16px" }}>
+            <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Today</div>
+            <div style={{ fontSize:20, fontWeight:800, color:C.primaryLight, marginTop:4 }}>AED {fmt(clinic.totalToday)}</div>
+          </div>
+          <div style={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:10, padding:"12px 16px" }}>
+            <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>MTD Revenue</div>
+            <div style={{ fontSize:20, fontWeight:800, color:C.primaryLight, marginTop:4 }}>AED {fmt(clinic.totalRevenueMTD)}</div>
+            <div style={{ display:"flex", gap:4, marginTop:4, flexWrap:"wrap" }}>
+              {mtdVarLY != null && <span style={{ fontSize:10, fontWeight:600, color:varColor(mtdVarLY), background:varBg(mtdVarLY), padding:"1px 6px", borderRadius:4, display:"inline-block" }}>vs LY {pct(mtdVarLY)}</span>}
+              <span style={{ fontSize:10, fontWeight:600, color:varColor(mtdVar), background:varBg(mtdVar), padding:"1px 6px", borderRadius:4, display:"inline-block" }}>vs Budget {pct(mtdVar)}</span>
+            </div>
+          </div>
+          <div style={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:10, padding:"12px 16px" }}>
+            <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>YTD Revenue</div>
+            <div style={{ fontSize:20, fontWeight:800, color:C.primaryLight, marginTop:4 }}>AED {fmt(clinic.totalRevenueYTD)}</div>
+            <div style={{ display:"flex", gap:4, marginTop:4, flexWrap:"wrap" }}>
+              {ytdVarLY != null && <span style={{ fontSize:10, fontWeight:600, color:varColor(ytdVarLY), background:varBg(ytdVarLY), padding:"1px 6px", borderRadius:4, display:"inline-block" }}>vs LY {pct(ytdVarLY)}</span>}
+              <span style={{ fontSize:10, fontWeight:600, color:varColor(ytdVar), background:varBg(ytdVar), padding:"1px 6px", borderRadius:4, display:"inline-block" }}>vs Budget {pct(ytdVar)}</span>
+            </div>
+          </div>
+          <div style={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:10, padding:"12px 16px" }}>
+            <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Specialties</div>
+            <div style={{ fontSize:20, fontWeight:800, color:C.primaryLight, marginTop:4 }}>{clinic.specialties.length}</div>
+            <div style={{ fontSize:10, color:C.textMuted, marginTop:4 }}>{clinic.specialties.reduce((a, s) => a + s.doctors.length, 0)} doctors</div>
+          </div>
+        </div>
+
+        {/* Specialty + Doctor Table */}
+        <div style={{ padding: modalMobile ? "0 12px 16px" : "0 28px 24px", overflowX:"auto" }}>
+          <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap", borderCollapse:"collapse" }}>
+            <thead>
+              <tr style={{ background:"#1e293b" }}>
+                <th style={dth}>Specialty / Doctor</th>
+                <th style={{ ...dth, textAlign:"right" }}>Today</th>
+                <th style={{ ...dth, textAlign:"right" }}>MTD Actual</th>
+                <th style={{ ...dth, textAlign:"right" }}>MTD Budget</th>
+                <th style={{ ...dth, textAlign:"right" }}>vs Budget</th>
+                <th style={{ ...dth, textAlign:"right" }}>YTD Actual</th>
+                <th style={{ ...dth, textAlign:"right" }}>YTD Budget</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clinic.specialties.map((spec) => {
+                const specVar = spec.mtdBudget ? (spec.mtdActual - spec.mtdBudget) / spec.mtdBudget : 0;
+                return (
+                  <React.Fragment key={spec.name}>
+                    <tr style={{ background:"rgba(59,130,246,0.06)", borderBottom:"1px solid "+C.border }}>
+                      <td style={{ ...dtd, fontWeight:700, color:C.primaryLight }}>{spec.name}</td>
+                      <td style={dtn}>{fmt(spec.today)}</td>
+                      <td style={{ ...dtn, fontWeight:700 }}>{fmt(spec.mtdActual)}</td>
+                      <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.mtdBudget)}</td>
+                      <td style={{ ...dtn, color:varColor(specVar), fontWeight:600 }}>{pct(specVar)}</td>
+                      <td style={{ ...dtn, fontWeight:700 }}>{fmt(spec.ytdActual)}</td>
+                      <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.ytdBudget)}</td>
+                    </tr>
+                    {spec.doctors.map((doc, di) => {
+                      const docVar = doc.mtdBudget ? (doc.mtdActual - doc.mtdBudget) / doc.mtdBudget : 0;
+                      return (
+                        <tr key={doc.name + di} style={{ background: di % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid "+C.border }}>
+                          <td style={{ ...dtd, paddingLeft:32, color:C.textSecondary }}>{doc.name}</td>
+                          <td style={dtn}>{fmt(doc.today)}</td>
+                          <td style={dtn}>{fmt(doc.mtdActual)}</td>
+                          <td style={{ ...dtn, color:C.textMuted }}>{fmt(doc.mtdBudget)}</td>
+                          <td style={{ ...dtn, color:varColor(docVar), fontWeight:600 }}>{pct(docVar)}</td>
+                          <td style={dtn}>{fmt(doc.ytdActual)}</td>
+                          <td style={{ ...dtn, color:C.textMuted }}>{fmt(doc.ytdBudget)}</td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+              <tr style={{ background:"rgba(59,130,246,0.08)", borderTop:"2px solid " + C.primary }}>
+                <td style={{ ...dtd, fontWeight:800, color:C.primaryLight }}>TOTAL</td>
+                <td style={{ ...dtn, fontWeight:800, color:C.primaryLight }}>{fmt(clinic.totalToday)}</td>
+                <td style={{ ...dtn, fontWeight:800, color:C.primaryLight }}>{fmt(clinic.totalRevenueMTD)}</td>
+                <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(clinic.mtdBudget)}</td>
+                <td style={{ ...dtn, fontWeight:800, color:varColor(mtdVar) }}>{pct(mtdVar)}</td>
+                <td style={{ ...dtn, fontWeight:800, color:C.primaryLight }}>{fmt(clinic.totalRevenueYTD)}</td>
+                <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(clinic.ytdBudget)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Specialty Drill-Down Modal ─────────────────────────────────────────────
+
+function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
+  const { useEffect } = React;
+  const modalMobile = window.innerWidth < 768;
+  useEffect(() => { const h = (e) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h); }, [onClose]);
+  if (!data) return null;
+  const { spec, doctors } = data;
+  const mtdVarLY = spec.mtdLY ? (spec.mtdActual - spec.mtdLY) / spec.mtdLY : 0;
+  const ytdVarLY = spec.ytdLY ? (spec.ytdActual - spec.ytdLY) / spec.ytdLY : 0;
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, backdropFilter:"blur(4px)" }} onClick={onClose}>
+      <div className="fade-in" style={{ background:C.pageBg, borderRadius: modalMobile ? 0 : 16, width: modalMobile ? "100%" : "94%", maxWidth: modalMobile ? "100%" : 1100, maxHeight: modalMobile ? "100vh" : "88vh", height: modalMobile ? "100vh" : "auto", overflow:"auto", boxShadow:"0 25px 60px rgba(0,0,0,0.4)", border: modalMobile ? "none" : "1px solid " + C.border }} onClick={(e) => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ padding: modalMobile ? "16px" : "20px 28px", background:"linear-gradient(135deg, " + C.primaryDark + ", " + C.primary + ")", borderRadius: modalMobile ? 0 : "16px 16px 0 0", color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", opacity:0.7 }}>Specialty</div>
+            <h2 style={{ margin:"4px 0 0", fontSize: modalMobile ? 18 : 22, fontWeight:800 }}>{spec.name}</h2>
+          </div>
+          <button onClick={onClose} style={{ width: modalMobile ? 40 : 36, height: modalMobile ? 40 : 36, borderRadius:10, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", fontSize: modalMobile ? 20 : 18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>{"\u2715"}</button>
+        </div>
+
+        {/* Mini KPIs */}
+        <div style={{ display:"grid", gridTemplateColumns: modalMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: modalMobile ? 8 : 12, padding: modalMobile ? "12px 16px" : "16px 28px" }}>
+          <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"12px 16px" }}>
+            <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase" }}>Today</div>
+            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>AED {fmt(spec.today)}</div>
+          </div>
+          <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"12px 16px" }}>
+            <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase" }}>MTD Revenue</div>
+            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>AED {fmt(spec.mtdActual)}</div>
+            <span style={{ fontSize:10, fontWeight:600, color:varColor(mtdVarLY), background:varBg(mtdVarLY), padding:"1px 6px", borderRadius:4, marginTop:4, display:"inline-block" }}>vs LY {pct(mtdVarLY)}</span>
+          </div>
+          <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"12px 16px" }}>
+            <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase" }}>YTD Revenue</div>
+            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>AED {fmt(spec.ytdActual)}</div>
+            <span style={{ fontSize:10, fontWeight:600, color:varColor(ytdVarLY), background:varBg(ytdVarLY), padding:"1px 6px", borderRadius:4, marginTop:4, display:"inline-block" }}>vs LY {pct(ytdVarLY)}</span>
+          </div>
+          <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"12px 16px" }}>
+            <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase" }}>Doctors</div>
+            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>{doctors.length}</div>
+          </div>
+        </div>
+
+        {/* Doctor Table */}
+        <div style={{ padding: modalMobile ? "0 12px 16px" : "0 28px 24px", overflowX:"auto" }}>
+          <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap", borderCollapse:"collapse" }}>
+            <thead>
+              <tr style={{ background:C.sidebarBg }}>
+                <th style={dth}>#</th>
+                <th style={dth}>Doctor</th>
+                <th style={dth}>Location(s)</th>
+                <th style={{ ...dth, textAlign:"right" }}>Today</th>
+                <th style={{ ...dth, textAlign:"right" }}>MTD Actual</th>
+                <th style={{ ...dth, textAlign:"right" }}>MTD LY</th>
+                <th style={{ ...dth, textAlign:"right" }}>vs LY</th>
+                <th style={{ ...dth, textAlign:"right" }}>YTD Actual</th>
+                <th style={{ ...dth, textAlign:"right" }}>YTD LY</th>
+                <th style={{ ...dth, textAlign:"right" }}>vs LY</th>
+              </tr>
+            </thead>
+            <tbody>
+              {doctors.map((d, i) => {
+                const dMtdVarLY = d.mtdLY ? (d.mtdActual - d.mtdLY) / d.mtdLY : 0;
+                const dYtdVarLY = d.ytdLY ? (d.ytdActual - d.ytdLY) / d.ytdLY : 0;
+                const locs = d.locations || (doctorLocations && doctorLocations[d.name]) || "";
+                const locsStr = typeof locs === "string" ? locs : Array.from(locs).sort().join(", ");
+                const shortLocs = locsStr.split(", ").length > 3 ? locsStr.split(", ").slice(0,3).join(", ") + " +" + (locsStr.split(", ").length - 3) : locsStr;
+                return (
+                  <tr key={d.name + i} style={{ background: i % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid " + C.border }}>
+                    <td style={dtd}>{i + 1}</td>
+                    <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td>
+                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis" }} title={locsStr}>{shortLocs || "\u2014"}</td>
+                    <td style={dtn}>{fmt(d.today)}</td>
+                    <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.mtdActual)}</td>
+                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
+                    <td style={{ ...dtn, color:varColor(dMtdVarLY), fontWeight:600 }}>{pct(dMtdVarLY)}</td>
+                    <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.ytdActual)}</td>
+                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
+                    <td style={{ ...dtn, color:varColor(dYtdVarLY), fontWeight:600 }}>{pct(dYtdVarLY)}</td>
+                  </tr>
+                );
+              })}
+              {!doctors.length && <tr><td colSpan={10} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload Excel data to see all doctors in this specialty.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
@@ -239,8 +1186,34 @@ function App() {
   const [specialties, setSpecialties] = useState(DEFAULT_SPECIALTIES);
   const [doctors, setDoctors] = useState(DEFAULT_DOCTORS);
   const [reportDate, setReportDate] = useState(DEFAULT_REPORT_DATE);
+  const [locations, setLocations] = useState(DEFAULT_LOCATIONS);
+  const [selectedClinic, setSelectedClinic] = useState(null);
+  const [dsrTotals, setDsrTotals] = useState(DEFAULT_DSR_TOTALS);
+  const [ipSpecialties, setIpSpecialties] = useState(DEFAULT_IP_SPECIALTIES);
+  const [ipDoctors, setIpDoctors] = useState(DEFAULT_IP_DOCTORS);
+  const [dailyRevenue, setDailyRevenue] = useState(DEFAULT_DAILY_REVENUE);
+  const [selectedSpecialty, setSelectedSpecialty] = useState(null);
+  const [doctorLocations, setDoctorLocations] = useState(DEFAULT_DOCTOR_LOCATIONS);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeSection, setActiveSection] = useState("overview");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  React.useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
-  const handleFileLoaded = useCallback(({ specialties: specs, doctors: docs, reportDate: rd }) => {
+  const scrollToSection = useCallback((id) => {
+    setActiveSection(id);
+    const el = document.getElementById(id);
+    if (el) {
+      const offset = window.innerWidth < 768 ? 64 : 0;
+      const top = el.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top, behavior: "smooth" });
+    }
+  }, []);
+
+  const handleFileLoaded = useCallback(({ specialties: specs, doctors: docs, reportDate: rd, locations: locs, dsrTotals: dst, ipSpecialties: ipSpecs, ipDoctors: ipDocs, dailyRevenue: dr, doctorLocations: dlocs }) => {
     setSpecialties(specs.map((s) => ({ ...s,
       mtdVarBudget: s.mtdVarBudget || (s.mtdBudget ? (s.mtdActual-s.mtdBudget)/s.mtdBudget : 0),
       mtdVarLY: s.mtdVarLY || (s.mtdLY ? (s.mtdActual-s.mtdLY)/s.mtdLY : 0),
@@ -248,10 +1221,47 @@ function App() {
       ytdVarLY: s.ytdLY ? (s.ytdActual-s.ytdLY)/s.ytdLY : 0,
     })));
     if (docs?.length) setDoctors(docs);
+    if (locs?.length) setLocations(locs);
+    if (dst) setDsrTotals(dst);
+    if (ipSpecs) setIpSpecialties(ipSpecs);
+    if (ipDocs) setIpDoctors(ipDocs);
+    if (dr && dr.length) setDailyRevenue(dr);
+    if (dlocs && Object.keys(dlocs).length) setDoctorLocations(dlocs);
     setReportDate(rd);
   }, []);
 
   const totals = useMemo(() => {
+    const tr = dsrTotals.todayRev;
+    const mA = dsrTotals.mtdActual;
+    const mB = dsrTotals.mtdBudget;
+    const mL = dsrTotals.mtdLY;
+    const yA = dsrTotals.ytdActual;
+    const yB = dsrTotals.ytdBudget;
+    const yL = dsrTotals.ytdLY;
+    return {
+      todayRev: tr, mtdActual: mA, mtdBudget: mB, mtdLY: mL,
+      mtdVarBudget: mB ? (mA - mB) / mB : 0,
+      mtdVarLY: mL ? (mA - mL) / mL : 0,
+      ytdActual: yA, ytdBudget: yB, ytdLY: yL,
+      ytdVarBudget: yB ? (yA - yB) / yB : 0,
+      ytdVarLY: yL ? (yA - yL) / yL : 0,
+    };
+  }, [dsrTotals]);
+
+  const scaledDailyRevenue = useMemo(() => {
+    if (!dailyRevenue.length) return [];
+    const opMtd = specialties.reduce((a, s) => a + s.mtdActual, 0) || 1;
+    const dsrMtd = dsrTotals.mtdActual || opMtd;
+    const ratio = dsrMtd / opMtd;
+    const scaled = dailyRevenue.map(d => ({ ...d, total: Math.round(d.total * ratio) }));
+    // Use exact DSR "Today" value for the last day
+    if (scaled.length > 0 && dsrTotals.todayRev > 0) {
+      scaled[scaled.length - 1] = { ...scaled[scaled.length - 1], total: dsrTotals.todayRev };
+    }
+    return scaled;
+  }, [dailyRevenue, specialties, dsrTotals]);
+
+  const specTotals = useMemo(() => {
     const sum = (k) => specialties.reduce((a,s) => a + (s[k]||0), 0);
     const [tr,mA,mB,mL,yA,yB,yL] = ["today","mtdActual","mtdBudget","mtdLY","ytdActual","ytdBudget","ytdLY"].map(sum);
     return { todayRev:tr, mtdActual:mA, mtdBudget:mB, mtdLY:mL, mtdVarBudget:mB?(mA-mB)/mB:0, mtdVarLY:mL?(mA-mL)/mL:0, ytdActual:yA, ytdBudget:yB, ytdLY:yL, ytdVarBudget:yB?(yA-yB)/yB:0, ytdVarLY:yL?(yA-yL)/yL:0 };
@@ -260,140 +1270,284 @@ function App() {
   const sorted = useMemo(() => [...specialties].sort((a,b) => (b.ytdActual||0)-(a.ytdActual||0)), [specialties]);
 
   const insights = useMemo(() => {
-    const above = specialties.filter(s => s.mtdVarBudget >= 0).length;
+    const above = specialties.filter(s => s.mtdVarLY >= 0).length;
     return { above, below: specialties.length - above, growingYoY: specialties.filter(s => s.ytdVarLY > 0).length, total: specialties.length };
   }, [specialties]);
 
-  const barChartData = useMemo(() => sorted.slice(0,10).map(s => ({ name: s.name.length > 14 ? s.name.slice(0,13)+"\u2026" : s.name, "This Year": s.mtdActual, Budget: s.mtdBudget, "Last Year": s.mtdLY })), [sorted]);
-  const varianceData = useMemo(() => sorted.slice(0,10).map(s => ({ name: s.name.length > 12 ? s.name.slice(0,11)+"\u2026" : s.name, variance: s.mtdActual - s.mtdBudget, fill: s.mtdVarBudget >= 0 ? C.success : C.danger })), [sorted]);
+  const clinicChartData = useMemo(() =>
+    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD).map(l => ({
+      name: CLINIC_COORDS[l.location]?.label || l.location,
+      revenue: l.totalRevenueMTD,
+    })), [locations]);
+
+  const barChartData = useMemo(() => sorted.slice(0,10).map(s => ({ name: s.name.length > 14 ? s.name.slice(0,13)+"\u2026" : s.name, "Last Year": s.mtdLY, "This Year": s.mtdActual })), [sorted]);
+  const varianceData = useMemo(() => sorted.map(s => ({ name: s.name.length > 12 ? s.name.slice(0,11)+"\u2026" : s.name, variance: s.mtdActual - s.mtdLY, fill: s.mtdVarLY >= 0 ? C.success : C.danger })), [sorted]);
   const pieData = useMemo(() => { const tot = sorted.reduce((a,s) => a+s.ytdActual, 0); return sorted.map((s,i) => ({ name:s.name, value:s.ytdActual, pctShare: tot ? s.ytdActual/tot : 0, fill: PALETTE[i%PALETTE.length] })); }, [sorted]);
 
+  const ipTotals = useMemo(() => {
+    const mtdA = ipSpecialties.reduce((a,s) => a + s.mtdActual, 0);
+    const mtdL = ipSpecialties.reduce((a,s) => a + s.mtdLY, 0);
+    const mtdB = ipSpecialties.reduce((a,s) => a + s.mtdBudget, 0);
+    const vol = ipSpecialties.reduce((a,s) => a + s.mtdVolume, 0);
+    const volLY = ipSpecialties.reduce((a,s) => a + (s.mtdVolLY||0), 0);
+    const ytdA = ipSpecialties.reduce((a,s) => a + (s.ytdActual||0), 0);
+    const ytdL = ipSpecialties.reduce((a,s) => a + (s.ytdLY||0), 0);
+    return { mtdActual: mtdA, mtdLY: mtdL, mtdBudget: mtdB, volume: vol, volumeLY: volLY, mtdVarLY: mtdL ? (mtdA-mtdL)/mtdL : 0, ytdActual: ytdA, ytdLY: ytdL, ytdVarLY: ytdL ? (ytdA-ytdL)/ytdL : 0 };
+  }, [ipSpecialties]);
+
+  // OP+Pharmacy PPC = (DSR total - IP revenue) / OP visit count
+  const opPharmaPPC = useMemo(() => {
+    const opPharmaRev = dsrTotals.mtdActual - ipTotals.mtdActual;
+    const opPharmaRevLY = dsrTotals.mtdLY - ipTotals.mtdLY;
+    const ppc = dsrTotals.opMtdVolume ? Math.round(opPharmaRev / dsrTotals.opMtdVolume) : 0;
+    const ppcLY = dsrTotals.opMtdLYVolume ? Math.round(opPharmaRevLY / dsrTotals.opMtdLYVolume) : 0;
+    return { ppc, ppcLY };
+  }, [dsrTotals, ipTotals]);
+
+  const underperformingSpecs = useMemo(() => {
+    return specialties
+      .filter(s => s.ytdVarLY < 0)
+      .sort((a, b) => a.ytdVarLY - b.ytdVarLY)
+      .map(spec => ({
+        ...spec,
+        doctors: doctors.filter(d => d.specialty === spec.name).sort((a, b) => (a.ytdVarLY || 0) - (b.ytdVarLY || 0))
+      }));
+  }, [specialties, doctors]);
+
+  const specialtyDrillData = useMemo(() => {
+    if (!selectedSpecialty) return null;
+    const spec = specialties.find(s => s.name === selectedSpecialty);
+
+    // Find doctors from OP doctors list
+    let specDoctors = doctors.filter(d => d.specialty === selectedSpecialty);
+
+    // Also check IP doctors if no OP doctors found (or if this is an IP specialty)
+    const ipSpecDoctors = ipDoctors.filter(d => d.specialty === selectedSpecialty);
+
+    // If we have IP doctors but no OP spec data, create a synthetic spec
+    const ipSpec = ipSpecialties.find(s => s.name === selectedSpecialty);
+
+    if (!spec && ipSpec) {
+      // Pure IP specialty
+      return {
+        spec: { name: selectedSpecialty, today: 0, mtdActual: ipSpec.mtdActual, mtdLY: ipSpec.mtdLY, mtdBudget: ipSpec.mtdBudget, ytdActual: ipSpec.ytdActual || 0, ytdLY: ipSpec.ytdLY || 0, ytdBudget: ipSpec.ytdBudget || 0, mtdVarLY: ipSpec.mtdLY ? (ipSpec.mtdActual - ipSpec.mtdLY) / ipSpec.mtdLY : 0, ytdVarLY: ipSpec.ytdLY ? ((ipSpec.ytdActual||0) - (ipSpec.ytdLY||0)) / ipSpec.ytdLY : 0 },
+        doctors: ipSpecDoctors.map(d => ({ name: d.name, specialty: d.specialty, today: 0, mtdActual: d.mtdRevenue, mtdLY: 0, ytdActual: 0, ytdLY: 0, locations: d.locations || "" })),
+        isIP: true,
+      };
+    }
+
+    if (!spec) return null;
+
+    // Combine OP and IP doctors
+    const allDoctors = [...specDoctors];
+    if (ipSpecDoctors.length > 0) {
+      ipSpecDoctors.forEach(ipd => {
+        if (!allDoctors.find(d => d.name === ipd.name)) {
+          allDoctors.push({ name: ipd.name, specialty: ipd.specialty, today: 0, mtdActual: ipd.mtdRevenue, mtdLY: 0, ytdActual: 0, ytdLY: 0, locations: ipd.locations || "" });
+        }
+      });
+    }
+
+    return { spec, doctors: allDoctors.sort((a, b) => b.mtdActual - a.mtdActual) };
+  }, [selectedSpecialty, specialties, doctors, ipDoctors, ipSpecialties]);
+
+  const commentary = useMemo(() => {
+    const lines = [];
+    const ytdVarLY = totals.ytdLY ? ((totals.ytdActual - totals.ytdLY) / totals.ytdLY * 100).toFixed(1) : 0;
+    const avgPerDay = Math.round(totals.mtdActual / (dsrTotals.daysElapsed || 1));
+
+    if (totals.ytdVarLY < 0) lines.push("YTD revenue of AED " + fmtK(totals.ytdActual) + " is " + ytdVarLY + "% below last year (AED " + fmtK(totals.ytdLY) + "), indicating a need for focused recovery strategies.");
+    else lines.push("YTD revenue of AED " + fmtK(totals.ytdActual) + " is +" + ytdVarLY + "% above last year.");
+
+    lines.push("MTD revenue stands at AED " + fmt(totals.mtdActual) + ", averaging AED " + fmt(avgPerDay) + " per day across " + (dsrTotals.daysElapsed || 1) + " operating days.");
+
+    const underCount = specialties.filter(s => s.ytdVarLY < 0).length;
+    if (underCount > 0) {
+      const worst = [...specialties].filter(s => s.ytdVarLY < 0 && s.ytdLY > 0).sort((a,b) => a.ytdVarLY - b.ytdVarLY).slice(0,3).map(s => s.name);
+      lines.push(underCount + " of " + specialties.length + " specialties are underperforming vs last year at YTD level. Key areas of concern: " + worst.join(', ') + ".");
+    }
+
+    const topLoc = [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD)[0];
+    if (topLoc) lines.push("Top performing location: " + (CLINIC_COORDS[topLoc.location]?.label || topLoc.location) + " with AED " + fmt(topLoc.totalRevenueMTD) + " MTD revenue.");
+
+    if (ipTotals.mtdActual > 0) {
+      const ipVar = ipTotals.mtdVarLY;
+      lines.push("Inpatient revenue: AED " + fmt(ipTotals.mtdActual) + " MTD (" + (ipVar >= 0 ? '+' : '') + (ipVar*100).toFixed(1) + "% vs LY) with " + ipTotals.volume + " cases.");
+    }
+
+    return lines;
+  }, [totals, dsrTotals, specialties, locations, ipTotals]);
+
   const topPerformers = useMemo(() => [...doctors].sort((a,b)=>(b.ytdActual||0)-(a.ytdActual||0)).slice(0,10), [doctors]);
-  const needsAttention = useMemo(() => doctors.filter(d=>d.mtdBudget>5000&&d.mtdVarBudget<-0.3).sort((a,b)=>a.mtdVarBudget-b.mtdVarBudget).slice(0,10), [doctors]);
-  const bottomPerformers = useMemo(() => doctors.filter(d=>d.ytdBudget>50000).sort((a,b)=>a.ytdVarBudget-b.ytdVarBudget).slice(0,10), [doctors]);
+  const needsAttention = useMemo(() => doctors.filter(d=>d.mtdLY>5000&&d.mtdVarLY<-0.2).sort((a,b)=>a.mtdVarLY-b.mtdVarLY).slice(0,10), [doctors]);
+  const bottomPerformers = useMemo(() => doctors.filter(d=>d.ytdLY>50000).sort((a,b)=>a.ytdVarLY-b.ytdVarLY).slice(0,10), [doctors]);
 
   return (
-    <div style={{ background:"#f0f4f8", minHeight:"100vh" }}>
+    <div style={{ display:"flex", minHeight:"100vh", background:C.pageBg }}>
+      <Sidebar activeSection={activeSection} onNavigate={scrollToSection} reportDate={reportDate} onFileLoaded={handleFileLoaded} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} />
 
-      {/* HEADER */}
-      <div style={{ background:`linear-gradient(135deg, ${C.primaryDark} 0%, ${C.primary} 50%, ${C.accent} 100%)`, padding:"28px 40px 24px", boxShadow:"0 4px 20px rgba(3,105,161,0.25)" }}>
-        <div style={{ maxWidth:1440, margin:"0 auto", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-            <div style={{ width:48, height:48, borderRadius:12, background:"rgba(255,255,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            </div>
-            <div>
-              <div style={{ fontSize:11, fontWeight:600, color:"rgba(186,230,253,0.8)", textTransform:"uppercase", letterSpacing:"0.1em" }}>Al-Futtaim Health</div>
-              <h1 style={{ margin:0, fontSize:26, fontWeight:800, color:"#fff", letterSpacing:"-0.03em" }}>Executive Revenue Summary</h1>
-            </div>
+      <main style={{ flex:1, marginLeft: isMobile ? 0 : (sidebarOpen ? 220 : 64), transition:"margin-left 0.3s", padding: isMobile ? "72px 16px 16px" : "24px 32px", maxWidth:1400 }}>
+
+        {/* HEADER */}
+        <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", justifyContent:"space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom:24, gap: isMobile ? 12 : 0 }}>
+          <div>
+            <h1 style={{ fontSize: isMobile ? 18 : 22, fontWeight:700, color:C.text, margin:0 }}>Executive Revenue Summary</h1>
+            <p style={{ fontSize: isMobile ? 12 : 13, color:C.textMuted, margin:"4px 0 0" }}>Al-Futtaim Health — Daily Sales Report</p>
           </div>
-          <div style={{ display:"flex", gap:12 }}>
-            <div style={{ background:"rgba(255,255,255,0.12)", borderRadius:10, padding:"10px 20px" }}>
-              <div style={{ fontSize:10, color:"rgba(186,230,253,0.7)", textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:600 }}>Report Date</div>
-              <div style={{ fontSize:16, fontWeight:700, color:"#fff", marginTop:2 }}>{reportDate}</div>
-            </div>
-            <div style={{ background:"rgba(255,255,255,0.12)", borderRadius:10, padding:"10px 20px" }}>
-              <div style={{ fontSize:10, color:"rgba(186,230,253,0.7)", textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:600 }}>Specialties</div>
-              <div style={{ fontSize:16, fontWeight:700, color:"#fff", marginTop:2 }}>{specialties.length}</div>
-            </div>
+          <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+            {!isMobile && <div style={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:8, padding:"6px 14px" }}>
+              <span style={{ fontSize:11, color:C.textMuted }}>Report Date</span>
+              <span style={{ fontSize:13, fontWeight:600, color:C.text, marginLeft:8 }}>{reportDate}</span>
+            </div>}
+            {isMobile && <UploadZone onFileLoaded={handleFileLoaded} compact />}
           </div>
         </div>
-      </div>
 
-      {/* CONTENT */}
-      <div className="fade-in" style={{ maxWidth:1440, margin:"0 auto", padding:"24px 32px 40px" }}>
-
-        <UploadZone onFileLoaded={handleFileLoaded} />
+        {/* EXECUTIVE SUMMARY */}
+        <div style={{ ...card, padding: isMobile ? "14px 16px" : "20px 28px", marginBottom:20 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <h3 style={{ margin:0, fontSize:15, fontWeight:700, color:C.text }}>Executive Summary</h3>
+          </div>
+          <ul style={{ margin:0, paddingLeft:20, listStyle:"disc" }}>
+            {commentary.map((line, i) => (
+              <li key={i} style={{ fontSize:13, lineHeight:1.8, color:C.textSecondary, marginBottom:4 }}>{line}</li>
+            ))}
+          </ul>
+        </div>
 
         {/* KPI STRIP */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:16, marginTop:24 }}>
+        <div id="overview" style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? 10 : 16 }}>
           <div style={{ ...card, padding:"22px 24px", position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg, ${C.primaryDark}, ${C.accent})` }} />
-            <div style={{ fontSize:11, fontWeight:600, color:C.slate, textTransform:"uppercase", letterSpacing:"0.06em" }}>Today's Revenue</div>
-            <div style={{ fontSize:30, fontWeight:800, color:C.primaryDark, marginTop:8, letterSpacing:"-0.03em" }}>AED {fmt(totals.todayRev)}</div>
-            <div style={{ fontSize:11, color:C.slateLight, marginTop:4 }}>{reportDate}</div>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, ${C.primaryDark}, ${C.accent})` }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Today's Revenue</div>
+            <div style={{ fontSize: isMobile ? 20 : 30, fontWeight:800, color:C.text, marginTop:8, letterSpacing:"-0.03em" }}>AED {fmt(totals.todayRev)}</div>
+            <div style={{ fontSize:11, color:C.textMuted, marginTop:4 }}>{reportDate}</div>
           </div>
           <div style={{ ...card, padding:"22px 24px", position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg, ${C.accent}, ${C.primaryLight})` }} />
-            <div style={{ fontSize:11, fontWeight:600, color:C.slate, textTransform:"uppercase", letterSpacing:"0.06em" }}>MTD Revenue</div>
-            <div style={{ fontSize:26, fontWeight:800, color:C.primaryDark, marginTop:8 }}>AED {fmt(totals.mtdActual)}</div>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, ${C.accent}, ${C.primaryLight})` }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>MTD Revenue</div>
+            <div style={{ fontSize: isMobile ? 18 : 26, fontWeight:800, color:C.text, marginTop:8 }}>AED {fmt(totals.mtdActual)}</div>
             <div style={{ display:"flex", gap:8, marginTop:8 }}>
-              <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.mtdVarBudget), background:varBg(totals.mtdVarBudget), padding:"2px 8px", borderRadius:6 }}>vs Budget {pct(totals.mtdVarBudget)}</span>
               <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.mtdVarLY), background:varBg(totals.mtdVarLY), padding:"2px 8px", borderRadius:6 }}>vs LY {pct(totals.mtdVarLY)}</span>
+              <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.mtdVarBudget), background:varBg(totals.mtdVarBudget), padding:"2px 8px", borderRadius:6 }}>vs Budget {pct(totals.mtdVarBudget)}</span>
             </div>
           </div>
           <div style={{ ...card, padding:"22px 24px", position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg, ${C.success}, ${C.successLight})` }} />
-            <div style={{ fontSize:11, fontWeight:600, color:C.slate, textTransform:"uppercase", letterSpacing:"0.06em" }}>YTD Revenue</div>
-            <div style={{ fontSize:26, fontWeight:800, color:C.primaryDark, marginTop:8 }}>AED {fmt(totals.ytdActual)}</div>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, ${C.success}, ${C.successLight})` }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>YTD Revenue</div>
+            <div style={{ fontSize: isMobile ? 18 : 26, fontWeight:800, color:C.text, marginTop:8 }}>AED {fmt(totals.ytdActual)}</div>
             <div style={{ display:"flex", gap:8, marginTop:8 }}>
-              <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.ytdVarBudget), background:varBg(totals.ytdVarBudget), padding:"2px 8px", borderRadius:6 }}>vs Budget {pct(totals.ytdVarBudget)}</span>
               <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.ytdVarLY), background:varBg(totals.ytdVarLY), padding:"2px 8px", borderRadius:6 }}>vs LY {pct(totals.ytdVarLY)}</span>
+              <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.ytdVarBudget), background:varBg(totals.ytdVarBudget), padding:"2px 8px", borderRadius:6 }}>vs Budget {pct(totals.ytdVarBudget)}</span>
             </div>
           </div>
           <div style={{ ...card, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-around", position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg, ${C.warning}, ${C.warningLight})` }} />
-            <BudgetGauge label="MTD" actual={totals.mtdActual} budget={totals.mtdBudget} size={100} />
-            <BudgetGauge label="YTD" actual={totals.ytdActual} budget={totals.ytdBudget} size={100} />
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, ${C.warning}, ${C.warningLight})` }} />
+            <BudgetGauge label="MTD YoY" actual={totals.mtdActual} comparison={totals.mtdLY} size={100} />
+            <BudgetGauge label="YTD YoY" actual={totals.ytdActual} comparison={totals.ytdLY} size={100} />
+          </div>
+          <div style={{ ...card, padding:"22px 24px", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #8b5cf6, #a855f7)" }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Avg Revenue/Day</div>
+            <div style={{ fontSize: isMobile ? 18 : 26, fontWeight:800, color:C.text, marginTop:8 }}>AED {fmt(Math.round(totals.mtdActual / (dsrTotals.daysElapsed || 1)))}</div>
+            <div style={{ fontSize:11, color:C.textMuted, marginTop:4 }}>{dsrTotals.daysElapsed || 1} days</div>
+          </div>
+        </div>
+
+        {/* PPC STRIP */}
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 10 : 16, marginTop:16 }}>
+          <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #8b5cf6, #a855f7)" }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Avg Revenue per OP Visit (MTD)</div>
+            <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
+              <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>AED {fmt(opPharmaPPC.ppc)}</div>
+              <div style={{ fontSize:12, color:C.textMuted }}>vs LY: AED {fmt(opPharmaPPC.ppcLY)}</div>
+            </div>
+            <div style={{ display:"flex", gap:8, marginTop:6 }}>
+              <span style={{ fontSize:11, fontWeight:600, color:varColor(opPharmaPPC.ppcLY ? (opPharmaPPC.ppc - opPharmaPPC.ppcLY) / opPharmaPPC.ppcLY : 0), background:varBg(opPharmaPPC.ppcLY ? (opPharmaPPC.ppc - opPharmaPPC.ppcLY) / opPharmaPPC.ppcLY : 0), padding:"2px 8px", borderRadius:6 }}>{pct(opPharmaPPC.ppcLY ? (opPharmaPPC.ppc - opPharmaPPC.ppcLY) / opPharmaPPC.ppcLY : 0)} vs LY</span>
+              <span style={{ fontSize:11, color:C.textMuted }}>{fmt(dsrTotals.opMtdVolume)} visits</span>
+            </div>
+          </div>
+          <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #ec4899, #f472b6)" }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Avg Revenue per IP Case (MTD)</div>
+            <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
+              <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>AED {fmt(ipTotals.mtdActual && ipTotals.volume ? Math.round(ipTotals.mtdActual / ipTotals.volume) : 0)}</div>
+              <div style={{ fontSize:12, color:C.textMuted }}>vs LY: AED {fmt(ipTotals.mtdLY && ipTotals.volumeLY ? Math.round(ipTotals.mtdLY / ipTotals.volumeLY) : 0)}</div>
+            </div>
+            <div style={{ display:"flex", gap:8, marginTop:6 }}>
+              {(() => { const curr = ipTotals.volume ? ipTotals.mtdActual / ipTotals.volume : 0; const ly = ipTotals.volumeLY ? ipTotals.mtdLY / ipTotals.volumeLY : 0; const v = ly ? (curr - ly) / ly : 0; return <span style={{ fontSize:11, fontWeight:600, color:varColor(v), background:varBg(v), padding:"2px 8px", borderRadius:6 }}>{pct(v)} vs LY</span>; })()}
+              <span style={{ fontSize:11, color:C.textMuted }}>{ipTotals.volume} cases (LY: {ipTotals.volumeLY || 0})</span>
+            </div>
+          </div>
+          <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #f59e0b, #fbbf24)" }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>OP Visits MTD</div>
+            <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
+              <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>{fmt(dsrTotals.opMtdVolume)}</div>
+              <div style={{ fontSize:12, color:C.textMuted }}>vs LY: {fmt(dsrTotals.opMtdLYVolume)}</div>
+            </div>
+            <div style={{ marginTop:6 }}>
+              <span style={{ fontSize:11, fontWeight:600, color:varColor(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), background:varBg(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), padding:"2px 8px", borderRadius:6 }}>{pct(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0)} vs LY</span>
+            </div>
           </div>
         </div>
 
         {/* INSIGHTS STRIP */}
-        <div style={{ ...card, marginTop:20, padding:"16px 28px", display:"flex", alignItems:"center", gap:32, flexWrap:"wrap" }}>
+        <div style={{ ...card, marginTop:20, padding: isMobile ? "12px 16px" : "16px 28px", display:"flex", alignItems:"center", gap: isMobile ? 16 : 32, flexWrap:"wrap" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:32, height:32, borderRadius:8, background:"#eff6ff", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ width:32, height:32, borderRadius:8, background:"rgba(59,130,246,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             </div>
-            <span style={{ fontSize:13, color:"#1e293b", fontWeight:500 }}>Key Insights</span>
+            <span style={{ fontSize:13, color:C.text, fontWeight:500 }}>Key Insights</span>
           </div>
-          <div style={{ height:24, width:1, background:"#e2e8f0" }} />
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:8, height:8, borderRadius:"50%", background:C.success }} /><span style={{ fontSize:12, color:"#475569" }}><strong style={{ color:C.success }}>{insights.above}</strong> of {insights.total} specialties at or above MTD budget</span></div>
-          <div style={{ height:24, width:1, background:"#e2e8f0" }} />
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:8, height:8, borderRadius:"50%", background:C.danger }} /><span style={{ fontSize:12, color:"#475569" }}><strong style={{ color:C.danger }}>{insights.below}</strong> below MTD budget target</span></div>
-          <div style={{ height:24, width:1, background:"#e2e8f0" }} />
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:8, height:8, borderRadius:"50%", background:C.primary }} /><span style={{ fontSize:12, color:"#475569" }}><strong style={{ color:C.primary }}>{insights.growingYoY}</strong> specialties growing YoY</span></div>
+          <div style={{ height:24, width:1, background:C.border }} />
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:8, height:8, borderRadius:"50%", background:C.success }} /><span style={{ fontSize:12, color:C.textSecondary }}><strong style={{ color:C.success }}>{insights.above}</strong> of {insights.total} specialties above MTD vs LY</span></div>
+          <div style={{ height:24, width:1, background:C.border }} />
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:8, height:8, borderRadius:"50%", background:C.danger }} /><span style={{ fontSize:12, color:C.textSecondary }}><strong style={{ color:C.danger }}>{insights.below}</strong> below MTD vs last year</span></div>
+          <div style={{ height:24, width:1, background:C.border }} />
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:8, height:8, borderRadius:"50%", background:C.primary }} /><span style={{ fontSize:12, color:C.textSecondary }}><strong style={{ color:C.primary }}>{insights.growingYoY}</strong> specialties growing YoY</span></div>
         </div>
 
         {/* CHARTS */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginTop:24 }}>
+        <div id="specialties" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:20, marginTop:24 }}>
           {/* Bar Chart */}
           <div style={{ ...card, padding:28 }}>
-            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:`2px solid ${C.primary}` }}>
-              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:"#1e293b" }}>MTD Performance by Specialty</h2>
-              <p style={{ margin:"4px 0 0", fontSize:12, color:C.slateLight }}>Top 10 — Actual vs Budget vs Last Year (AED)</p>
+            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.primary }}>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>MTD Performance by Specialty</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Top 10 — This Year vs Last Year (AED)</p>
             </div>
-            <ResponsiveContainer width="100%" height={340}>
+            <ResponsiveContainer width="100%" height={isMobile ? 250 : 340}>
               <BarChart data={barChartData} margin={{ top:10, right:10, left:0, bottom:60 }} barGap={2} barCategoryGap="20%">
                 <defs>
                   <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.primary} /><stop offset="100%" stopColor={C.accent} stopOpacity={0.85}/></linearGradient>
-                  <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e2e8f0" /><stop offset="100%" stopColor="#cbd5e1" stopOpacity={0.7}/></linearGradient>
-                  <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a5b4fc" stopOpacity={0.9}/><stop offset="100%" stopColor="#818cf8" stopOpacity={0.6}/></linearGradient>
+                  <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9}/><stop offset="100%" stopColor="#6366f1" stopOpacity={0.6}/></linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize:10, fill:"#64748b" }} angle={-40} textAnchor="end" interval={0} height={75} axisLine={{ stroke:"#e2e8f0" }} tickLine={false} />
-                <YAxis tick={{ fontSize:10, fill:"#94a3b8" }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.08)" }} />
-                <Legend wrapperStyle={{ fontSize:11, paddingTop:8 }} iconType="circle" iconSize={8} />
-                <Bar dataKey="This Year" fill="url(#gA)" radius={[5,5,0,0]} maxBarSize={32} />
-                <Bar dataKey="Budget" fill="url(#gB)" radius={[5,5,0,0]} maxBarSize={32} />
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize:10, fill:C.textMuted }} angle={-40} textAnchor="end" interval={0} height={75} axisLine={{ stroke:C.border }} tickLine={false} />
+                <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.05)" }} />
+                <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
                 <Bar dataKey="Last Year" fill="url(#gL)" radius={[5,5,0,0]} maxBarSize={32} />
+                <Bar dataKey="This Year" fill="url(#gA)" radius={[5,5,0,0]} maxBarSize={32} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Variance Waterfall */}
           <div style={{ ...card, padding:28 }}>
-            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:`2px solid ${C.success}` }}>
-              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:"#1e293b" }}>MTD Variance vs Budget</h2>
-              <p style={{ margin:"4px 0 0", fontSize:12, color:C.slateLight }}>Green = over budget, Red = under budget (AED)</p>
+            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.success }}>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>MTD Variance vs Last Year</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Green = above LY, Red = below LY (AED)</p>
             </div>
-            <ResponsiveContainer width="100%" height={340}>
-              <BarChart data={varianceData} margin={{ top:10, right:10, left:0, bottom:60 }} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize:10, fill:"#94a3b8" }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:"#475569" }} width={100} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.06)" }} />
-                <Bar dataKey="variance" radius={[0,4,4,0]} maxBarSize={22} name="Variance (AED)">
+            <ResponsiveContainer width="100%" height={isMobile ? 400 : 500}>
+              <BarChart data={varianceData} margin={{ top:10, right:10, left:0, bottom:10 }} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:C.textSecondary }} width={100} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.04)" }} />
+                <Bar dataKey="variance" radius={[0,4,4,0]} maxBarSize={16} name="Variance (AED)">
                   {varianceData.map((e,i) => <Cell key={i} fill={e.fill} fillOpacity={0.85} />)}
                 </Bar>
               </BarChart>
@@ -401,82 +1555,130 @@ function App() {
           </div>
         </div>
 
+        {/* DAILY REVENUE TREND */}
+        <div style={{ ...card, padding:28, marginTop:20 }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid " + C.accent }}>
+            <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Daily Revenue Trend</h2>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Total estimated revenue per day — {scaledDailyRevenue.length} days</p>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={scaledDailyRevenue} margin={{ top:10, right:30, left:0, bottom:5 }}>
+              <defs>
+                <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={C.primary} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={C.primary} stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize:11, fill:C.textSecondary }} axisLine={{ stroke:C.border }} tickLine={false} />
+              <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke:C.primary, strokeDasharray:"4 4" }} />
+              <Area type="monotone" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue" dot={{ r:5, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:7, fill:C.primary, stroke:"#fff", strokeWidth:2 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
         {/* PIE CHART */}
         <div style={{ ...card, padding:28, marginTop:20 }}>
-          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:`2px solid ${C.accent}` }}>
-            <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:"#1e293b" }}>YTD Revenue Composition</h2>
-            <p style={{ margin:"4px 0 0", fontSize:12, color:C.slateLight }}>Share of total revenue by specialty</p>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.accent }}>
+            <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>YTD Revenue Composition</h2>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Share of total revenue by specialty</p>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:40 }}>
-            <ResponsiveContainer width="50%" height={300}>
+          <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", alignItems:"center", gap: isMobile ? 20 : 40 }}>
+            <ResponsiveContainer width={isMobile ? "100%" : "50%"} height={isMobile ? 250 : 300}>
               <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={120} paddingAngle={2} dataKey="value" stroke="none">
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={isMobile ? 50 : 70} outerRadius={isMobile ? 90 : 120} paddingAngle={2} dataKey="value" stroke="none">
                   {pieData.map((e,i) => <Cell key={i} fill={e.fill} />)}
                 </Pie>
                 <Tooltip content={<PieTooltip />} />
               </PieChart>
             </ResponsiveContainer>
-            <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px 24px" }}>
+            <div style={{ flex:1, width: isMobile ? "100%" : "auto", display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr", gap:"6px 24px" }}>
               {pieData.map((s) => (
-                <div key={s.name} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0" }}>
+                <div key={s.name} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0", cursor:"pointer" }} onClick={() => setSelectedSpecialty(s.name)}>
                   <div style={{ width:10, height:10, borderRadius:3, background:s.fill, flexShrink:0 }} />
-                  <span style={{ fontSize:12, color:"#475569", flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{s.name}</span>
-                  <span style={{ fontSize:11, fontWeight:600, color:"#1e293b", fontVariantNumeric:"tabular-nums" }}>{(s.pctShare*100).toFixed(1)}%</span>
+                  <span style={{ fontSize:12, color:C.textSecondary, flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{s.name}</span>
+                  <span style={{ fontSize:11, fontWeight:600, color:C.text, fontVariantNumeric:"tabular-nums" }}>{(s.pctShare*100).toFixed(1)}%</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
+        {/* CLINIC MAP */}
+        <div id="map">
+          <DubaiMap locations={locations} onClinicClick={setSelectedClinic} isMobile={isMobile} />
+        </div>
+
+        {/* CLINIC REVENUE COMPARISON */}
+        <div id="clinics-chart" style={{ ...card, padding:28, marginTop:20 }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid " + C.accent }}>
+            <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Clinic Revenue Comparison</h2>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>All locations — MTD Revenue (AED)</p>
+          </div>
+          <ResponsiveContainer width="100%" height={Math.max(400, locations.length * 32)}>
+            <BarChart data={clinicChartData} layout="vertical" margin={{ top:5, right:30, left:10, bottom:5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+              <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:C.textSecondary }} width={130} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(59,130,246,0.06)" }} />
+              <Bar dataKey="revenue" fill={C.accent} radius={[0,4,4,0]} maxBarSize={20} name="MTD Revenue" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
         {/* SPECIALTY TABLE */}
         <div style={{ ...card, marginTop:24, overflow:"hidden" }}>
-          <div style={{ padding:"18px 28px", borderBottom:"1px solid #e2e8f0" }}>
-            <h3 style={{ margin:0, fontSize:16, fontWeight:700, color:"#1e293b" }}>Specialty Breakdown</h3>
-            <p style={{ margin:"4px 0 0", fontSize:12, color:C.slateLight }}>Sorted by YTD Actual descending — red rows have negative YoY variance</p>
+          <div style={{ padding:"18px 28px", borderBottom:"1px solid "+C.border }}>
+            <h3 style={{ margin:0, fontSize:16, fontWeight:700, color:C.text }}>Specialty Breakdown</h3>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Sorted by YTD Actual descending — highlighted rows have negative YoY variance</p>
           </div>
           <div style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", fontSize:13, whiteSpace:"nowrap" }}>
               <thead>
-                <tr style={{ background:"#f8fafc" }}>
+                <tr style={{ background:"#1e293b" }}>
                   <th style={thS} rowSpan={2}>Specialty</th><th style={thS} rowSpan={2}>Today</th>
-                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid #e2e8f0" }} colSpan={5}>Month-to-Date (MTD)</th>
-                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid #e2e8f0" }} colSpan={5}>Year-to-Date (YTD)</th>
+                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={5}>Month-to-Date (MTD)</th>
+                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={5}>Year-to-Date (YTD)</th>
                 </tr>
-                <tr style={{ background:"#f8fafc" }}>
-                  {["Actual","Budget","LY","vs Bgt","vs LY"].map(h=><th key={"m"+h} style={thSub}>{h}</th>)}
-                  {["Actual","Budget","LY","vs Bgt","vs LY"].map(h=><th key={"y"+h} style={thSub}>{h}</th>)}
+                <tr style={{ background:"#1e293b" }}>
+                  {["Actual","LY","Budget","vs LY","vs Bgt"].map(h=><th key={"m"+h} style={thSub}>{h}</th>)}
+                  {["Actual","LY","Budget","vs LY","vs Bgt"].map(h=><th key={"y"+h} style={thSub}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {sorted.map((s,i) => (
-                  <tr key={s.name} style={{ background: s.ytdVarLY<0 ? "#fef2f2" : i%2===0 ? "#fff" : "#fafbfc", borderBottom:"1px solid #f1f5f9" }}>
-                    <td style={{ ...tdS, fontWeight:600, color:"#1e293b" }}>{s.name}</td>
+                  <tr key={s.name} style={{ background: s.ytdVarLY<0 ? "rgba(239,68,68,0.06)" : i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
+                    <td style={{ ...tdS, fontWeight:600, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(s.name)}>{s.name}</td>
                     <td style={tdN}>{fmt(s.today)}</td>
-                    <td style={tdN}>{fmt(s.mtdActual)}</td><td style={{ ...tdN, color:"#94a3b8" }}>{fmt(s.mtdBudget)}</td><td style={{ ...tdN, color:"#94a3b8" }}>{fmt(s.mtdLY)}</td>
-                    <td style={{ ...tdN, color:varColor(s.mtdVarBudget), fontWeight:600 }}>{pct(s.mtdVarBudget)}</td>
+                    <td style={tdN}>{fmt(s.mtdActual)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.mtdLY)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.mtdBudget)}</td>
                     <td style={{ ...tdN, color:varColor(s.mtdVarLY), fontWeight:600 }}>{pct(s.mtdVarLY)}</td>
-                    <td style={{ ...tdN, fontWeight:600 }}>{fmt(s.ytdActual)}</td><td style={{ ...tdN, color:"#94a3b8" }}>{fmt(s.ytdBudget)}</td><td style={{ ...tdN, color:"#94a3b8" }}>{fmt(s.ytdLY)}</td>
-                    <td style={{ ...tdN, color:varColor(s.ytdVarBudget), fontWeight:600 }}>{pct(s.ytdVarBudget)}</td>
+                    <td style={{ ...tdN, color:varColor(s.mtdVarBudget), fontWeight:600 }}>{pct(s.mtdVarBudget)}</td>
+                    <td style={{ ...tdN, fontWeight:600 }}>{fmt(s.ytdActual)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.ytdLY)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.ytdBudget)}</td>
                     <td style={{ ...tdN, color:varColor(s.ytdVarLY), fontWeight:600 }}>{pct(s.ytdVarLY)}</td>
+                    <td style={{ ...tdN, color:varColor(s.ytdVarBudget), fontWeight:600 }}>{pct(s.ytdVarBudget)}</td>
                   </tr>
                 ))}
-                <tr style={{ background:"#f0f7ff", borderTop:`2px solid ${C.primary}` }}>
-                  <td style={{ ...tdS, fontWeight:800, color:C.primaryDark }}>GRAND TOTAL</td>
-                  <td style={{ ...tdN, fontWeight:800, color:C.primaryDark }}>{fmt(totals.todayRev)}</td>
-                  <td style={{ ...tdN, fontWeight:800, color:C.primaryDark }}>{fmt(totals.mtdActual)}</td><td style={{ ...tdN, fontWeight:700, color:"#94a3b8" }}>{fmt(totals.mtdBudget)}</td><td style={{ ...tdN, fontWeight:700, color:"#94a3b8" }}>{fmt(totals.mtdLY)}</td>
-                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.mtdVarBudget) }}>{pct(totals.mtdVarBudget)}</td>
+                <tr style={{ background:"rgba(59,130,246,0.08)", borderTop:"2px solid "+C.primary }}>
+                  <td style={{ ...tdS, fontWeight:800, color:C.primaryLight }}>GRAND TOTAL</td>
+                  <td style={{ ...tdN, fontWeight:800, color:C.primaryLight }}>{fmt(totals.todayRev)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:C.primaryLight }}>{fmt(totals.mtdActual)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.mtdLY)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.mtdBudget)}</td>
                   <td style={{ ...tdN, fontWeight:800, color:varColor(totals.mtdVarLY) }}>{pct(totals.mtdVarLY)}</td>
-                  <td style={{ ...tdN, fontWeight:800, color:C.primaryDark }}>{fmt(totals.ytdActual)}</td><td style={{ ...tdN, fontWeight:700, color:"#94a3b8" }}>{fmt(totals.ytdBudget)}</td><td style={{ ...tdN, fontWeight:700, color:"#94a3b8" }}>{fmt(totals.ytdLY)}</td>
-                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.ytdVarBudget) }}>{pct(totals.ytdVarBudget)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.mtdVarBudget) }}>{pct(totals.mtdVarBudget)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:C.primaryLight }}>{fmt(totals.ytdActual)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.ytdLY)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.ytdBudget)}</td>
                   <td style={{ ...tdN, fontWeight:800, color:varColor(totals.ytdVarLY) }}>{pct(totals.ytdVarLY)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.ytdVarBudget) }}>{pct(totals.ytdVarBudget)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <div style={{ padding:"8px 28px 12px", fontSize:11, color:C.textMuted, fontStyle:"italic" }}>
+            Specialty rows show OP Doctor Revenue. Grand Total includes all revenue streams (OP, Pharmacy, IP).
+          </div>
         </div>
 
         {/* DOCTOR PANELS */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginTop:24 }}>
+        <div id="doctors" style={{ display:"flex", flexDirection:"column", gap:20, marginTop:24 }}>
           {/* Top Performers */}
           <div style={{ ...card, overflow:"hidden" }}>
             <div style={{ padding:"16px 24px", background:`linear-gradient(135deg, ${C.success}, ${C.successLight})`, display:"flex", alignItems:"center", gap:12 }}>
@@ -486,21 +1688,23 @@ function App() {
               <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Top Performers</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Highest YTD Revenue</div></div>
             </div>
             <table style={{ width:"100%", fontSize:12 }}>
-              <thead><tr style={{ background:"#f0fdf4" }}>
-                <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th>
-                <th style={{ ...dth, textAlign:"right" }}>Today</th><th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>vs Bgt</th><th style={{ ...dth, textAlign:"right" }}>YTD</th>
+              <thead><tr style={{ background:"#1e293b" }}>
+                <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={dth}>Location(s)</th>
+                <th style={{ ...dth, textAlign:"right" }}>Today</th><th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>vs Bgt</th><th style={{ ...dth, textAlign:"right" }}>YTD</th><th style={{ ...dth, textAlign:"right" }}>YoY</th>
               </tr></thead>
               <tbody>
                 {topPerformers.map((d,i) => (
-                  <tr key={d.name+i} style={{ background:i%2===0?"#fff":"#f9fafb", borderBottom:"1px solid #f1f5f9" }}>
-                    <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"#fef3c7":"#f1f5f9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?"#92400e":"#64748b" }}>{i+1}</span></td>
-                    <td style={{ ...dtd, fontWeight:600, color:"#1e293b" }}>{d.name}</td><td style={{ ...dtd, color:"#64748b" }}>{d.specialty}</td>
+                  <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
+                    <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(245,158,11,0.15)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?C.warning:C.textMuted }}>{i+1}</span></td>
+                    <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
+                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
                     <td style={dtn}>{fmt(d.today)}</td><td style={dtn}>{fmt(d.mtdActual)}</td>
                     <td style={{ ...dtn, color:varColor(d.mtdVarBudget), fontWeight:600 }}>{pct(d.mtdVarBudget)}</td>
                     <td style={{ ...dtn, fontWeight:700, color:C.success }}>{fmt(d.ytdActual)}</td>
+                    <td style={{ ...dtn, color:varColor(d.ytdVarLY), fontWeight:600 }}>{pct(d.ytdVarLY)}</td>
                   </tr>
                 ))}
-                {!topPerformers.length && <tr><td colSpan={7} style={{ ...dtd, textAlign:"center", color:C.slateLight, padding:28 }}>Upload data to populate</td></tr>}
+                {!topPerformers.length && <tr><td colSpan={9} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload data to populate</td></tr>}
               </tbody>
             </table>
           </div>
@@ -511,22 +1715,26 @@ function App() {
               <div style={{ width:32, height:32, borderRadius:8, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
-              <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Needs Attention</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>MTD &gt; 30% below budget</div></div>
+              <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Needs Attention</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>MTD &gt; 20% below LY</div></div>
               {needsAttention.length > 0 && <div style={{ marginLeft:"auto", background:"rgba(255,255,255,0.3)", borderRadius:20, padding:"3px 12px", fontSize:12, fontWeight:700, color:"#fff" }}>{needsAttention.length}</div>}
             </div>
             <table style={{ width:"100%", fontSize:12 }}>
-              <thead><tr style={{ background:"#fffbeb" }}>
-                <th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>MTD Actual</th><th style={{ ...dth, textAlign:"right" }}>Budget</th><th style={{ ...dth, textAlign:"right" }}>Variance</th>
+              <thead><tr style={{ background:"#1e293b" }}>
+                <th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={dth}>Location(s)</th>
+                <th style={{ ...dth, textAlign:"right" }}>Today</th><th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th><th style={{ ...dth, textAlign:"right" }}>YTD</th><th style={{ ...dth, textAlign:"right" }}>YoY</th>
               </tr></thead>
               <tbody>
                 {needsAttention.map((d,i) => (
-                  <tr key={d.name+i} style={{ background:i%2===0?"#fff":"#fffbeb", borderBottom:"1px solid #f1f5f9" }}>
-                    <td style={{ ...dtd, fontWeight:600, color:"#1e293b" }}>{d.name}</td><td style={{ ...dtd, color:"#64748b" }}>{d.specialty}</td>
-                    <td style={dtn}>{fmt(d.mtdActual)}</td><td style={{ ...dtn, color:"#94a3b8" }}>{fmt(d.mtdBudget)}</td>
-                    <td style={dtn}><span style={{ color:"#fff", background:C.danger, padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.mtdVarBudget)}</span></td>
+                  <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
+                    <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
+                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
+                    <td style={dtn}>{fmt(d.today)}</td><td style={dtn}>{fmt(d.mtdActual)}</td>
+                    <td style={dtn}><span style={{ color:"#fff", background:varColor(d.mtdVarLY), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.mtdVarLY)}</span></td>
+                    <td style={{ ...dtn, fontWeight:700 }}>{fmt(d.ytdActual)}</td>
+                    <td style={{ ...dtn, color:varColor(d.ytdVarLY), fontWeight:600 }}>{pct(d.ytdVarLY)}</td>
                   </tr>
                 ))}
-                {!needsAttention.length && <tr><td colSpan={5} style={{ ...dtd, textAlign:"center", color:C.slateLight, padding:28 }}>All doctors within budget tolerance</td></tr>}
+                {!needsAttention.length && <tr><td colSpan={8} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>All doctors within LY tolerance</td></tr>}
               </tbody>
             </table>
           </div>
@@ -538,28 +1746,212 @@ function App() {
             <div style={{ width:32, height:32, borderRadius:8, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
             </div>
-            <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Bottom Performers</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Lowest YTD variance vs budget (Budget &gt; AED 50K)</div></div>
+            <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Bottom Performers</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Lowest YTD variance vs last year (LY &gt; AED 50K)</div></div>
           </div>
           <table style={{ width:"100%", fontSize:12 }}>
-            <thead><tr style={{ background:"#fef2f2" }}>
-              <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>YTD Actual</th><th style={{ ...dth, textAlign:"right" }}>YTD Budget</th><th style={{ ...dth, textAlign:"right" }}>Variance</th>
+            <thead><tr style={{ background:"#1e293b" }}>
+              <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={dth}>Location(s)</th><th style={{ ...dth, textAlign:"right" }}>YTD Actual</th><th style={{ ...dth, textAlign:"right" }}>YTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th>
             </tr></thead>
             <tbody>
               {bottomPerformers.map((d,i) => (
-                <tr key={d.name+i} style={{ background:i%2===0?"#fff":"#fef2f2", borderBottom:"1px solid #f1f5f9" }}>
-                  <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:"#fef2f2", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:C.danger }}>{i+1}</span></td>
-                  <td style={{ ...dtd, fontWeight:600, color:"#1e293b" }}>{d.name}</td><td style={{ ...dtd, color:"#64748b" }}>{d.specialty}</td>
-                  <td style={dtn}>{fmt(d.ytdActual)}</td><td style={{ ...dtn, color:"#94a3b8" }}>{fmt(d.ytdBudget)}</td>
-                  <td style={dtn}><span style={{ color:"#fff", background:C.danger, padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.ytdVarBudget)}</span></td>
+                <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
+                  <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:"rgba(239,68,68,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:C.danger }}>{i+1}</span></td>
+                  <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
+                  <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
+                  <td style={dtn}>{fmt(d.ytdActual)}</td><td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
+                  <td style={dtn}><span style={{ color:"#fff", background:varColor(d.ytdVarLY), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.ytdVarLY)}</span></td>
                 </tr>
               ))}
-              {!bottomPerformers.length && <tr><td colSpan={6} style={{ ...dtd, textAlign:"center", color:C.slateLight, padding:28 }}>Upload data to populate</td></tr>}
+              {!bottomPerformers.length && <tr><td colSpan={7} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload data to populate</td></tr>}
             </tbody>
           </table>
         </div>
 
-        <div style={{ textAlign:"center", padding:"28px 0 12px", color:C.slateLight, fontSize:11 }}>Al-Futtaim Health — HealthHub Executive Revenue Summary — All values in AED</div>
-      </div>
+        {/* INPATIENT SECTION */}
+        <div id="inpatient" style={{ marginTop:32 }}>
+          <h2 style={{ fontSize:17, fontWeight:700, color:C.text, marginBottom:16 }}>Inpatient (IP) Revenue</h2>
+
+          {/* IP KPI mini cards */}
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 10 : 12, marginBottom:12 }}>
+            <div style={{ ...card, padding:"14px 18px" }}>
+              <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>MTD Revenue</div>
+              <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:C.primaryLight, marginTop:4 }}>AED {fmt(ipTotals.mtdActual)}</div>
+            </div>
+            <div style={{ ...card, padding:"14px 18px" }}>
+              <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>MTD vs LY</div>
+              <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:varColor(ipTotals.mtdVarLY), marginTop:4 }}>{pct(ipTotals.mtdVarLY)}</div>
+            </div>
+            <div style={{ ...card, padding:"14px 18px" }}>
+              <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Cases</div>
+              <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:C.text, marginTop:4 }}>{ipTotals.volume}</div>
+            </div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 10 : 12, marginBottom:20 }}>
+            <div style={{ ...card, padding:"14px 18px" }}>
+              <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>YTD Revenue</div>
+              <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:C.primaryLight, marginTop:4 }}>AED {fmt(ipTotals.ytdActual)}</div>
+            </div>
+            <div style={{ ...card, padding:"14px 18px" }}>
+              <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>YTD vs LY</div>
+              <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:varColor(ipTotals.ytdVarLY), marginTop:4 }}>{pct(ipTotals.ytdVarLY)}</div>
+            </div>
+            <div style={{ ...card, padding:"14px 18px" }}>
+              <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>vs Budget</div>
+              <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:varColor(ipTotals.mtdBudget ? (ipTotals.mtdActual - ipTotals.mtdBudget)/ipTotals.mtdBudget : 0), marginTop:4 }}>{pct(ipTotals.mtdBudget ? (ipTotals.mtdActual - ipTotals.mtdBudget)/ipTotals.mtdBudget : 0)}</div>
+            </div>
+          </div>
+
+          {/* IP Specialty Table */}
+          <div style={{ ...card, overflow:"hidden", marginBottom:20 }}>
+            <div style={{ padding:"14px 24px", borderBottom:"1px solid " + C.border }}>
+              <h3 style={{ margin:0, fontSize:15, fontWeight:700, color:C.text }}>IP Specialty Breakdown</h3>
+            </div>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
+                <thead><tr style={{ background:"#1e293b" }}>
+                  <th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>MTD Actual</th><th style={{ ...dth, textAlign:"right" }}>MTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th><th style={{ ...dth, textAlign:"right" }}>Cases</th><th style={{ ...dth, textAlign:"right" }}>Cases LY</th><th style={{ ...dth, textAlign:"right" }}>YTD Actual</th><th style={{ ...dth, textAlign:"right" }}>YTD LY</th><th style={{ ...dth, textAlign:"right" }}>YTD vs LY</th><th style={{ ...dth, textAlign:"right" }}>Vol LY</th>
+                </tr></thead>
+                <tbody>
+                  {[...ipSpecialties].sort((a,b) => b.mtdActual - a.mtdActual).map((s,i) => {
+                    const vsLY = s.mtdLY ? (s.mtdActual - s.mtdLY) / s.mtdLY : 0;
+                    const ytdVsLY = s.ytdLY ? (s.ytdActual - s.ytdLY) / s.ytdLY : 0;
+                    return (
+                      <tr key={s.name} style={{ background: i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
+                        <td onClick={() => setSelectedSpecialty(s.name)} style={{ ...dtd, fontWeight:600, cursor:"pointer", color:C.primary }}>{s.name}</td>
+                        <td style={dtn}>{fmt(s.mtdActual)}</td>
+                        <td style={{ ...dtn, color:C.textMuted }}>{fmt(s.mtdLY)}</td>
+                        <td style={{ ...dtn, color:varColor(vsLY), fontWeight:600 }}>{pct(vsLY)}</td>
+                        <td style={dtn}>{s.mtdVolume}</td>
+                        <td style={{ ...dtn, color:C.textMuted }}>{s.mtdVolLY || 0}</td>
+                        <td style={dtn}>{fmt(s.ytdActual || 0)}</td>
+                        <td style={{ ...dtn, color:C.textMuted }}>{fmt(s.ytdLY || 0)}</td>
+                        <td style={{ ...dtn, color:varColor(ytdVsLY), fontWeight:600 }}>{pct(ytdVsLY)}</td>
+                        <td style={{ ...dtn, color:C.textMuted }}>{s.ytdVolLY || 0}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr style={{ background:"rgba(59,130,246,0.08)", borderTop:"2px solid " + C.primary }}>
+                    <td style={{ ...dtd, fontWeight:800, color:C.primaryLight }}>TOTAL</td>
+                    <td style={{ ...dtn, fontWeight:800, color:C.primaryLight }}>{fmt(ipTotals.mtdActual)}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(ipTotals.mtdLY)}</td>
+                    <td style={{ ...dtn, fontWeight:800, color:varColor(ipTotals.mtdVarLY) }}>{pct(ipTotals.mtdVarLY)}</td>
+                    <td style={{ ...dtn, fontWeight:800, color:C.primaryLight }}>{ipTotals.volume}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{ipSpecialties.reduce((a,s) => a + (s.mtdVolLY||0), 0)}</td>
+                    <td style={{ ...dtn, fontWeight:800, color:C.primaryLight }}>{fmt(ipTotals.ytdActual)}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(ipTotals.ytdLY)}</td>
+                    <td style={{ ...dtn, fontWeight:800, color:varColor(ipTotals.ytdVarLY) }}>{pct(ipTotals.ytdVarLY)}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{ipSpecialties.reduce((a,s) => a + (s.ytdVolLY||0), 0)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* IP Doctor Table */}
+          <div style={{ ...card, overflow:"hidden" }}>
+            <div style={{ padding:"14px 24px", borderBottom:"1px solid " + C.border }}>
+              <h3 style={{ margin:0, fontSize:15, fontWeight:700, color:C.text }}>IP Doctor Performance</h3>
+            </div>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
+                <thead><tr style={{ background:"#1e293b" }}>
+                  <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>MTD Revenue</th><th style={{ ...dth, textAlign:"right" }}>Cases</th>
+                </tr></thead>
+                <tbody>
+                  {ipDoctors.map((d,i) => (
+                    <tr key={d.name+i} style={{ background: i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
+                      <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(245,158,11,0.15)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?C.warning:C.textMuted }}>{i+1}</span></td>
+                      <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td>
+                      <td style={{ ...dtd, color:C.textMuted }}>{d.specialty}</td>
+                      <td style={dtn}>{fmt(d.mtdRevenue)}</td>
+                      <td style={dtn}>{d.mtdCount}</td>
+                    </tr>
+                  ))}
+                  {!ipDoctors.length && <tr><td colSpan={5} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload data to populate</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* UNDERPERFORMERS SECTION */}
+        <div id="underperformers" style={{ marginTop:32 }}>
+          <h2 style={{ fontSize:17, fontWeight:700, color:C.text, marginBottom:4 }}>Underperforming Specialties</h2>
+          <p style={{ fontSize:12, color:C.textMuted, marginBottom:16 }}>Specialties with YTD revenue below last year, with contributing doctors</p>
+
+          <div style={{ ...card, overflow:"hidden" }}>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
+                <thead><tr style={{ background:"#1e293b" }}>
+                  <th style={dth}>Specialty / Doctor</th><th style={dth}>Location(s)</th><th style={{ ...dth, textAlign:"right" }}>MTD Actual</th><th style={{ ...dth, textAlign:"right" }}>MTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th><th style={{ ...dth, textAlign:"right" }}>YTD Actual</th><th style={{ ...dth, textAlign:"right" }}>YTD LY</th><th style={{ ...dth, textAlign:"right" }}>YTD vs LY</th>
+                </tr></thead>
+                <tbody>
+                  {underperformingSpecs.map((spec, si) => (
+                    <tr key={spec.name} style={{ background: si % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid " + C.border }}>
+                      <td style={{ ...dtd, fontWeight:700, color:C.danger, cursor:"pointer" }} onClick={() => setSelectedSpecialty(spec.name)}>{spec.name}</td>
+                      <td style={{ ...dtd, color:C.textMuted, fontSize:11 }}>{spec.doctors.length} doctors</td>
+                      <td style={dtn}>{fmt(spec.mtdActual)}</td>
+                      <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.mtdLY)}</td>
+                      <td style={{ ...dtn, color:C.danger, fontWeight:600 }}>{pct(spec.mtdVarLY)}</td>
+                      <td style={dtn}>{fmt(spec.ytdActual)}</td>
+                      <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.ytdLY)}</td>
+                      <td style={{ ...dtn, color:C.danger, fontWeight:600 }}>{pct(spec.ytdVarLY)}</td>
+                    </tr>
+                  ))}
+                  {!underperformingSpecs.length && <tr><td colSpan={8} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>All specialties at or above last year</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* DAY-OF-WEEK REVENUE CHART */}
+        {dailyRevenue.length > 0 && (
+          <div style={{ ...card, marginTop:24, padding:28 }}>
+            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #8b5cf6" }}>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Revenue by Day of Week</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Average daily revenue grouped by day of week</p>
+            </div>
+            {dailyRevenue.length < 14 ? (
+              <div style={{ textAlign:"center", padding:"32px 20px", color:C.textMuted, fontSize:13 }}>
+                Day-of-week analysis available after 14 days of data (currently {dailyRevenue.length} days)
+              </div>
+            ) : (() => {
+              // Apr 1, 2026 = Wednesday (day index 3)
+              const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+              const startDayOfWeek = 3; // Wednesday
+              const buckets = {};
+              dayNames.forEach(d => { buckets[d] = { sum:0, count:0 }; });
+              dailyRevenue.forEach(dr => {
+                const dow = (startDayOfWeek + dr.day - 1) % 7;
+                const name = dayNames[dow];
+                buckets[name].sum += dr.total;
+                buckets[name].count += 1;
+              });
+              const chartData = dayNames.map(d => ({
+                name: d,
+                avg: buckets[d].count ? Math.round(buckets[d].sum / buckets[d].count) : 0,
+              })).filter(d => d.avg > 0);
+              return (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData} margin={{ top:10, right:10, left:0, bottom:10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize:12, fill:C.textSecondary }} axisLine={{ stroke:C.border }} tickLine={false} />
+                    <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.05)" }} />
+                    <Bar dataKey="avg" fill="#8b5cf6" radius={[5,5,0,0]} maxBarSize={48} name="Avg Revenue" />
+                  </BarChart>
+                </ResponsiveContainer>
+              );
+            })()}
+          </div>
+        )}
+
+        <div style={{ textAlign:"center", padding:"28px 0 12px", color:C.textMuted, fontSize:11 }}>Al-Futtaim Health — HealthHub Executive Revenue Summary — All values in AED</div>
+      </main>
+
+      {selectedClinic && <ClinicDrillDown clinic={selectedClinic} onClose={() => setSelectedClinic(null)} />}
+      {specialtyDrillData && <SpecialtyDrillDown data={specialtyDrillData} doctorLocations={doctorLocations} onClose={() => setSelectedSpecialty(null)} />}
     </div>
   );
 }
@@ -567,7 +1959,7 @@ function App() {
 try {
   ReactDOM.render(<App />, document.getElementById("root"));
 } catch(e) {
-  document.getElementById("root").innerHTML = '<div style="padding:40px;font-family:monospace;color:#dc2626"><h2>Render Error</h2><pre>'+e.message+'</pre><pre>'+e.stack+'</pre></div>';
+  document.getElementById("root").innerHTML = '<div style="padding:40px;font-family:monospace;color:#ef4444"><h2>Render Error</h2><pre>'+e.message+'</pre><pre>'+e.stack+'</pre></div>';
 }
 </script>
 </body>
