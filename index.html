@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HealthHub Executive Revenue Summary — Al-Futtaim Health</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script crossorigin src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+<script crossorigin src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f4f8; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.4s ease-out; }
+  table { border-collapse: collapse; }
+  ::-webkit-scrollbar { height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useCallback, useMemo, useRef } = React;
+const {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, Cell, PieChart, Pie, RadialBarChart, RadialBar,
+} = Recharts;
+
+// ─── Utility Helpers ─────────────────────────────────────────────────────────
+
+const fmt = (n) => {
+  if (n == null || isNaN(n)) return "\u2014";
+  const abs = Math.abs(Math.round(n));
+  const s = abs.toLocaleString("en-US");
+  return n < 0 ? `(${s})` : s;
+};
+const fmtK = (n) => {
+  if (n == null || isNaN(n)) return "\u2014";
+  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
+  return fmt(n);
+};
+const pct = (n) => {
+  if (n == null || isNaN(n)) return "\u2014";
+  const v = (n * 100).toFixed(1);
+  return `${v > 0 ? "+" : ""}${v}%`;
+};
+const varColor = (n) => (n == null || isNaN(n)) ? "#64748b" : n >= 0 ? "#059669" : "#dc2626";
+const varBg = (n) => (n == null || isNaN(n)) ? "transparent" : n >= 0 ? "#ecfdf5" : "#fef2f2";
+
+const C = {
+  primary: "#0369a1", primaryLight: "#38bdf8", primaryDark: "#0c4a6e",
+  accent: "#0ea5e9", success: "#059669", successLight: "#34d399",
+  danger: "#dc2626", dangerLight: "#f87171", warning: "#d97706",
+  warningLight: "#fbbf24", slate: "#64748b", slateLight: "#94a3b8",
+};
+const PALETTE = ["#0369a1","#0ea5e9","#38bdf8","#06b6d4","#14b8a6","#10b981","#059669","#0d9488","#0891b2","#0284c7","#6366f1","#8b5cf6","#a855f7","#d946ef","#ec4899"];
+
+// ─── Default Data ────────────────────────────────────────────────────────────
+
+const DEFAULT_REPORT_DATE = "Apr 5, 2026";
+
+const DEFAULT_DOCTORS = [
+  { name: "Dr. Ahmed Al Mansouri", specialty: "Internal Medicine", today: 18200, mtdActual: 185600, mtdBudget: 170000, mtdLY: 172400, ytdActual: 1856000, ytdBudget: 1700000, ytdLY: 1724000 },
+  { name: "Dr. Fatima Hassan", specialty: "Cardiology", today: 21500, mtdActual: 218400, mtdBudget: 200000, mtdLY: 195800, ytdActual: 2184000, ytdBudget: 2000000, ytdLY: 1958000 },
+  { name: "Dr. Khalid Ibrahim", specialty: "Dermatology", today: 15800, mtdActual: 162300, mtdBudget: 155000, mtdLY: 148200, ytdActual: 1623000, ytdBudget: 1550000, ytdLY: 1482000 },
+  { name: "Dr. Sara Nasser", specialty: "Gynecology", today: 19400, mtdActual: 198500, mtdBudget: 185000, mtdLY: 182300, ytdActual: 1985000, ytdBudget: 1850000, ytdLY: 1823000 },
+  { name: "Dr. Mohammed Ali", specialty: "Orthopedics", today: 16700, mtdActual: 172400, mtdBudget: 180000, mtdLY: 168500, ytdActual: 1724000, ytdBudget: 1800000, ytdLY: 1685000 },
+  { name: "Dr. Layla Qasim", specialty: "Dentistry", today: 22300, mtdActual: 228100, mtdBudget: 210000, mtdLY: 215600, ytdActual: 2281000, ytdBudget: 2100000, ytdLY: 2156000 },
+  { name: "Dr. Omar Farooq", specialty: "Neurology", today: 14200, mtdActual: 146800, mtdBudget: 150000, mtdLY: 142300, ytdActual: 1468000, ytdBudget: 1500000, ytdLY: 1423000 },
+  { name: "Dr. Amina Rashid", specialty: "Pediatrics", today: 11600, mtdActual: 118200, mtdBudget: 125000, mtdLY: 128400, ytdActual: 1182000, ytdBudget: 1250000, ytdLY: 1284000 },
+  { name: "Dr. Yusuf Bakr", specialty: "Ophthalmology", today: 13100, mtdActual: 135400, mtdBudget: 130000, mtdLY: 124600, ytdActual: 1354000, ytdBudget: 1300000, ytdLY: 1246000 },
+  { name: "Dr. Nour El Din", specialty: "ENT", today: 10500, mtdActual: 108300, mtdBudget: 115000, mtdLY: 112400, ytdActual: 1083000, ytdBudget: 1150000, ytdLY: 1124000 },
+  { name: "Dr. Hassan Mahmoud", specialty: "Radiology", today: 17300, mtdActual: 176500, mtdBudget: 165000, mtdLY: 158900, ytdActual: 1765000, ytdBudget: 1650000, ytdLY: 1589000 },
+  { name: "Dr. Rania Shukri", specialty: "General Surgery", today: 12400, mtdActual: 128600, mtdBudget: 140000, mtdLY: 138200, ytdActual: 1286000, ytdBudget: 1400000, ytdLY: 1382000 },
+  { name: "Dr. Tariq Jaber", specialty: "Internal Medicine", today: 14800, mtdActual: 152300, mtdBudget: 145000, mtdLY: 148600, ytdActual: 1523000, ytdBudget: 1450000, ytdLY: 1486000 },
+  { name: "Dr. Huda Saleh", specialty: "Cardiology", today: 12600, mtdActual: 130200, mtdBudget: 135000, mtdLY: 128400, ytdActual: 1302000, ytdBudget: 1350000, ytdLY: 1284000 },
+  { name: "Dr. Imad Khalil", specialty: "Psychiatry", today: 8200, mtdActual: 84500, mtdBudget: 90000, mtdLY: 82100, ytdActual: 845000, ytdBudget: 900000, ytdLY: 821000 },
+  { name: "Dr. Dina Fawzi", specialty: "Dermatology", today: 9800, mtdActual: 101200, mtdBudget: 105000, mtdLY: 98400, ytdActual: 1012000, ytdBudget: 1050000, ytdLY: 984000 },
+  { name: "Dr. Walid Harb", specialty: "Orthopedics", today: 11200, mtdActual: 3800, mtdBudget: 12000, mtdLY: 108600, ytdActual: 1148000, ytdBudget: 1200000, ytdLY: 1086000 },
+  { name: "Dr. Mona Issa", specialty: "Physiotherapy", today: 7600, mtdActual: 78400, mtdBudget: 82000, mtdLY: 85200, ytdActual: 784000, ytdBudget: 820000, ytdLY: 852000 },
+  { name: "Dr. Ziad Sabbagh", specialty: "Urology", today: 9100, mtdActual: 94200, mtdBudget: 95000, mtdLY: 97600, ytdActual: 942000, ytdBudget: 950000, ytdLY: 976000 },
+  { name: "Dr. Samir Najem", specialty: "Dentistry", today: 10400, mtdActual: 4200, mtdBudget: 11000, mtdLY: 102800, ytdActual: 982000, ytdBudget: 1050000, ytdLY: 1028000 },
+  { name: "Dr. Reem Khoury", specialty: "Gynecology", today: 8900, mtdActual: 5100, mtdBudget: 9500, mtdLY: 88600, ytdActual: 910000, ytdBudget: 950000, ytdLY: 886000 },
+  { name: "Dr. Faisal Darwish", specialty: "General Surgery", today: 6800, mtdActual: 3200, mtdBudget: 8500, mtdLY: 72400, ytdActual: 668000, ytdBudget: 850000, ytdLY: 724000 },
+  { name: "Dr. Lina Abed", specialty: "Pediatrics", today: 7200, mtdActual: 74600, mtdBudget: 78000, mtdLY: 76800, ytdActual: 746000, ytdBudget: 780000, ytdLY: 768000 },
+  { name: "Dr. Adel Rizk", specialty: "Neurology", today: 8400, mtdActual: 86200, mtdBudget: 88000, mtdLY: 84500, ytdActual: 862000, ytdBudget: 880000, ytdLY: 845000 },
+].map((d) => ({ ...d, mtdVarBudget: d.mtdBudget ? (d.mtdActual - d.mtdBudget) / d.mtdBudget : 0, ytdVarBudget: d.ytdBudget ? (d.ytdActual - d.ytdBudget) / d.ytdBudget : 0 }));
+
+const DEFAULT_SPECIALTIES = [
+  { name: "Dermatology", today: 38520, mtdActual: 412580, mtdBudget: 395000, mtdLY: 378200, ytdActual: 4125800, ytdBudget: 3950000, ytdLY: 3782000 },
+  { name: "Cardiology", today: 52340, mtdActual: 538900, mtdBudget: 510000, mtdLY: 495600, ytdActual: 5389000, ytdBudget: 5100000, ytdLY: 4956000 },
+  { name: "Internal Medicine", today: 61200, mtdActual: 625400, mtdBudget: 600000, mtdLY: 612300, ytdActual: 6254000, ytdBudget: 6000000, ytdLY: 6123000 },
+  { name: "Orthopedics", today: 45600, mtdActual: 467200, mtdBudget: 480000, mtdLY: 445100, ytdActual: 4672000, ytdBudget: 4800000, ytdLY: 4451000 },
+  { name: "Pediatrics", today: 33400, mtdActual: 342100, mtdBudget: 355000, mtdLY: 358900, ytdActual: 3421000, ytdBudget: 3550000, ytdLY: 3589000 },
+  { name: "Ophthalmology", today: 28700, mtdActual: 298500, mtdBudget: 290000, mtdLY: 275400, ytdActual: 2985000, ytdBudget: 2900000, ytdLY: 2754000 },
+  { name: "ENT", today: 22100, mtdActual: 231600, mtdBudget: 240000, mtdLY: 228900, ytdActual: 2316000, ytdBudget: 2400000, ytdLY: 2289000 },
+  { name: "Gynecology", today: 41800, mtdActual: 428500, mtdBudget: 415000, mtdLY: 402300, ytdActual: 4285000, ytdBudget: 4150000, ytdLY: 4023000 },
+  { name: "Urology", today: 18900, mtdActual: 195200, mtdBudget: 200000, mtdLY: 201500, ytdActual: 1952000, ytdBudget: 2000000, ytdLY: 2015000 },
+  { name: "Neurology", today: 36200, mtdActual: 372400, mtdBudget: 360000, mtdLY: 348700, ytdActual: 3724000, ytdBudget: 3600000, ytdLY: 3487000 },
+  { name: "Dentistry", today: 47500, mtdActual: 486300, mtdBudget: 470000, mtdLY: 462100, ytdActual: 4863000, ytdBudget: 4700000, ytdLY: 4621000 },
+  { name: "General Surgery", today: 29800, mtdActual: 305400, mtdBudget: 310000, mtdLY: 312800, ytdActual: 3054000, ytdBudget: 3100000, ytdLY: 3128000 },
+  { name: "Psychiatry", today: 15600, mtdActual: 162800, mtdBudget: 170000, mtdLY: 155200, ytdActual: 1628000, ytdBudget: 1700000, ytdLY: 1552000 },
+  { name: "Physiotherapy", today: 21300, mtdActual: 218600, mtdBudget: 225000, mtdLY: 232400, ytdActual: 2186000, ytdBudget: 2250000, ytdLY: 2324000 },
+  { name: "Radiology", today: 34100, mtdActual: 348900, mtdBudget: 340000, mtdLY: 325600, ytdActual: 3489000, ytdBudget: 3400000, ytdLY: 3256000 },
+].map((s) => ({ ...s, mtdVarBudget: (s.mtdActual - s.mtdBudget) / s.mtdBudget, mtdVarLY: (s.mtdActual - s.mtdLY) / s.mtdLY, ytdVarBudget: (s.ytdActual - s.ytdBudget) / s.ytdBudget, ytdVarLY: (s.ytdActual - s.ytdLY) / s.ytdLY }));
+
+// ─── Excel Parser ────────────────────────────────────────────────────────────
+
+function parseExcelFile(data) {
+  const wb = XLSX.read(data, { type: "array" });
+  const ssName = wb.SheetNames.find((n) => n.toLowerCase().includes("specialty"));
+  if (!ssName) throw new Error("Sheet not found");
+  const ws = wb.Sheets[ssName];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+  let headerIdx = 4;
+  for (let i = 0; i < 10; i++) { const r = rows[i] || []; if (r.join(" ").toLowerCase().match(/specialty|doctor/)) { headerIdx = i; break; } }
+  const num = (v) => (typeof v === "number" ? v : parseFloat(v) || 0);
+  const specialties = [], doctors = [];
+  for (let i = headerIdx + 2; i < rows.length; i++) {
+    const r = rows[i]; if (!r) continue;
+    const colA = r[0], colB = r[1];
+    if (!colB || typeof colB !== "string" || colB.toLowerCase().includes("grand total")) continue;
+    const today=num(r[2]),mtdBudget=num(r[3]),mtdActual=num(r[4]),mtdLY=num(r[5]),mtdVBR=num(r[6]),mtdVLR=num(r[7]),ytdBudget=num(r[8]),ytdActual=num(r[9]),ytdLY=num(r[10]);
+    if (colB.includes("Total")) {
+      const name = colB.replace(/\s*Total\s*/i,"").trim(); if (!name) continue;
+      specialties.push({ name, today, mtdActual, mtdBudget, mtdLY, mtdVarBudget: mtdBudget ? mtdVBR||(mtdActual-mtdBudget)/mtdBudget : 0, mtdVarLY: mtdLY ? mtdVLR||(mtdActual-mtdLY)/mtdLY : 0, ytdActual, ytdBudget, ytdLY, ytdVarBudget: ytdBudget ? (ytdActual-ytdBudget)/ytdBudget : 0, ytdVarLY: ytdLY ? (ytdActual-ytdLY)/ytdLY : 0 });
+    } else if (colA && typeof colA === "string" && colA.trim()) {
+      doctors.push({ name: colA.trim(), specialty: colB.trim(), today, mtdActual, mtdBudget, mtdLY, ytdActual, ytdBudget, ytdLY, mtdVarBudget: mtdBudget ? (mtdActual-mtdBudget)/mtdBudget : 0, ytdVarBudget: ytdBudget ? (ytdActual-ytdBudget)/ytdBudget : 0 });
+    }
+  }
+  let reportDate = DEFAULT_REPORT_DATE;
+  const dsrName = wb.SheetNames.find((n) => n.toUpperCase().includes("DSR"));
+  if (dsrName) { const dsRows = XLSX.utils.sheet_to_json(wb.Sheets[dsrName], { header:1, defval:null }); for (let i=0;i<6;i++) { const r=dsRows[i]; if(!r) continue; for (const cell of r) { if (cell instanceof Date) { reportDate=cell.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); break; } if (typeof cell==="string" && /apr|may|jun|mar|feb|jan/i.test(cell)) { reportDate=cell; break; } } } }
+  return { specialties, doctors, reportDate };
+}
+
+// ─── Custom Tooltips ─────────────────────────────────────────────────────────
+
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background:"#fff", borderRadius:10, padding:"14px 18px", boxShadow:"0 8px 30px rgba(0,0,0,0.12)", border:"1px solid #e2e8f0" }}>
+      <div style={{ fontWeight:700, fontSize:13, color:"#1e293b", marginBottom:8, borderBottom:"1px solid #f1f5f9", paddingBottom:6 }}>{label}</div>
+      {payload.map((p,i) => (
+        <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
+          <div style={{ width:10, height:10, borderRadius:3, background:p.color }} />
+          <span style={{ fontSize:12, color:"#64748b", flex:1 }}>{p.name}</span>
+          <span style={{ fontSize:13, fontWeight:600, color:"#1e293b", fontVariantNumeric:"tabular-nums" }}>AED {fmt(p.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PieTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0];
+  return (
+    <div style={{ background:"#fff", borderRadius:10, padding:"12px 16px", boxShadow:"0 8px 30px rgba(0,0,0,0.12)", border:"1px solid #e2e8f0" }}>
+      <div style={{ fontWeight:700, fontSize:13, color:"#1e293b", marginBottom:4 }}>{d.name}</div>
+      <div style={{ fontSize:13, color:"#64748b" }}>AED {fmt(d.value)} ({(d.payload.pctShare*100).toFixed(1)}%)</div>
+    </div>
+  );
+}
+
+// ─── Budget Gauge ────────────────────────────────────────────────────────────
+
+function BudgetGauge({ label, actual, budget, size = 120 }) {
+  const pctVal = budget ? actual / budget : 0;
+  const capped = Math.min(pctVal, 1.2);
+  const color = pctVal >= 1 ? C.success : pctVal >= 0.9 ? C.warning : C.danger;
+  const data = [{ name: label, value: capped * 100, fill: color }];
+  return (
+    <div style={{ textAlign: "center" }}>
+      <ResponsiveContainer width={size} height={size}>
+        <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" startAngle={210} endAngle={-30} data={data} barSize={10}>
+          <RadialBar background={{ fill:"#f1f5f9" }} dataKey="value" cornerRadius={8} />
+        </RadialBarChart>
+      </ResponsiveContainer>
+      <div style={{ marginTop: -size * 0.45, position: "relative", zIndex: 1 }}>
+        <div style={{ fontSize: 20, fontWeight: 800, color, letterSpacing: "-0.02em" }}>{(pctVal*100).toFixed(0)}%</div>
+        <div style={{ fontSize: 10, color: C.slateLight, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginTop: 2 }}>{label}</div>
+      </div>
+      <div style={{ height: size * 0.15 }} />
+    </div>
+  );
+}
+
+// ─── Upload Zone ─────────────────────────────────────────────────────────────
+
+function UploadZone({ onFileLoaded }) {
+  const [isDrag, setIsDrag] = useState(false);
+  const [status, setStatus] = useState(null);
+  const inputRef = useRef(null);
+  const processFile = useCallback((file) => {
+    if (!file) return; setStatus("loading");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try { const parsed = parseExcelFile(new Uint8Array(e.target.result)); if (!parsed.specialties.length) { setStatus("error"); return; } onFileLoaded(parsed); setStatus("success"); setTimeout(() => setStatus(null), 3000); }
+      catch(err) { console.error(err); setStatus("error"); setTimeout(() => setStatus(null), 4000); }
+    };
+    reader.readAsArrayBuffer(file);
+  }, [onFileLoaded]);
+  return (
+    <div onDragOver={(e)=>{e.preventDefault();setIsDrag(true);}} onDragLeave={()=>setIsDrag(false)} onDrop={(e)=>{e.preventDefault();setIsDrag(false);processFile(e.dataTransfer.files[0]);}} onClick={()=>inputRef.current?.click()}
+      style={{ border:`2px dashed ${isDrag ? C.primary : "#cbd5e1"}`, borderRadius:14, padding:"14px 28px", background: isDrag ? "#eff6ff" : "#f8fafc", transition:"all 0.25s", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:14 }}>
+      <input ref={inputRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={(e)=>processFile(e.target.files[0])} />
+      <div style={{ width:40, height:40, borderRadius:10, background: isDrag ? "#dbeafe" : "#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDrag ? C.primary : C.slateLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div><span style={{ fontWeight:700, color:C.primary, fontSize:14 }}>Upload New Report</span><span style={{ color:C.slateLight, fontSize:13, marginLeft:8 }}>Drag & drop .xlsx or click</span></div>
+      {status==="loading" && <div style={{ width:18, height:18, border:"2px solid #e2e8f0", borderTopColor:C.primary, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />}
+      {status==="success" && <span style={{ color:C.success, fontSize:13, fontWeight:700 }}>Updated</span>}
+      {status==="error" && <span style={{ color:C.danger, fontSize:13, fontWeight:700 }}>Parse error</span>}
+    </div>
+  );
+}
+
+// ─── Table Styles ────────────────────────────────────────────────────────────
+
+const thS = { padding:"10px 14px", textAlign:"left", fontSize:10, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", borderBottom:"2px solid #e2e8f0", background:"#f8fafc" };
+const thSub = { padding:"6px 14px", textAlign:"right", fontSize:10, fontWeight:600, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.04em", borderBottom:"2px solid #e2e8f0", background:"#f8fafc" };
+const tdS = { padding:"10px 14px", fontSize:13 };
+const tdN = { padding:"10px 14px", textAlign:"right", fontSize:13, fontVariantNumeric:"tabular-nums", color:"#334155" };
+const dth = { padding:"8px 14px", textAlign:"left", fontSize:10, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.04em", borderBottom:"2px solid #e2e8f0" };
+const dtd = { padding:"9px 14px", fontSize:12 };
+const dtn = { padding:"9px 14px", textAlign:"right", fontSize:12, fontVariantNumeric:"tabular-nums", color:"#334155" };
+const card = { background:"#fff", borderRadius:14, boxShadow:"0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)" };
+
+// ─── Main Dashboard ──────────────────────────────────────────────────────────
+
+function App() {
+  const [specialties, setSpecialties] = useState(DEFAULT_SPECIALTIES);
+  const [doctors, setDoctors] = useState(DEFAULT_DOCTORS);
+  const [reportDate, setReportDate] = useState(DEFAULT_REPORT_DATE);
+
+  const handleFileLoaded = useCallback(({ specialties: specs, doctors: docs, reportDate: rd }) => {
+    setSpecialties(specs.map((s) => ({ ...s,
+      mtdVarBudget: s.mtdVarBudget || (s.mtdBudget ? (s.mtdActual-s.mtdBudget)/s.mtdBudget : 0),
+      mtdVarLY: s.mtdVarLY || (s.mtdLY ? (s.mtdActual-s.mtdLY)/s.mtdLY : 0),
+      ytdVarBudget: s.ytdBudget ? (s.ytdActual-s.ytdBudget)/s.ytdBudget : 0,
+      ytdVarLY: s.ytdLY ? (s.ytdActual-s.ytdLY)/s.ytdLY : 0,
+    })));
+    if (docs?.length) setDoctors(docs);
+    setReportDate(rd);
+  }, []);
+
+  const totals = useMemo(() => {
+    const sum = (k) => specialties.reduce((a,s) => a + (s[k]||0), 0);
+    const [tr,mA,mB,mL,yA,yB,yL] = ["today","mtdActual","mtdBudget","mtdLY","ytdActual","ytdBudget","ytdLY"].map(sum);
+    return { todayRev:tr, mtdActual:mA, mtdBudget:mB, mtdLY:mL, mtdVarBudget:mB?(mA-mB)/mB:0, mtdVarLY:mL?(mA-mL)/mL:0, ytdActual:yA, ytdBudget:yB, ytdLY:yL, ytdVarBudget:yB?(yA-yB)/yB:0, ytdVarLY:yL?(yA-yL)/yL:0 };
+  }, [specialties]);
+
+  const sorted = useMemo(() => [...specialties].sort((a,b) => (b.ytdActual||0)-(a.ytdActual||0)), [specialties]);
+
+  const insights = useMemo(() => {
+    const above = specialties.filter(s => s.mtdVarBudget >= 0).length;
+    return { above, below: specialties.length - above, growingYoY: specialties.filter(s => s.ytdVarLY > 0).length, total: specialties.length };
+  }, [specialties]);
+
+  const barChartData = useMemo(() => sorted.slice(0,10).map(s => ({ name: s.name.length > 14 ? s.name.slice(0,13)+"\u2026" : s.name, "This Year": s.mtdActual, Budget: s.mtdBudget, "Last Year": s.mtdLY })), [sorted]);
+  const varianceData = useMemo(() => sorted.slice(0,10).map(s => ({ name: s.name.length > 12 ? s.name.slice(0,11)+"\u2026" : s.name, variance: s.mtdActual - s.mtdBudget, fill: s.mtdVarBudget >= 0 ? C.success : C.danger })), [sorted]);
+  const pieData = useMemo(() => { const tot = sorted.reduce((a,s) => a+s.ytdActual, 0); return sorted.map((s,i) => ({ name:s.name, value:s.ytdActual, pctShare: tot ? s.ytdActual/tot : 0, fill: PALETTE[i%PALETTE.length] })); }, [sorted]);
+
+  const topPerformers = useMemo(() => [...doctors].sort((a,b)=>(b.ytdActual||0)-(a.ytdActual||0)).slice(0,10), [doctors]);
+  const needsAttention = useMemo(() => doctors.filter(d=>d.mtdBudget>5000&&d.mtdVarBudget<-0.3).sort((a,b)=>a.mtdVarBudget-b.mtdVarBudget).slice(0,10), [doctors]);
+  const bottomPerformers = useMemo(() => doctors.filter(d=>d.ytdBudget>50000).sort((a,b)=>a.ytdVarBudget-b.ytdVarBudget).slice(0,10), [doctors]);
+
+  return (
+    <div style={{ background:"#f0f4f8", minHeight:"100vh" }}>
+
+      {/* HEADER */}
+      <div style={{ background:`linear-gradient(135deg, ${C.primaryDark} 0%, ${C.primary} 50%, ${C.accent} 100%)`, padding:"28px 40px 24px", boxShadow:"0 4px 20px rgba(3,105,161,0.25)" }}>
+        <div style={{ maxWidth:1440, margin:"0 auto", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+            <div style={{ width:48, height:48, borderRadius:12, background:"rgba(255,255,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:600, color:"rgba(186,230,253,0.8)", textTransform:"uppercase", letterSpacing:"0.1em" }}>Al-Futtaim Health</div>
+              <h1 style={{ margin:0, fontSize:26, fontWeight:800, color:"#fff", letterSpacing:"-0.03em" }}>Executive Revenue Summary</h1>
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:12 }}>
+            <div style={{ background:"rgba(255,255,255,0.12)", borderRadius:10, padding:"10px 20px" }}>
+              <div style={{ fontSize:10, color:"rgba(186,230,253,0.7)", textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:600 }}>Report Date</div>
+              <div style={{ fontSize:16, fontWeight:700, color:"#fff", marginTop:2 }}>{reportDate}</div>
+            </div>
+            <div style={{ background:"rgba(255,255,255,0.12)", borderRadius:10, padding:"10px 20px" }}>
+              <div style={{ fontSize:10, color:"rgba(186,230,253,0.7)", textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:600 }}>Specialties</div>
+              <div style={{ fontSize:16, fontWeight:700, color:"#fff", marginTop:2 }}>{specialties.length}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CONTENT */}
+      <div className="fade-in" style={{ maxWidth:1440, margin:"0 auto", padding:"24px 32px 40px" }}>
+
+        <UploadZone onFileLoaded={handleFileLoaded} />
+
+        {/* KPI STRIP */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:16, marginTop:24 }}>
+          <div style={{ ...card, padding:"22px 24px", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg, ${C.primaryDark}, ${C.accent})` }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.slate, textTransform:"uppercase", letterSpacing:"0.06em" }}>Today's Revenue</div>
+            <div style={{ fontSize:30, fontWeight:800, color:C.primaryDark, marginTop:8, letterSpacing:"-0.03em" }}>AED {fmt(totals.todayRev)}</div>
+            <div style={{ fontSize:11, color:C.slateLight, marginTop:4 }}>{reportDate}</div>
+          </div>
+          <div style={{ ...card, padding:"22px 24px", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg, ${C.accent}, ${C.primaryLight})` }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.slate, textTransform:"uppercase", letterSpacing:"0.06em" }}>MTD Revenue</div>
+            <div style={{ fontSize:26, fontWeight:800, color:C.primaryDark, marginTop:8 }}>AED {fmt(totals.mtdActual)}</div>
+            <div style={{ display:"flex", gap:8, marginTop:8 }}>
+              <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.mtdVarBudget), background:varBg(totals.mtdVarBudget), padding:"2px 8px", borderRadius:6 }}>vs Budget {pct(totals.mtdVarBudget)}</span>
+              <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.mtdVarLY), background:varBg(totals.mtdVarLY), padding:"2px 8px", borderRadius:6 }}>vs LY {pct(totals.mtdVarLY)}</span>
+            </div>
+          </div>
+          <div style={{ ...card, padding:"22px 24px", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg, ${C.success}, ${C.successLight})` }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.slate, textTransform:"uppercase", letterSpacing:"0.06em" }}>YTD Revenue</div>
+            <div style={{ fontSize:26, fontWeight:800, color:C.primaryDark, marginTop:8 }}>AED {fmt(totals.ytdActual)}</div>
+            <div style={{ display:"flex", gap:8, marginTop:8 }}>
+              <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.ytdVarBudget), background:varBg(totals.ytdVarBudget), padding:"2px 8px", borderRadius:6 }}>vs Budget {pct(totals.ytdVarBudget)}</span>
+              <span style={{ fontSize:11, fontWeight:600, color:varColor(totals.ytdVarLY), background:varBg(totals.ytdVarLY), padding:"2px 8px", borderRadius:6 }}>vs LY {pct(totals.ytdVarLY)}</span>
+            </div>
+          </div>
+          <div style={{ ...card, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-around", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg, ${C.warning}, ${C.warningLight})` }} />
+            <BudgetGauge label="MTD" actual={totals.mtdActual} budget={totals.mtdBudget} size={100} />
+            <BudgetGauge label="YTD" actual={totals.ytdActual} budget={totals.ytdBudget} size={100} />
+          </div>
+        </div>
+
+        {/* INSIGHTS STRIP */}
+        <div style={{ ...card, marginTop:20, padding:"16px 28px", display:"flex", alignItems:"center", gap:32, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:32, height:32, borderRadius:8, background:"#eff6ff", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <span style={{ fontSize:13, color:"#1e293b", fontWeight:500 }}>Key Insights</span>
+          </div>
+          <div style={{ height:24, width:1, background:"#e2e8f0" }} />
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:8, height:8, borderRadius:"50%", background:C.success }} /><span style={{ fontSize:12, color:"#475569" }}><strong style={{ color:C.success }}>{insights.above}</strong> of {insights.total} specialties at or above MTD budget</span></div>
+          <div style={{ height:24, width:1, background:"#e2e8f0" }} />
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:8, height:8, borderRadius:"50%", background:C.danger }} /><span style={{ fontSize:12, color:"#475569" }}><strong style={{ color:C.danger }}>{insights.below}</strong> below MTD budget target</span></div>
+          <div style={{ height:24, width:1, background:"#e2e8f0" }} />
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:8, height:8, borderRadius:"50%", background:C.primary }} /><span style={{ fontSize:12, color:"#475569" }}><strong style={{ color:C.primary }}>{insights.growingYoY}</strong> specialties growing YoY</span></div>
+        </div>
+
+        {/* CHARTS */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginTop:24 }}>
+          {/* Bar Chart */}
+          <div style={{ ...card, padding:28 }}>
+            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:`2px solid ${C.primary}` }}>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:"#1e293b" }}>MTD Performance by Specialty</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.slateLight }}>Top 10 — Actual vs Budget vs Last Year (AED)</p>
+            </div>
+            <ResponsiveContainer width="100%" height={340}>
+              <BarChart data={barChartData} margin={{ top:10, right:10, left:0, bottom:60 }} barGap={2} barCategoryGap="20%">
+                <defs>
+                  <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.primary} /><stop offset="100%" stopColor={C.accent} stopOpacity={0.85}/></linearGradient>
+                  <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e2e8f0" /><stop offset="100%" stopColor="#cbd5e1" stopOpacity={0.7}/></linearGradient>
+                  <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a5b4fc" stopOpacity={0.9}/><stop offset="100%" stopColor="#818cf8" stopOpacity={0.6}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize:10, fill:"#64748b" }} angle={-40} textAnchor="end" interval={0} height={75} axisLine={{ stroke:"#e2e8f0" }} tickLine={false} />
+                <YAxis tick={{ fontSize:10, fill:"#94a3b8" }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.08)" }} />
+                <Legend wrapperStyle={{ fontSize:11, paddingTop:8 }} iconType="circle" iconSize={8} />
+                <Bar dataKey="This Year" fill="url(#gA)" radius={[5,5,0,0]} maxBarSize={32} />
+                <Bar dataKey="Budget" fill="url(#gB)" radius={[5,5,0,0]} maxBarSize={32} />
+                <Bar dataKey="Last Year" fill="url(#gL)" radius={[5,5,0,0]} maxBarSize={32} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Variance Waterfall */}
+          <div style={{ ...card, padding:28 }}>
+            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:`2px solid ${C.success}` }}>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:"#1e293b" }}>MTD Variance vs Budget</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.slateLight }}>Green = over budget, Red = under budget (AED)</p>
+            </div>
+            <ResponsiveContainer width="100%" height={340}>
+              <BarChart data={varianceData} margin={{ top:10, right:10, left:0, bottom:60 }} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize:10, fill:"#94a3b8" }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:"#475569" }} width={100} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.06)" }} />
+                <Bar dataKey="variance" radius={[0,4,4,0]} maxBarSize={22} name="Variance (AED)">
+                  {varianceData.map((e,i) => <Cell key={i} fill={e.fill} fillOpacity={0.85} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* PIE CHART */}
+        <div style={{ ...card, padding:28, marginTop:20 }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:`2px solid ${C.accent}` }}>
+            <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:"#1e293b" }}>YTD Revenue Composition</h2>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.slateLight }}>Share of total revenue by specialty</p>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:40 }}>
+            <ResponsiveContainer width="50%" height={300}>
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={120} paddingAngle={2} dataKey="value" stroke="none">
+                  {pieData.map((e,i) => <Cell key={i} fill={e.fill} />)}
+                </Pie>
+                <Tooltip content={<PieTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px 24px" }}>
+              {pieData.map((s) => (
+                <div key={s.name} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0" }}>
+                  <div style={{ width:10, height:10, borderRadius:3, background:s.fill, flexShrink:0 }} />
+                  <span style={{ fontSize:12, color:"#475569", flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{s.name}</span>
+                  <span style={{ fontSize:11, fontWeight:600, color:"#1e293b", fontVariantNumeric:"tabular-nums" }}>{(s.pctShare*100).toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* SPECIALTY TABLE */}
+        <div style={{ ...card, marginTop:24, overflow:"hidden" }}>
+          <div style={{ padding:"18px 28px", borderBottom:"1px solid #e2e8f0" }}>
+            <h3 style={{ margin:0, fontSize:16, fontWeight:700, color:"#1e293b" }}>Specialty Breakdown</h3>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.slateLight }}>Sorted by YTD Actual descending — red rows have negative YoY variance</p>
+          </div>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", fontSize:13, whiteSpace:"nowrap" }}>
+              <thead>
+                <tr style={{ background:"#f8fafc" }}>
+                  <th style={thS} rowSpan={2}>Specialty</th><th style={thS} rowSpan={2}>Today</th>
+                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid #e2e8f0" }} colSpan={5}>Month-to-Date (MTD)</th>
+                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid #e2e8f0" }} colSpan={5}>Year-to-Date (YTD)</th>
+                </tr>
+                <tr style={{ background:"#f8fafc" }}>
+                  {["Actual","Budget","LY","vs Bgt","vs LY"].map(h=><th key={"m"+h} style={thSub}>{h}</th>)}
+                  {["Actual","Budget","LY","vs Bgt","vs LY"].map(h=><th key={"y"+h} style={thSub}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((s,i) => (
+                  <tr key={s.name} style={{ background: s.ytdVarLY<0 ? "#fef2f2" : i%2===0 ? "#fff" : "#fafbfc", borderBottom:"1px solid #f1f5f9" }}>
+                    <td style={{ ...tdS, fontWeight:600, color:"#1e293b" }}>{s.name}</td>
+                    <td style={tdN}>{fmt(s.today)}</td>
+                    <td style={tdN}>{fmt(s.mtdActual)}</td><td style={{ ...tdN, color:"#94a3b8" }}>{fmt(s.mtdBudget)}</td><td style={{ ...tdN, color:"#94a3b8" }}>{fmt(s.mtdLY)}</td>
+                    <td style={{ ...tdN, color:varColor(s.mtdVarBudget), fontWeight:600 }}>{pct(s.mtdVarBudget)}</td>
+                    <td style={{ ...tdN, color:varColor(s.mtdVarLY), fontWeight:600 }}>{pct(s.mtdVarLY)}</td>
+                    <td style={{ ...tdN, fontWeight:600 }}>{fmt(s.ytdActual)}</td><td style={{ ...tdN, color:"#94a3b8" }}>{fmt(s.ytdBudget)}</td><td style={{ ...tdN, color:"#94a3b8" }}>{fmt(s.ytdLY)}</td>
+                    <td style={{ ...tdN, color:varColor(s.ytdVarBudget), fontWeight:600 }}>{pct(s.ytdVarBudget)}</td>
+                    <td style={{ ...tdN, color:varColor(s.ytdVarLY), fontWeight:600 }}>{pct(s.ytdVarLY)}</td>
+                  </tr>
+                ))}
+                <tr style={{ background:"#f0f7ff", borderTop:`2px solid ${C.primary}` }}>
+                  <td style={{ ...tdS, fontWeight:800, color:C.primaryDark }}>GRAND TOTAL</td>
+                  <td style={{ ...tdN, fontWeight:800, color:C.primaryDark }}>{fmt(totals.todayRev)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:C.primaryDark }}>{fmt(totals.mtdActual)}</td><td style={{ ...tdN, fontWeight:700, color:"#94a3b8" }}>{fmt(totals.mtdBudget)}</td><td style={{ ...tdN, fontWeight:700, color:"#94a3b8" }}>{fmt(totals.mtdLY)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.mtdVarBudget) }}>{pct(totals.mtdVarBudget)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.mtdVarLY) }}>{pct(totals.mtdVarLY)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:C.primaryDark }}>{fmt(totals.ytdActual)}</td><td style={{ ...tdN, fontWeight:700, color:"#94a3b8" }}>{fmt(totals.ytdBudget)}</td><td style={{ ...tdN, fontWeight:700, color:"#94a3b8" }}>{fmt(totals.ytdLY)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.ytdVarBudget) }}>{pct(totals.ytdVarBudget)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.ytdVarLY) }}>{pct(totals.ytdVarLY)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* DOCTOR PANELS */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginTop:24 }}>
+          {/* Top Performers */}
+          <div style={{ ...card, overflow:"hidden" }}>
+            <div style={{ padding:"16px 24px", background:`linear-gradient(135deg, ${C.success}, ${C.successLight})`, display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:32, height:32, borderRadius:8, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+              </div>
+              <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Top Performers</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Highest YTD Revenue</div></div>
+            </div>
+            <table style={{ width:"100%", fontSize:12 }}>
+              <thead><tr style={{ background:"#f0fdf4" }}>
+                <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th>
+                <th style={{ ...dth, textAlign:"right" }}>Today</th><th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>vs Bgt</th><th style={{ ...dth, textAlign:"right" }}>YTD</th>
+              </tr></thead>
+              <tbody>
+                {topPerformers.map((d,i) => (
+                  <tr key={d.name+i} style={{ background:i%2===0?"#fff":"#f9fafb", borderBottom:"1px solid #f1f5f9" }}>
+                    <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"#fef3c7":"#f1f5f9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?"#92400e":"#64748b" }}>{i+1}</span></td>
+                    <td style={{ ...dtd, fontWeight:600, color:"#1e293b" }}>{d.name}</td><td style={{ ...dtd, color:"#64748b" }}>{d.specialty}</td>
+                    <td style={dtn}>{fmt(d.today)}</td><td style={dtn}>{fmt(d.mtdActual)}</td>
+                    <td style={{ ...dtn, color:varColor(d.mtdVarBudget), fontWeight:600 }}>{pct(d.mtdVarBudget)}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:C.success }}>{fmt(d.ytdActual)}</td>
+                  </tr>
+                ))}
+                {!topPerformers.length && <tr><td colSpan={7} style={{ ...dtd, textAlign:"center", color:C.slateLight, padding:28 }}>Upload data to populate</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Needs Attention */}
+          <div style={{ ...card, overflow:"hidden" }}>
+            <div style={{ padding:"16px 24px", background:`linear-gradient(135deg, ${C.warning}, ${C.warningLight})`, display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:32, height:32, borderRadius:8, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Needs Attention</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>MTD &gt; 30% below budget</div></div>
+              {needsAttention.length > 0 && <div style={{ marginLeft:"auto", background:"rgba(255,255,255,0.3)", borderRadius:20, padding:"3px 12px", fontSize:12, fontWeight:700, color:"#fff" }}>{needsAttention.length}</div>}
+            </div>
+            <table style={{ width:"100%", fontSize:12 }}>
+              <thead><tr style={{ background:"#fffbeb" }}>
+                <th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>MTD Actual</th><th style={{ ...dth, textAlign:"right" }}>Budget</th><th style={{ ...dth, textAlign:"right" }}>Variance</th>
+              </tr></thead>
+              <tbody>
+                {needsAttention.map((d,i) => (
+                  <tr key={d.name+i} style={{ background:i%2===0?"#fff":"#fffbeb", borderBottom:"1px solid #f1f5f9" }}>
+                    <td style={{ ...dtd, fontWeight:600, color:"#1e293b" }}>{d.name}</td><td style={{ ...dtd, color:"#64748b" }}>{d.specialty}</td>
+                    <td style={dtn}>{fmt(d.mtdActual)}</td><td style={{ ...dtn, color:"#94a3b8" }}>{fmt(d.mtdBudget)}</td>
+                    <td style={dtn}><span style={{ color:"#fff", background:C.danger, padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.mtdVarBudget)}</span></td>
+                  </tr>
+                ))}
+                {!needsAttention.length && <tr><td colSpan={5} style={{ ...dtd, textAlign:"center", color:C.slateLight, padding:28 }}>All doctors within budget tolerance</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Bottom Performers */}
+        <div style={{ ...card, marginTop:20, overflow:"hidden" }}>
+          <div style={{ padding:"16px 24px", background:`linear-gradient(135deg, ${C.danger}, ${C.dangerLight})`, display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:32, height:32, borderRadius:8, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            </div>
+            <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Bottom Performers</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Lowest YTD variance vs budget (Budget &gt; AED 50K)</div></div>
+          </div>
+          <table style={{ width:"100%", fontSize:12 }}>
+            <thead><tr style={{ background:"#fef2f2" }}>
+              <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>YTD Actual</th><th style={{ ...dth, textAlign:"right" }}>YTD Budget</th><th style={{ ...dth, textAlign:"right" }}>Variance</th>
+            </tr></thead>
+            <tbody>
+              {bottomPerformers.map((d,i) => (
+                <tr key={d.name+i} style={{ background:i%2===0?"#fff":"#fef2f2", borderBottom:"1px solid #f1f5f9" }}>
+                  <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:"#fef2f2", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:C.danger }}>{i+1}</span></td>
+                  <td style={{ ...dtd, fontWeight:600, color:"#1e293b" }}>{d.name}</td><td style={{ ...dtd, color:"#64748b" }}>{d.specialty}</td>
+                  <td style={dtn}>{fmt(d.ytdActual)}</td><td style={{ ...dtn, color:"#94a3b8" }}>{fmt(d.ytdBudget)}</td>
+                  <td style={dtn}><span style={{ color:"#fff", background:C.danger, padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.ytdVarBudget)}</span></td>
+                </tr>
+              ))}
+              {!bottomPerformers.length && <tr><td colSpan={6} style={{ ...dtd, textAlign:"center", color:C.slateLight, padding:28 }}>Upload data to populate</td></tr>}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ textAlign:"center", padding:"28px 0 12px", color:C.slateLight, fontSize:11 }}>Al-Futtaim Health — HealthHub Executive Revenue Summary — All values in AED</div>
+      </div>
+    </div>
+  );
+}
+
+try {
+  ReactDOM.render(<App />, document.getElementById("root"));
+} catch(e) {
+  document.getElementById("root").innerHTML = '<div style="padding:40px;font-family:monospace;color:#dc2626"><h2>Render Error</h2><pre>'+e.message+'</pre><pre>'+e.stack+'</pre></div>';
+}
+</script>
+</body>
+</html>
