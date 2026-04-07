@@ -1573,7 +1573,7 @@ function App() {
               <XAxis dataKey="label" tick={{ fontSize:11, fill:C.textSecondary }} axisLine={{ stroke:C.border }} tickLine={false} />
               <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip />} cursor={{ stroke:C.primary, strokeDasharray:"4 4" }} />
-              <Area type="monotone" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue" dot={{ r:5, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:7, fill:C.primary, stroke:"#fff", strokeWidth:2 }} />
+              <Area type="monotone" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue" dot={{ r:5, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:7, fill:C.primary, stroke:"#fff", strokeWidth:2 }} label={({ x, y, value }) => <text x={x} y={y - 14} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.text}>{fmtK(value)}</text>} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -1950,7 +1950,26 @@ function App() {
         <div style={{ textAlign:"center", padding:"28px 0 12px", color:C.textMuted, fontSize:11 }}>Al-Futtaim Health — HealthHub Executive Revenue Summary — All values in AED</div>
       </main>
 
-      {selectedClinic && <ClinicDrillDown clinic={selectedClinic} onClose={() => setSelectedClinic(null)} />}
+      {selectedClinic && (() => {
+        let enrichedClinic = selectedClinic;
+        if (!selectedClinic.specialties || selectedClinic.specialties.length === 0 || selectedClinic.specialties.every(s => s.doctors.length === 0)) {
+          // Build specialties from doctors state using location data
+          const clinicDocs = doctors.filter(d => d.locations && d.locations.includes(selectedClinic.location));
+          const specMap = {};
+          clinicDocs.forEach(d => {
+            if (!specMap[d.specialty]) specMap[d.specialty] = [];
+            specMap[d.specialty].push(d);
+          });
+          const specs = Object.keys(specMap).map(name => {
+            const ds = specMap[name];
+            return { name, today: ds.reduce((a,d) => a + (d.today||0), 0), mtdActual: ds.reduce((a,d) => a + d.mtdActual, 0), mtdBudget: ds.reduce((a,d) => a + d.mtdBudget, 0), mtdLY: ds.reduce((a,d) => a + (d.mtdLY||0), 0), ytdActual: ds.reduce((a,d) => a + d.ytdActual, 0), ytdBudget: ds.reduce((a,d) => a + d.ytdBudget, 0), ytdLY: ds.reduce((a,d) => a + (d.ytdLY||0), 0), doctors: ds.sort((a,b) => b.mtdActual - a.mtdActual) };
+          }).sort((a,b) => b.mtdActual - a.mtdActual);
+          const mtdLY = specs.reduce((a,s) => a + (s.mtdLY||0), 0);
+          const ytdLY = specs.reduce((a,s) => a + (s.ytdLY||0), 0);
+          enrichedClinic = { ...selectedClinic, specialties: specs, mtdLY: selectedClinic.mtdLY || mtdLY, ytdLY: selectedClinic.ytdLY || ytdLY };
+        }
+        return <ClinicDrillDown clinic={enrichedClinic} onClose={() => setSelectedClinic(null)} />;
+      })()}
       {specialtyDrillData && <SpecialtyDrillDown data={specialtyDrillData} doctorLocations={doctorLocations} onClose={() => setSelectedSpecialty(null)} />}
     </div>
   );
