@@ -58,7 +58,7 @@ const { useState, useCallback, useMemo, useRef } = React;
 const {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Cell, PieChart, Pie, RadialBarChart, RadialBar,
-  LineChart, Line, AreaChart, Area,
+  LineChart, Line, AreaChart, Area, ReferenceLine,
 } = Recharts;
 
 // ─── Utility Helpers ─────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ const C = {
   textMuted: "#64748b",
   border: "#2f3548",
 };
-const PALETTE = ["#3b82f6","#06b6d4","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#f97316","#14b8a6","#6366f1","#a855f7","#d946ef","#84cc16","#0ea5e9","#e11d48"];
+const PALETTE = ["#3b82f6","#06b6d4","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#14b8a6","#6366f1","#f97316","#84cc16","#0ea5e9","#d946ef","#a855f7","#22d3ee","#fb923c","#a3e635","#2dd4bf","#818cf8","#fb7185","#facc15","#4ade80","#38bdf8","#c084fc"];
 
 // ─── Doctor Profile Links ───────────────────────────────────────────────────
 
@@ -775,8 +775,9 @@ function aggregateLocationData(rawRows) {
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
+  const accentColor = payload[0]?.color || C.primary;
   return (
-    <div style={{ background:"#1e293b", borderRadius:10, padding:"14px 18px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548" }}>
+    <div style={{ background:"#1e293b", borderRadius:10, padding:"14px 18px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548", borderLeft:"3px solid " + accentColor }}>
       <div style={{ fontWeight:700, fontSize:13, color:"#e2e8f0", marginBottom:8, borderBottom:"1px solid #2f3548", paddingBottom:6 }}>{label}</div>
       {payload.map((p,i) => (
         <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
@@ -793,7 +794,7 @@ function PieTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0];
   return (
-    <div style={{ background:"#1e293b", borderRadius:10, padding:"12px 16px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548" }}>
+    <div style={{ background:"#1e293b", borderRadius:10, padding:"12px 16px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548", borderLeft:"3px solid " + (d.payload?.fill || C.primary) }}>
       <div style={{ fontWeight:700, fontSize:13, color:"#e2e8f0", marginBottom:4 }}>{d.name}</div>
       <div style={{ fontSize:13, color:"#94a3b8" }}>AED {fmt(d.value)} ({(d.payload.pctShare*100).toFixed(1)}%)</div>
     </div>
@@ -1384,6 +1385,11 @@ function App() {
     return scaled;
   }, [dailyRevenue, specialties, dsrTotals]);
 
+  const dailyAvg = useMemo(() => {
+    if (!scaledDailyRevenue.length) return 0;
+    return Math.round(scaledDailyRevenue.reduce((a, d) => a + d.total, 0) / scaledDailyRevenue.length);
+  }, [scaledDailyRevenue]);
+
   const specTotals = useMemo(() => {
     const sum = (k) => specialties.reduce((a,s) => a + (s[k]||0), 0);
     const [tr,mA,mB,mL,yA,yB,yL] = ["today","mtdActual","mtdBudget","mtdLY","ytdActual","ytdBudget","ytdLY"].map(sum);
@@ -1403,6 +1409,16 @@ function App() {
       code: l.location,
       revenue: l.totalRevenueMTD,
     })), [locations]);
+
+  const clinicYTDChartData = useMemo(() =>
+    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.totalRevenueYTD > 0 || (l.ytdLY || 0) > 0))
+      .sort((a, b) => b.totalRevenueYTD - a.totalRevenueYTD)
+      .map(l => ({
+        name: CLINIC_COORDS[l.location]?.label || l.location,
+        code: l.location,
+        "2026": l.totalRevenueYTD,
+        "2025": l.ytdLY || 0,
+      })), [locations]);
 
   const barChartData = useMemo(() => sorted.slice(0,10).map(s => ({ name: s.name.length > 14 ? s.name.slice(0,13)+"\u2026" : s.name, "Last Year": s.mtdLY, "This Year": s.mtdActual })), [sorted]);
   const varianceData = useMemo(() => sorted.map(s => ({ name: s.name.length > 12 ? s.name.slice(0,11)+"\u2026" : s.name, variance: s.mtdActual - s.mtdLY, fill: s.mtdVarLY >= 0 ? C.success : C.danger })), [sorted]);
@@ -1648,41 +1664,51 @@ function App() {
         <div id="specialties" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:20, marginTop:24 }}>
           {/* Bar Chart */}
           <div style={{ ...card, padding:28 }}>
-            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.primary }}>
-              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>MTD Performance by Specialty</h2>
-              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Top 10 — This Year vs Last Year (AED)</p>
+            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.primary, display:"flex", alignItems:"center", gap:10 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <div>
+                <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>MTD Performance by Specialty</h2>
+                <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Top 10 — This Year vs Last Year (AED)</p>
+              </div>
             </div>
-            <ResponsiveContainer width="100%" height={isMobile ? 250 : 340}>
-              <BarChart data={barChartData} margin={{ top:10, right:10, left:0, bottom:60 }} barGap={2} barCategoryGap="20%">
+            <ResponsiveContainer width="100%" height={isMobile ? 270 : 360}>
+              <BarChart data={barChartData} margin={{ top:10, right:10, left:0, bottom:60 }} barGap={1} barCategoryGap="25%">
                 <defs>
-                  <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.primary} /><stop offset="100%" stopColor={C.accent} stopOpacity={0.85}/></linearGradient>
-                  <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9}/><stop offset="100%" stopColor="#6366f1" stopOpacity={0.6}/></linearGradient>
+                  <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity={0.9}/><stop offset="100%" stopColor="#60a5fa" stopOpacity={0.9}/></linearGradient>
+                  <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#475569" stopOpacity={0.5}/><stop offset="100%" stopColor="#64748b" stopOpacity={0.5}/></linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize:10, fill:C.textMuted }} angle={-40} textAnchor="end" interval={0} height={75} axisLine={{ stroke:C.border }} tickLine={false} />
                 <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.05)" }} />
                 <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
-                <Bar dataKey="Last Year" fill="url(#gL)" radius={[5,5,0,0]} maxBarSize={32} />
-                <Bar dataKey="This Year" fill="url(#gA)" radius={[5,5,0,0]} maxBarSize={32} />
+                <Bar dataKey="Last Year" fill="url(#gL)" radius={[5,5,0,0]} maxBarSize={28} />
+                <Bar dataKey="This Year" fill="url(#gA)" radius={[5,5,0,0]} maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Variance Waterfall */}
           <div style={{ ...card, padding:28 }}>
-            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.success }}>
-              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>MTD Variance vs Last Year</h2>
-              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Green = above LY, Red = below LY (AED)</p>
+            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.success, display:"flex", alignItems:"center", gap:10 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.success} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              <div>
+                <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>MTD Variance vs Last Year</h2>
+                <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Green = above LY, Red = below LY (AED)</p>
+              </div>
             </div>
-            <ResponsiveContainer width="100%" height={isMobile ? 400 : 500}>
-              <BarChart data={varianceData} margin={{ top:10, right:10, left:0, bottom:10 }} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+            <ResponsiveContainer width="100%" height={isMobile ? 420 : 520}>
+              <BarChart data={varianceData} margin={{ top:10, right:50, left:0, bottom:10 }} layout="vertical">
+                <defs>
+                  <linearGradient id="varGreenGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#059669" stopOpacity={0.85}/><stop offset="100%" stopColor="#34d399" stopOpacity={0.85}/></linearGradient>
+                  <linearGradient id="varRedGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#ef4444" stopOpacity={0.85}/><stop offset="100%" stopColor="#f87171" stopOpacity={0.85}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:C.textSecondary }} width={100} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.04)" }} />
-                <Bar dataKey="variance" radius={[0,4,4,0]} maxBarSize={16} name="Variance (AED)">
-                  {varianceData.map((e,i) => <Cell key={i} fill={e.fill} fillOpacity={0.85} />)}
+                <Bar dataKey="variance" radius={[0,4,4,0]} maxBarSize={14} name="Variance (AED)" label={{ position:"right", fontSize:10, fontWeight:600, fill:C.textSecondary, formatter:(v) => fmtK(v) }}>
+                  {varianceData.map((e,i) => <Cell key={i} fill={e.fill === C.success ? "url(#varGreenGrad)" : "url(#varRedGrad)"} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -1691,37 +1717,49 @@ function App() {
 
         {/* DAILY REVENUE TREND */}
         <div style={{ ...card, padding:28, marginTop:20 }}>
-          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid " + C.accent }}>
-            <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Daily Revenue Trend</h2>
-            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Total estimated revenue per day — {scaledDailyRevenue.length} days</p>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid " + C.accent, display:"flex", alignItems:"center", gap:10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <div>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Daily Revenue Trend</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Total estimated revenue per day — {scaledDailyRevenue.length} days</p>
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={scaledDailyRevenue} margin={{ top:10, right:30, left:0, bottom:5 }}>
               <defs>
                 <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={C.primary} stopOpacity={0.3} />
+                  <stop offset="5%" stopColor={C.primary} stopOpacity={0.4} />
                   <stop offset="95%" stopColor={C.primary} stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize:11, fill:C.textSecondary }} axisLine={{ stroke:C.border }} tickLine={false} />
               <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip />} cursor={{ stroke:C.primary, strokeDasharray:"4 4" }} />
-              <Area type="monotone" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue" dot={{ r:5, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:7, fill:C.primary, stroke:"#fff", strokeWidth:2 }} label={({ x, y, value }) => <text x={x} y={y - 14} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.text}>{fmtK(value)}</text>} />
+              {dailyAvg > 0 && <ReferenceLine y={dailyAvg} stroke={C.textMuted} strokeDasharray="6 4" strokeWidth={1} label={{ value:"Avg: " + fmtK(dailyAvg), position:"insideTopRight", fontSize:10, fill:C.textMuted, fontWeight:600 }} />}
+              <Area type="natural" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue" dot={{ r:6, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:8, fill:C.primary, stroke:"#fff", strokeWidth:2 }} label={({ x, y, value }) => <text x={x} y={y - 14} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.text}>{fmtK(value)}</text>} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         {/* PIE CHART */}
         <div style={{ ...card, padding:28, marginTop:20 }}>
-          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.accent }}>
-            <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>YTD Revenue Composition</h2>
-            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Share of total revenue by specialty</p>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.accent, display:"flex", alignItems:"center", gap:10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+            <div>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>YTD Revenue Composition</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Share of total revenue by specialty</p>
+            </div>
           </div>
           <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", alignItems:"center", gap: isMobile ? 20 : 40 }}>
-            <ResponsiveContainer width={isMobile ? "100%" : "50%"} height={isMobile ? 250 : 300}>
+            <ResponsiveContainer width={isMobile ? "100%" : "50%"} height={isMobile ? 270 : 320}>
               <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={isMobile ? 50 : 70} outerRadius={isMobile ? 90 : 120} paddingAngle={2} dataKey="value" stroke="none">
+                <defs>
+                  <filter id="pieShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="rgba(59,130,246,0.3)" />
+                  </filter>
+                </defs>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={isMobile ? 50 : 70} outerRadius={isMobile ? 90 : 120} paddingAngle={3} dataKey="value" stroke="none" activeIndex={0} activeShape={(props) => { const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props; return <g filter="url(#pieShadow)"><Recharts.Sector cx={cx} cy={cy} innerRadius={innerRadius-2} outerRadius={outerRadius+4} startAngle={startAngle} endAngle={endAngle} fill={fill} /></g>; }}>
                   {pieData.map((e,i) => <Cell key={i} fill={e.fill} />)}
                 </Pie>
                 <Tooltip content={<PieTooltip />} />
@@ -1746,13 +1784,22 @@ function App() {
 
         {/* CLINIC REVENUE COMPARISON */}
         <div id="clinics-chart" style={{ ...card, padding:28, marginTop:20 }}>
-          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid " + C.accent }}>
-            <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Clinic Revenue Comparison</h2>
-            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>All locations — MTD Revenue (AED)</p>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid " + C.accent, display:"flex", alignItems:"center", gap:10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <div>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Clinic Revenue Comparison</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>All locations — MTD Revenue (AED)</p>
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={Math.max(400, locations.length * 32)}>
-            <BarChart data={clinicChartData} layout="vertical" margin={{ top:5, right:30, left:10, bottom:5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+          <ResponsiveContainer width="100%" height={Math.max(420, locations.length * 34)}>
+            <BarChart data={clinicChartData} layout="vertical" margin={{ top:5, right:50, left:10, bottom:5 }}>
+              <defs>
+                <linearGradient id="clinicMtdGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.9} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" horizontal={false} />
               <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
                 const item = clinicChartData.find(d => d.name === payload.value);
@@ -1762,7 +1809,45 @@ function App() {
                   : <text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.textSecondary}>{payload.value}</text>;
               }} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(59,130,246,0.06)" }} />
-              <Bar dataKey="revenue" fill={C.accent} radius={[0,4,4,0]} maxBarSize={20} name="MTD Revenue" />
+              <Bar dataKey="revenue" fill="url(#clinicMtdGrad)" radius={[0,4,4,0]} maxBarSize={18} name="MTD Revenue" label={{ position:"right", fontSize:10, fontWeight:600, fill:C.textSecondary, formatter:(v) => fmtK(v) }} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* CLINIC YTD COMPARISON */}
+        <div style={{ ...card, padding:28, marginTop:20 }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid " + C.primary, display:"flex", alignItems:"center", gap:10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Clinic Revenue — YTD 2026 vs 2025</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>All locations — Year-to-Date total revenue comparison (AED)</p>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={Math.max(420, clinicYTDChartData.length * 38)}>
+            <BarChart data={clinicYTDChartData} layout="vertical" margin={{ top:5, right:30, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
+              <defs>
+                <linearGradient id="ytd2026Grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.9} />
+                </linearGradient>
+                <linearGradient id="ytd2025Grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#64748b" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="#94a3b8" stopOpacity={0.4} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+              <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
+                const item = clinicYTDChartData.find(d => d.name === payload.value);
+                const url = item && CLINIC_COORDS[item.code]?.url;
+                return url
+                  ? <a href={url} target="_blank" rel="noopener"><text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.primaryLight} style={{cursor:"pointer"}}>{payload.value}</text></a>
+                  : <text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.textSecondary}>{payload.value}</text>;
+              }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(59,130,246,0.04)" }} />
+              <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
+              <Bar dataKey="2026" fill="url(#ytd2026Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2026 YTD" />
+              <Bar dataKey="2025" fill="url(#ytd2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 YTD" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -2048,9 +2133,12 @@ function App() {
         {/* DAY-OF-WEEK REVENUE CHART */}
         {dailyRevenue.length > 0 && (
           <div style={{ ...card, marginTop:24, padding:28 }}>
-            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #8b5cf6" }}>
-              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Revenue by Day of Week</h2>
-              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Average daily revenue grouped by day of week</p>
+            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #8b5cf6", display:"flex", alignItems:"center", gap:10 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <div>
+                <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Revenue by Day of Week</h2>
+                <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Average daily revenue grouped by day of week</p>
+              </div>
             </div>
             {dailyRevenue.length < 14 ? (
               <div style={{ textAlign:"center", padding:"32px 20px", color:C.textMuted, fontSize:13 }}>
