@@ -303,7 +303,7 @@ const DEFAULT_DAILY_REVENUE = [
   { day:6, total:314906, volume:1146, label:"Mon 6", fullLabel:"Mon, Apr 6" },
 ];
 
-const DEFAULT_REPORT_DATE = "Apr 6, 2026";
+const DEFAULT_REPORT_DATE = "Apr 7, 2026";
 
 const DEFAULT_DSR_TOTALS = {
   todayRev: 548941, mtdActual: 2724642, mtdBudget: 3538000,
@@ -1550,8 +1550,13 @@ function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [dataWarnings, setDataWarnings] = useState([]);
   const [historicalMonth, setHistoricalMonth] = useState(null);
+  const currentStateRef = useRef(null); // stores the "current month" state for Back to Current
 
   const loadHistoricalMonth = useCallback((monthKey) => {
+    // Save current state before switching (only if not already viewing history)
+    if (!historicalMonth) {
+      currentStateRef.current = { dsrTotals, locations, reportDate, specialties, doctors, ipSpecialties, ipDoctors, dailyRevenue, doctorLocations };
+    }
     const hist = MONTHLY_HISTORY.find(m => m.monthKey === monthKey);
     if (!hist) return;
     setHistoricalMonth(monthKey);
@@ -1585,14 +1590,27 @@ function App() {
 
   const loadCurrentMonth = useCallback(() => {
     setHistoricalMonth(null);
-    setDsrTotals(DEFAULT_DSR_TOTALS);
-    setLocations(DEFAULT_LOCATIONS);
-    setReportDate(DEFAULT_REPORT_DATE);
-    setSpecialties(DEFAULT_SPECIALTIES);
-    setDoctors(DEFAULT_DOCTORS);
-    setIpSpecialties(DEFAULT_IP_SPECIALTIES);
-    setIpDoctors(DEFAULT_IP_DOCTORS);
-    setDailyRevenue(DEFAULT_DAILY_REVENUE);
+    const s = currentStateRef.current;
+    if (s) {
+      setDsrTotals(s.dsrTotals);
+      setLocations(s.locations);
+      setReportDate(s.reportDate);
+      setSpecialties(s.specialties);
+      setDoctors(s.doctors);
+      setIpSpecialties(s.ipSpecialties);
+      setIpDoctors(s.ipDoctors);
+      setDailyRevenue(s.dailyRevenue);
+      if (s.doctorLocations) setDoctorLocations(s.doctorLocations);
+    } else {
+      setDsrTotals(DEFAULT_DSR_TOTALS);
+      setLocations(DEFAULT_LOCATIONS);
+      setReportDate(DEFAULT_REPORT_DATE);
+      setSpecialties(DEFAULT_SPECIALTIES);
+      setDoctors(DEFAULT_DOCTORS);
+      setIpSpecialties(DEFAULT_IP_SPECIALTIES);
+      setIpDoctors(DEFAULT_IP_DOCTORS);
+      setDailyRevenue(DEFAULT_DAILY_REVENUE);
+    }
     setDataWarnings([]);
   }, []);
 
