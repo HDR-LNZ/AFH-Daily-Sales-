@@ -1722,6 +1722,18 @@ function App() {
     const southPct = totalClinicMTD ? ((southMTD / totalClinicMTD) * 100).toFixed(1) : 0;
     lines.push("Dubai South clinics (Tecom, JVC, Discovery Gardens, Festival Plaza) contribute " + southPct + "% of total clinic MTD revenue (AED " + fmt(southMTD) + " of AED " + fmt(totalClinicMTD) + ").");
 
+    // OP Volume commentary
+    const totalVolMTD = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolMTD || 0), 0);
+    const totalVolLY = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolMTDLY || 0), 0);
+    const days = dsrTotals.daysElapsed || 1;
+    const avgVolPerDay = Math.round(totalVolMTD / days);
+    const avgVolPerDayLY = Math.round(totalVolLY / days);
+    if (totalVolMTD > 0) {
+      const volVar = totalVolLY ? ((totalVolMTD - totalVolLY) / totalVolLY * 100).toFixed(1) : 0;
+      const growingClinics = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.opVolMTD > 0 && l.opVolMTDLY > 0 && l.opVolMTD > l.opVolMTDLY).map(l => CLINIC_COORDS[l.location]?.label || l.location);
+      lines.push("OP volume: " + fmt(totalVolMTD) + " visits MTD (" + avgVolPerDay + " avg/day), " + (totalVolLY ? volVar + "% vs LY (" + fmt(totalVolLY) + " visits, " + avgVolPerDayLY + " avg/day)" : "no LY data") + "." + (growingClinics.length > 0 ? " Volume growth at: " + growingClinics.join(", ") + "." : ""));
+    }
+
     // Monthly context
     const bestMonth = MONTHLY_HISTORY.reduce((best, m) => m.revenue > best.revenue ? m : best, MONTHLY_HISTORY[0]);
     const projectedMonth = Math.round(totals.mtdActual / (dsrTotals.daysElapsed || 1) * 30);
