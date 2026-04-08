@@ -145,22 +145,30 @@ function DoctorName({ name }) {
 // ─── Dubai Map Constants ────────────────────────────────────────────────────
 
 const CLINIC_COORDS = {
-  "Staff DIP": { lat: 24.9790, lng: 55.1762, label: "Staff DIP" },
-  "DG":        { lat: 25.0390, lng: 55.1445, label: "Discovery Gardens" },
-  "Fest Plaza":{ lat: 25.0270, lng: 55.1175, label: "Festival Plaza" },
-  "JVC":       { lat: 25.0566, lng: 55.2080, label: "JVC" },
-  "Tecom":     { lat: 25.0977, lng: 55.1755, label: "Tecom" },
-  "Silicon":   { lat: 25.1214, lng: 55.3753, label: "Silicon Oasis" },
-  "Intl City": { lat: 25.1419, lng: 55.4047, label: "Intl City" },
-  "Warqa":     { lat: 25.1885, lng: 55.4095, label: "Al Warqa" },
-  "Stationed": { lat: 25.2048, lng: 55.2708, label: "Stationed" },
-  "DSU":       { lat: 25.2219, lng: 55.3527, label: "DSU" },
-  "Staff DFC": { lat: 25.2230, lng: 55.3540, label: "Staff DFC" },
-  "Arabian":   { lat: 25.2346, lng: 55.4364, label: "Arabian Center" },
-  "Karama":    { lat: 25.2414, lng: 55.3025, label: "Karama" },
-  "Qusais":    { lat: 25.2770, lng: 55.3721, label: "Qusais" },
-  "Nahda":     { lat: 25.2940, lng: 55.3720, label: "Nahda" },
+  "Staff DIP": { lat: 24.9790, lng: 55.1762, label: "Staff DIP", url: null },
+  "DG":        { lat: 25.0390, lng: 55.1445, label: "Discovery Gardens", url: "https://www.healthhubalfuttaim.com/clinics/discovery-gardens/" },
+  "Fest Plaza":{ lat: 25.0270, lng: 55.1175, label: "Festival Plaza", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-festival-plaza/" },
+  "JVC":       { lat: 25.0566, lng: 55.2080, label: "JVC", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-jvc-jumeirah-village-circle/" },
+  "Tecom":     { lat: 25.0977, lng: 55.1755, label: "Tecom", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-barsha-heights/" },
+  "Silicon":   { lat: 25.1214, lng: 55.3753, label: "Silicon Oasis", url: "https://www.healthhubalfuttaim.com/clinics/silicon-oasis/" },
+  "Intl City": { lat: 25.1419, lng: 55.4047, label: "Intl City", url: "https://www.healthhubalfuttaim.com/clinics/international-city/" },
+  "Warqa":     { lat: 25.1885, lng: 55.4095, label: "Al Warqa", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-al-warqa/" },
+  "Stationed": { lat: 25.2048, lng: 55.2708, label: "Stationed", url: null },
+  "DSU":       { lat: 25.2219, lng: 55.3527, label: "DSU", url: "https://www.healthhubalfuttaim.com/clinics/day-surgery-center/" },
+  "Staff DFC": { lat: 25.2230, lng: 55.3540, label: "Staff DFC", url: null },
+  "Arabian":   { lat: 25.2346, lng: 55.4364, label: "Arabian Center", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-arabian-center/" },
+  "Karama":    { lat: 25.2414, lng: 55.3025, label: "Karama", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-al-karama/" },
+  "Qusais":    { lat: 25.2770, lng: 55.3721, label: "Qusais", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-al-qusais/" },
+  "Nahda":     { lat: 25.2940, lng: 55.3720, label: "Nahda", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-al-nahda/" },
 };
+
+function ClinicLink({ code, label }) {
+  const coords = CLINIC_COORDS[code];
+  const url = coords && coords.url;
+  const name = label || (coords && coords.label) || code;
+  if (url) return <a href={url} target="_blank" rel="noopener noreferrer" style={{ color:C.primaryLight, textDecoration:"none", fontWeight:700 }} onMouseEnter={(e) => e.target.style.textDecoration="underline"} onMouseLeave={(e) => e.target.style.textDecoration="none"}>{name}</a>;
+  return <span style={{ fontWeight:700, color:C.text }}>{name}</span>;
+}
 
 const DEFAULT_LOCATIONS = [
   { location:"DSU", totalToday:126597, totalRevenueMTD:665987, mtdBudget:916176, mtdLY:549282, totalRevenueYTD:12024449, ytdBudget:0, ytdLY:10411167, specialties:[] },
@@ -1003,7 +1011,9 @@ function DubaiMap({ locations, onClinicClick, isMobile }) {
 
       circle.bindPopup(
         '<div style="font-family:Inter,sans-serif;font-size:12px;min-width:140px">' +
-        '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#e2e8f0">' + (coords.label || loc.location) + '</div>' +
+        (coords.url
+          ? '<a href="' + coords.url + '" target="_blank" rel="noopener" style="font-weight:700;font-size:13px;margin-bottom:4px;color:#60a5fa;text-decoration:none;display:block">' + (coords.label || loc.location) + '</a>'
+          : '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#e2e8f0">' + (coords.label || loc.location) + '</div>') +
         '<div style="color:#94a3b8">MTD Revenue</div>' +
         '<div style="font-weight:700;font-size:15px;color:#60a5fa;margin:2px 0">AED ' + fmt(loc.totalRevenueMTD) + '</div>' +
         varLine +
@@ -1060,7 +1070,7 @@ function ClinicDrillDown({ clinic, onClose }) {
         <div style={{ padding: modalMobile ? "16px" : "20px 28px", background:"linear-gradient(135deg, "+C.primaryDark+", "+C.primary+")", borderRadius: modalMobile ? 0 : "16px 16px 0 0", color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div>
             <div style={{ fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", opacity:0.7 }}>Clinic Location</div>
-            <h2 style={{ margin:"4px 0 0", fontSize: modalMobile ? 18 : 22, fontWeight:800 }}>{clinic.location}</h2>
+            <h2 style={{ margin:"4px 0 0", fontSize: modalMobile ? 18 : 22, fontWeight:800 }}>{(() => { const url = CLINIC_COORDS[clinic.location]?.url; return url ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ color:"#fff", textDecoration:"none" }} onMouseEnter={(e) => e.target.style.textDecoration="underline"} onMouseLeave={(e) => e.target.style.textDecoration="none"}>{CLINIC_COORDS[clinic.location]?.label || clinic.location}</a> : (CLINIC_COORDS[clinic.location]?.label || clinic.location); })()}</h2>
           </div>
           <button onClick={onClose} style={{ width: modalMobile ? 40 : 36, height: modalMobile ? 40 : 36, borderRadius:10, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", fontSize: modalMobile ? 20 : 18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>{"\u2715"}</button>
         </div>
@@ -1347,6 +1357,7 @@ function App() {
   const clinicChartData = useMemo(() =>
     [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD).map(l => ({
       name: CLINIC_COORDS[l.location]?.label || l.location,
+      code: l.location,
       revenue: l.totalRevenueMTD,
     })), [locations]);
 
@@ -1690,7 +1701,13 @@ function App() {
             <BarChart data={clinicChartData} layout="vertical" margin={{ top:5, right:30, left:10, bottom:5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
               <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:C.textSecondary }} width={130} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
+                const item = clinicChartData.find(d => d.name === payload.value);
+                const url = item && CLINIC_COORDS[item.code]?.url;
+                return url
+                  ? <a href={url} target="_blank" rel="noopener"><text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.primaryLight} style={{cursor:"pointer"}}>{payload.value}</text></a>
+                  : <text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.textSecondary}>{payload.value}</text>;
+              }} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(59,130,246,0.06)" }} />
               <Bar dataKey="revenue" fill={C.accent} radius={[0,4,4,0]} maxBarSize={20} name="MTD Revenue" />
             </BarChart>
