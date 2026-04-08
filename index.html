@@ -1549,8 +1549,15 @@ function App() {
       lines.push("Revenue impact from " + resignedDocs.length + " resigned doctors: AED " + fmt(revLoss) + " YTD revenue gap (LY revenue: AED " + fmt(resignedYtdLY) + ").");
     }
 
+    // Dubai South vs total MTD
+    const SOUTH = new Set(["Tecom","JVC","DG","Fest Plaza"]);
+    const southMTD = locations.filter(l => SOUTH.has(l.location)).reduce((a,l) => a + l.totalRevenueMTD, 0);
+    const totalClinicMTD = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + l.totalRevenueMTD, 0);
+    const southPct = totalClinicMTD ? ((southMTD / totalClinicMTD) * 100).toFixed(1) : 0;
+    lines.push("Dubai South clinics (Tecom, JVC, Discovery Gardens, Festival Plaza) contribute " + southPct + "% of total clinic MTD revenue (AED " + fmt(southMTD) + " of AED " + fmt(totalClinicMTD) + ").");
+
     return lines;
-  }, [totals, dsrTotals, specialties, locations, ipTotals]);
+  }, [totals, dsrTotals, specialties, locations, ipTotals, doctors]);
 
   const topPerformers = useMemo(() => [...doctors].sort((a,b)=>(b.ytdActual||0)-(a.ytdActual||0)).slice(0,10), [doctors]);
   const needsAttention = useMemo(() => doctors.filter(d=>d.mtdLY>5000&&d.mtdVarLY<-0.2).sort((a,b)=>a.mtdVarLY-b.mtdVarLY).slice(0,10), [doctors]);
