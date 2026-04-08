@@ -1984,7 +1984,7 @@ function App() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 6" stroke={C.border} horizontal={false} />
-              <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={(v) => v > 0 ? "AED " + v : ""} axisLine={false} tickLine={false} />
+              <XAxis type="number" tick={false} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
                 const item = clinicPPCChartData.find(d => d.name === payload.value);
                 const url = item && CLINIC_COORDS[item.code]?.url;
