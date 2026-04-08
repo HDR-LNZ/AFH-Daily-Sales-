@@ -568,7 +568,11 @@ function parseExcelFile(data) {
   const dsrName = wb.SheetNames.find((n) => n.toUpperCase().includes("DSR"));
   if (dsrName) {
     const dsRows = XLSX.utils.sheet_to_json(wb.Sheets[dsrName], { header:1, defval:null });
-    for (let i=0;i<6;i++) { const r=dsRows[i]; if(!r) continue; for (const cell of r) { if (cell instanceof Date) { reportDate=cell.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); break; } if (typeof cell==="string" && /apr|may|jun|mar|feb|jan/i.test(cell)) { reportDate=cell; break; } } }
+    // Report date from DSR R7 C8 (0-indexed: row 6, col 7) or R7 C3 (row 6, col 2)
+    const dateCell = dsRows[6] && (dsRows[6][7] || dsRows[6][2]);
+    if (dateCell instanceof Date) { reportDate = dateCell.toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); }
+    else if (typeof dateCell === "number" && dateCell > 40000) { const d = new Date((dateCell - 25569) * 86400000); reportDate = d.toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); }
+    else { for (let i=0;i<10;i++) { const r=dsRows[i]; if(!r) continue; for (const cell of r) { if (cell instanceof Date) { reportDate=cell.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); break; } } } }
     const numK = (r, c) => { const v = dsRows[r] && dsRows[r][c]; return typeof v === 'number' ? Math.round(v * 1000) : 0; };
     const specMtdActual = specialties.reduce((a,s) => a + s.mtdActual, 0) || 1;
     const specMtdBudget = specialties.reduce((a,s) => a + s.mtdBudget, 0);
@@ -1491,9 +1495,11 @@ function App() {
         "2025": l.ytdLY || 0,
       })), [locations]);
 
-  const barChartData = useMemo(() => sorted.slice(0,10).map(s => ({ name: s.name.length > 14 ? s.name.slice(0,13)+"\u2026" : s.name, "Last Year": s.mtdLY, "This Year": s.mtdActual })), [sorted]);
-  const varianceData = useMemo(() => sorted.map(s => ({ name: s.name.length > 12 ? s.name.slice(0,11)+"\u2026" : s.name, variance: s.mtdActual - s.mtdLY, fill: s.mtdVarLY >= 0 ? C.success : C.danger })), [sorted]);
-  const pieData = useMemo(() => { const tot = sorted.reduce((a,s) => a+s.ytdActual, 0); return sorted.map((s,i) => ({ name:s.name, value:s.ytdActual, pctShare: tot ? s.ytdActual/tot : 0, fill: PALETTE[i%PALETTE.length] })); }, [sorted]);
+  // Filter out minor specialties (< AED 10K MTD and < AED 50K YTD) from charts
+  const chartSpecialties = useMemo(() => sorted.filter(s => s.mtdActual >= 10000 || s.ytdActual >= 50000), [sorted]);
+  const barChartData = useMemo(() => chartSpecialties.slice(0,10).map(s => ({ name: s.name.length > 14 ? s.name.slice(0,13)+"\u2026" : s.name, "Last Year": s.mtdLY, "This Year": s.mtdActual })), [chartSpecialties]);
+  const varianceData = useMemo(() => chartSpecialties.filter(s => s.mtdActual > 0 || s.mtdLY > 0).map(s => ({ name: s.name.length > 12 ? s.name.slice(0,11)+"\u2026" : s.name, variance: s.mtdActual - s.mtdLY, fill: s.mtdVarLY >= 0 ? C.success : C.danger })), [chartSpecialties]);
+  const pieData = useMemo(() => { const filtered = sorted.filter(s => s.ytdActual >= 50000); const tot = filtered.reduce((a,s) => a+s.ytdActual, 0); return filtered.map((s,i) => ({ name:s.name, value:s.ytdActual, pctShare: tot ? s.ytdActual/tot : 0, fill: PALETTE[i%PALETTE.length] })); }, [sorted]);
 
   const ipTotals = useMemo(() => {
     const mtdA = ipSpecialties.reduce((a,s) => a + s.mtdActual, 0);
