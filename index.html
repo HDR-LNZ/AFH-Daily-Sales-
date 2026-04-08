@@ -87,15 +87,66 @@ const varColor = (n) => (n == null || isNaN(n)) ? "#64748b" : n >= 0 ? "#10b981"
 const varBg = (n) => (n == null || isNaN(n)) ? "transparent" : n >= 0 ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)";
 
 const MONTHLY_HISTORY = [
-  { month:"Jan 2026", revenue:14862925, lyRevenue:14897705, budget:19506623, opRevenue:9260402, opLY:8971293, ipRevenue:927233, ipLY:926701, ipCases:126, days:31,
+  { month:"Jan 2026", monthKey:"Jan", revenue:14862925, lyRevenue:14897705, budget:19506623, opRevenue:9260402, opLY:8971293, ipRevenue:927233, ipLY:926701, ipCases:126, days:31,
     topClinic:"DSU", topClinicRev:4031995,
-    summary:"Revenue of AED 14.9M, flat vs LY (-0.2%). DSU led with AED 4.0M (+24.2%). IP revenue AED 927K (126 cases). Ramadan impact minimal." },
-  { month:"Feb 2026", revenue:15033816, lyRevenue:14651467, budget:14814809, opRevenue:9006036, opLY:8837767, ipRevenue:875410, ipLY:956761, ipCases:123, days:28,
+    dsr: { todayRev:641216, mtdActual:14862925, mtdLY:14897705, ytdActual:14862925, ytdLY:14897705, ytdBudget:19506623, opMtdVolume:32944, daysElapsed:31 },
+    clinics: [
+      {loc:"DSU",mtd:4031995,mtdLY:3245892,ytd:4031995,ytdLY:3245892,vol:5803,volLY:5466},
+      {loc:"Silicon",mtd:2029287,mtdLY:1881661,ytd:2029287,ytdLY:1881661,vol:4934,volLY:6186},
+      {loc:"Qusais",mtd:1664582,mtdLY:1931659,ytd:1664582,ytdLY:1931659,vol:3378,volLY:5613},
+      {loc:"DG",mtd:1236086,mtdLY:1297516,ytd:1236086,ytdLY:1297516,vol:3495,volLY:5116},
+      {loc:"Intl City",mtd:1054900,mtdLY:995749,ytd:1054900,ytdLY:995749,vol:2448,volLY:3005},
+      {loc:"Warqa",mtd:915688,mtdLY:798086,ytd:915688,ytdLY:798086,vol:2747,volLY:3068},
+      {loc:"Nahda",mtd:872156,mtdLY:1046319,ytd:872156,ytdLY:1046319,vol:2146,volLY:3328},
+      {loc:"Karama",mtd:680149,mtdLY:726063,ytd:680149,ytdLY:726063,vol:2011,volLY:3170},
+      {loc:"Fest Plaza",mtd:688643,mtdLY:621398,ytd:688643,ytdLY:621398,vol:1407,volLY:1898},
+      {loc:"Tecom",mtd:582083,mtdLY:1018115,ytd:582083,ytdLY:1018115,vol:1498,volLY:3021},
+      {loc:"Arabian",mtd:560294,mtdLY:454935,ytd:560294,ytdLY:454935,vol:970,volLY:870},
+      {loc:"JVC",mtd:203392,mtdLY:0,ytd:203392,ytdLY:0,vol:442,volLY:0},
+      {loc:"Staff DIP",mtd:41446,mtdLY:26366,ytd:41446,ytdLY:26366,vol:978,volLY:484},
+      {loc:"Stationed",mtd:96965,mtdLY:88333,ytd:96965,ytdLY:88333,vol:687,volLY:1087},
+    ],
+    summary:"Revenue of AED 14.9M, flat vs LY (-0.2%). DSU led with AED 4.0M (+24.2%). OP volume 32,944 visits." },
+  { month:"Feb 2026", monthKey:"Feb", revenue:15033816, lyRevenue:14651467, budget:14814809, opRevenue:9006036, opLY:8837767, ipRevenue:875410, ipLY:956761, ipCases:123, days:28,
     topClinic:"DSU", topClinicRev:4402714,
-    summary:"Strongest month at AED 15.0M. DSU peaked at AED 4.4M (+31.4% vs LY). Qusais underperformed (-10.4%). IP cases: 123 (AED 875K)." },
-  { month:"Mar 2026", revenue:11565488, lyRevenue:12995430, budget:13226062, opRevenue:7087280, opLY:8193061, ipRevenue:653813, ipLY:736021, ipCases:88, days:31,
+    dsr: { todayRev:584277, mtdActual:15033816, mtdLY:14651467, ytdActual:29896741, ytdLY:29549172, ytdBudget:34321432, opMtdVolume:31246, daysElapsed:28 },
+    clinics: [
+      {loc:"DSU",mtd:4402714,mtdLY:3351802,ytd:8434709,ytdLY:6597694,vol:5167,volLY:5313},
+      {loc:"Qusais",mtd:1768349,mtdLY:1974563,ytd:3432931,ytdLY:3906222,vol:3847,volLY:5563},
+      {loc:"Silicon",mtd:1928985,mtdLY:1907640,ytd:3958272,ytdLY:3789301,vol:4690,volLY:6237},
+      {loc:"DG",mtd:1141317,mtdLY:1337400,ytd:2377403,ytdLY:2634916,vol:3069,volLY:5247},
+      {loc:"Intl City",mtd:955475,mtdLY:1023718,ytd:2010376,ytdLY:2019467,vol:2293,volLY:3342},
+      {loc:"Nahda",mtd:847032,mtdLY:992627,ytd:1719189,ytdLY:2038946,vol:2210,volLY:3299},
+      {loc:"Warqa",mtd:921305,mtdLY:758890,ytd:1836993,ytdLY:1556977,vol:2689,volLY:3006},
+      {loc:"Karama",mtd:675505,mtdLY:641621,ytd:1355654,ytdLY:1367685,vol:1969,volLY:2549},
+      {loc:"Fest Plaza",mtd:615386,mtdLY:768404,ytd:1304030,ytdLY:1389802,vol:1281,volLY:1800},
+      {loc:"Tecom",mtd:542991,mtdLY:912572,ytd:1125074,ytdLY:1930688,vol:1315,volLY:3056},
+      {loc:"Arabian",mtd:531919,mtdLY:411330,ytd:1092214,ytdLY:866265,vol:958,volLY:760},
+      {loc:"JVC",mtd:235554,mtdLY:0,ytd:438947,ytdLY:0,vol:529,volLY:0},
+      {loc:"Staff DIP",mtd:25428,mtdLY:25641,ytd:66874,ytdLY:52007,vol:622,volLY:416},
+      {loc:"Stationed",mtd:90720,mtdLY:106062,ytd:187684,ytdLY:194394,vol:607,volLY:1098},
+    ],
+    summary:"Strongest month at AED 15.0M (+2.6% vs LY). DSU peaked at AED 4.4M. OP volume 31,246 visits." },
+  { month:"Mar 2026", monthKey:"Mar", revenue:11565488, lyRevenue:12995430, budget:13226062, opRevenue:7087280, opLY:8193061, ipRevenue:653813, ipLY:736021, ipCases:88, days:31,
     topClinic:"DSU", topClinicRev:2923754,
-    summary:"Revenue declined to AED 11.6M (-11.0% vs LY) due to Ramadan. All clinics impacted. DG -23.8%, Qusais -24.9%. IP cases dropped to 88." },
+    dsr: { todayRev:421315, mtdActual:11565488, mtdLY:12995430, ytdActual:41462229, ytdLY:42544602, ytdBudget:47548494, opMtdVolume:25754, daysElapsed:31 },
+    clinics: [
+      {loc:"DSU",mtd:2923754,mtdLY:2934754,ytd:11358462,ytdLY:9779618,vol:4202,volLY:4596},
+      {loc:"Qusais",mtd:1499903,mtdLY:1996611,ytd:4932834,ytdLY:5902833,vol:3133,volLY:5820},
+      {loc:"Silicon",mtd:1541405,mtdLY:1768976,ytd:5499677,ytdLY:5558277,vol:3831,volLY:5696},
+      {loc:"DG",mtd:887157,mtdLY:1164337,ytd:3264560,ytdLY:3799253,vol:2535,volLY:4544},
+      {loc:"Intl City",mtd:850700,mtdLY:959028,ytd:2861076,ytdLY:2978495,vol:1943,volLY:3132},
+      {loc:"Nahda",mtd:693534,mtdLY:919248,ytd:2412723,ytdLY:2958194,vol:1877,volLY:2974},
+      {loc:"Warqa",mtd:606165,mtdLY:712682,ytd:2443158,ytdLY:2269659,vol:1906,volLY:2649},
+      {loc:"Karama",mtd:596520,mtdLY:702862,ytd:1952174,ytdLY:2070546,vol:1815,volLY:2584},
+      {loc:"Tecom",mtd:500014,mtdLY:790003,ytd:1625087,ytdLY:2720690,vol:1237,volLY:2719},
+      {loc:"Fest Plaza",mtd:487202,mtdLY:761925,ytd:1791231,ytdLY:2151727,vol:887,volLY:1815},
+      {loc:"Arabian",mtd:427411,mtdLY:348267,ytd:1519624,ytdLY:1214532,vol:803,volLY:675},
+      {loc:"JVC",mtd:204836,mtdLY:0,ytd:643783,ytdLY:0,vol:538,volLY:0},
+      {loc:"Staff DIP",mtd:28211,mtdLY:23440,ytd:95086,ytdLY:75447,vol:685,volLY:432},
+      {loc:"Stationed",mtd:50213,mtdLY:93704,ytd:237898,ytdLY:288099,vol:362,volLY:892},
+    ],
+    summary:"Revenue declined to AED 11.6M (-11.0% vs LY) due to Ramadan. All clinics impacted. OP volume 25,754." },
 ];
 
 const C = {
@@ -1015,7 +1066,7 @@ const fmtLocs = (locs) => {
 
 // ─── Sidebar Component ─────────────────────────────────────────────────────
 
-function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarOpen, setSidebarOpen, isMobile }) {
+function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarOpen, setSidebarOpen, isMobile, loadHistoricalMonth, loadCurrentMonth, historicalMonth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navItems = [
     { id: "overview", label: "Overview", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> },
@@ -1056,6 +1107,29 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
                     <span style={{ flexShrink:0, display:"flex", alignItems:"center" }}>{item.icon}</span>
                     <span>{item.label}</span>
                   </button>
+                );
+              })}
+            </div>
+            {/* Monthly History */}
+            <div style={{ padding:"8px 12px", borderTop:"1px solid "+C.border, overflowY:"auto", flex:"0 1 auto" }}>
+              <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Monthly History</div>
+              {historicalMonth && (
+                <div onClick={() => { loadCurrentMonth(); setMobileMenuOpen(false); }} style={{ padding:"6px 10px", background:C.primary, borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
+                  <span style={{ fontSize:11, fontWeight:600, color:"#fff" }}>{"\u2190"} Back to Current (Apr)</span>
+                </div>
+              )}
+              {MONTHLY_HISTORY.map((m, i) => {
+                const varLY = m.lyRevenue ? ((m.revenue - m.lyRevenue) / m.lyRevenue * 100).toFixed(1) : 0;
+                const isPositive = m.revenue >= m.lyRevenue;
+                return (
+                  <div key={m.month} style={{ marginBottom:8, padding:"8px 10px", background:C.cardBg, borderRadius:8, border: historicalMonth === m.monthKey ? "2px solid "+C.primary : "1px solid "+C.border, cursor:"pointer" }}
+                    onClick={() => { loadHistoricalMonth(m.monthKey); setMobileMenuOpen(false); }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                      <span style={{ fontSize:11, fontWeight:700, color:C.text }}>{m.month}</span>
+                      <span style={{ fontSize:9, fontWeight:600, color: isPositive ? "#10b981" : "#ef4444", background: isPositive ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", padding:"1px 6px", borderRadius:4 }}>{isPositive ? "+" : ""}{varLY}%</span>
+                    </div>
+                    <div style={{ fontSize:13, fontWeight:800, color:C.text }}>AED {(m.revenue / 1e6).toFixed(1)}M</div>
+                  </div>
                 );
               })}
             </div>
@@ -1106,12 +1180,17 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
       {sidebarOpen && (
         <div style={{ padding:"8px 12px", borderTop:"1px solid "+C.border, overflowY:"auto", flex:"0 1 auto" }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Monthly History</div>
+          {historicalMonth && (
+            <div onClick={loadCurrentMonth} style={{ padding:"6px 10px", background:C.primary, borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
+              <span style={{ fontSize:11, fontWeight:600, color:"#fff" }}>{"\u2190"} Back to Current (Apr)</span>
+            </div>
+          )}
           {MONTHLY_HISTORY.map((m, i) => {
             const varLY = m.lyRevenue ? ((m.revenue - m.lyRevenue) / m.lyRevenue * 100).toFixed(1) : 0;
             const isPositive = m.revenue >= m.lyRevenue;
             return (
-              <div key={m.month} style={{ marginBottom:10, padding:"8px 10px", background:C.cardBg, borderRadius:8, border:"1px solid "+C.border, cursor:"pointer" }}
-                onClick={() => { /* could expand to show details */ }}>
+              <div key={m.month} style={{ marginBottom:10, padding:"8px 10px", background:C.cardBg, borderRadius:8, border: historicalMonth === m.monthKey ? "2px solid "+C.primary : "1px solid "+C.border, cursor:"pointer" }}
+                onClick={() => loadHistoricalMonth(m.monthKey)}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                   <span style={{ fontSize:11, fontWeight:700, color:C.text }}>{m.month}</span>
                   <span style={{ fontSize:9, fontWeight:600, color: isPositive ? "#10b981" : "#ef4444", background: isPositive ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", padding:"1px 6px", borderRadius:4 }}>{isPositive ? "+" : ""}{varLY}%</span>
@@ -1470,6 +1549,53 @@ function App() {
   const [activeSection, setActiveSection] = useState("overview");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [dataWarnings, setDataWarnings] = useState([]);
+  const [historicalMonth, setHistoricalMonth] = useState(null);
+
+  const loadHistoricalMonth = useCallback((monthKey) => {
+    const hist = MONTHLY_HISTORY.find(m => m.monthKey === monthKey);
+    if (!hist) return;
+    setHistoricalMonth(monthKey);
+    const d = hist.dsr;
+    setDsrTotals({
+      todayRev: d.todayRev, mtdActual: d.mtdActual, mtdLY: d.mtdLY || 0,
+      ytdActual: d.ytdActual, ytdLY: d.ytdLY, ytdBudget: d.ytdBudget,
+      opMtdVolume: d.opMtdVolume, opMtdLYVolume: 0,
+      opMtdPPC: 0, opMtdLYPPC: 0, opMtdRevenue: 0, opMtdLYRevenue: 0,
+      daysElapsed: d.daysElapsed,
+      mtdBudget: d.mtdActual,
+    });
+    const histLocs = hist.clinics.map(c => ({
+      location: c.loc,
+      totalToday: 0,
+      totalRevenueMTD: c.mtd,
+      mtdBudget: 0,
+      mtdLY: c.mtdLY,
+      totalRevenueYTD: c.ytd,
+      ytdBudget: 0,
+      ytdLY: c.ytdLY,
+      opVolMTD: c.vol,
+      opVolMTDLY: c.volLY,
+      ppcYTD: c.vol ? Math.round(c.ytd / c.vol) : 0,
+      ppcYTDLY: c.volLY ? Math.round(c.ytdLY / c.volLY) : 0,
+      specialties: [],
+    }));
+    setLocations(histLocs);
+    setReportDate(hist.month);
+  }, []);
+
+  const loadCurrentMonth = useCallback(() => {
+    setHistoricalMonth(null);
+    setDsrTotals(DEFAULT_DSR_TOTALS);
+    setLocations(DEFAULT_LOCATIONS);
+    setReportDate(DEFAULT_REPORT_DATE);
+    setSpecialties(DEFAULT_SPECIALTIES);
+    setDoctors(DEFAULT_DOCTORS);
+    setIpSpecialties(DEFAULT_IP_SPECIALTIES);
+    setIpDoctors(DEFAULT_IP_DOCTORS);
+    setDailyRevenue(DEFAULT_DAILY_REVENUE);
+    setDataWarnings([]);
+  }, []);
+
   React.useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handler);
@@ -1750,7 +1876,7 @@ function App() {
 
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.pageBg }}>
-      <Sidebar activeSection={activeSection} onNavigate={scrollToSection} reportDate={reportDate} onFileLoaded={handleFileLoaded} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} />
+      <Sidebar activeSection={activeSection} onNavigate={scrollToSection} reportDate={reportDate} onFileLoaded={handleFileLoaded} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} loadHistoricalMonth={loadHistoricalMonth} loadCurrentMonth={loadCurrentMonth} historicalMonth={historicalMonth} />
 
       <main style={{ flex:1, marginLeft: isMobile ? 0 : (sidebarOpen ? 220 : 64), transition:"margin-left 0.3s", padding: isMobile ? "68px 12px 16px" : "24px 32px", maxWidth:1400, overflowX:"hidden" }}>
 
@@ -1779,6 +1905,14 @@ function App() {
             <ul style={{ margin:0, paddingLeft:20, listStyle:"disc" }}>
               {dataWarnings.map((w, i) => <li key={i} style={{ fontSize:12, color:"#fbbf24", marginBottom:2 }}>{w}</li>)}
             </ul>
+          </div>
+        )}
+
+        {/* HISTORICAL DATA BANNER */}
+        {historicalMonth && (
+          <div style={{ ...card, background:"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.3)", padding:"10px 20px", marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:13, color:C.primaryLight }}>Viewing historical data for <strong>{MONTHLY_HISTORY.find(m => m.monthKey === historicalMonth)?.month}</strong></span>
+            <button onClick={loadCurrentMonth} style={{ background:C.primary, border:"none", borderRadius:6, padding:"4px 12px", color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer" }}>Back to Current</button>
           </div>
         )}
 
