@@ -121,16 +121,59 @@ function getDoctorSlug(name) {
   return name.toLowerCase().replace(/\./g, '').replace(/\s+/g, '-').replace(/--+/g, '-').trim();
 }
 
+// Manual aliases: Excel name slug → website slug (for known spelling differences)
+const DOCTOR_SLUG_ALIASES = {
+  "dr-mohammed-abul-hassan-boopathy":"dr-mohammed-hassan",
+  "dr-mhd-amer-dardari":"dr-mohamed-amer-dardari",
+  "dr-omar-eissa-abdelshafy-habo":"dr-omar-eissa-habo",
+  "dr-hind-alaa-majeed-abodaka":"dr-hind-a-majeed-abodaka",
+  "dr-ali-aleddey":"dr-ali-hasan-aleddey",
+  "dr-isteer-nashed-makhaly-wahba":"dr-isteer-wahba",
+  "dr-jay-edwarde-hontanosas":"dr-jay-hontanosas",
+  "dr-shashikanth-jadhav":"dr-shashikant-jadhav",
+  "dr-mohammed-al-jumaily":"prof-dr-mohammed-al-jumaily",
+  "dr-nivedita-m-c":"dr-nivedita-mc",
+  "dr-shweta-jaiswal":"dr-shweta-ramesh-chandra-jaiswal",
+  "dr-benish-khanzda":"dr-benish-khanzada",
+  "dr-shaji-kuzhiyil":"dr-shaji-pallissery-kuzhiyil",
+  "dr-mohsin-e-azam":"dr-mohsin-azam",
+  "dr-prashant-agarkar":"dr-prashant-pradeep-agarkar",
+  "dr-ahmed-almousa":"prof-dr-ahmed-almousa",
+  "dr-sujatha-chella-rajesh":"dr-sujatha-rajesh",
+  "dr-tusharkumar-deepak-sinhal":"dr-tushar-sinhal",
+  "dr-deepthi-reddy":"dr-deepthi-gopala-reddy",
+  "dr-sai-soujanya":"dr-sai-soujanya-sarva",
+  "dr-abdalla-alhajeri":"dr-abdalla-alhajiri",
+  "dr-gada-abdelhamid":"dr-gada-abdel-hamid",
+  "dr-layla-askar-alsalama":"dr-layla-askar",
+  "dr-muhammed-shafi-shamsu":"dr-muhammed-shafi",
+  "dr-rinku-alex":"dr-rinku-alex-vaidyan",
+  "dr-vineetha-oommen-kottakkattu":"dr-vineetha-oommen-kottakkatu",
+  "dr-khaldun-alshaheen":"dr-khaldun-al-shaheen",
+  "dr-mouhsen-hosein":"dr-mouhsen-alhosein",
+  "dr-ola-alsheikh":"dr-ola-al-sheikh",
+  "dr-hans-mohammed-hanif":"dr-hans-mohammed",
+  "dr-hassan-al-rifai":"dr-hassan-alrifai",
+  "dr-abdul-manaf":"dr-abdul-manaf-k-m",
+  "dr-ashraf-demiry":"dr-ashraf-aldemiry",
+  "dr-chuchendra-shadakshari":"dr-chuchendra-lingadahalli",
+};
+
 function getDoctorProfileUrl(name) {
   const slug = getDoctorSlug(name);
   if (!slug) return null;
+  // Direct match
   if (ACTIVE_DOCTOR_SLUGS.has(slug)) return HEALTHHUB_DOCTOR_URL + slug + "/";
-  // Try without middle names (match on first + last)
-  const parts = slug.split('-').filter(p => p);
-  if (parts.length > 2) {
-    const shortSlug = parts[0] + '-' + parts[parts.length - 1];
+  // Alias match
+  if (DOCTOR_SLUG_ALIASES[slug]) return HEALTHHUB_DOCTOR_URL + DOCTOR_SLUG_ALIASES[slug] + "/";
+  // Fuzzy: try matching on last name + first name prefix
+  const parts = slug.split('-').filter(p => p && p !== 'dr');
+  if (parts.length >= 1) {
+    const last = parts[parts.length - 1];
+    const first = parts[0];
     for (const s of ACTIVE_DOCTOR_SLUGS) {
-      if (s.endsWith('-' + parts[parts.length - 1]) && s.startsWith(parts[0] + '-')) return HEALTHHUB_DOCTOR_URL + s + "/";
+      const sp = s.split('-').filter(p => p && p !== 'dr' && p !== 'prof');
+      if (sp.length >= 2 && sp[sp.length - 1] === last && sp[0] === first) return HEALTHHUB_DOCTOR_URL + s + "/";
     }
   }
   return null;
@@ -1454,6 +1497,16 @@ function App() {
     if (ipTotals.mtdActual > 0) {
       const ipVar = ipTotals.mtdVarLY;
       lines.push("Inpatient revenue: AED " + fmt(ipTotals.mtdActual) + " MTD (" + (ipVar >= 0 ? '+' : '') + (ipVar*100).toFixed(1) + "% vs LY) with " + ipTotals.volume + " cases.");
+    }
+
+    // Revenue loss from resigned doctors
+    const resignedDocs = doctors.filter(d => !getDoctorProfileUrl(d.name) && d.ytdLY > 0);
+    if (resignedDocs.length > 0) {
+      const resignedYtdLY = resignedDocs.reduce((a, d) => a + (d.ytdLY || 0), 0);
+      const resignedMtdLY = resignedDocs.reduce((a, d) => a + (d.mtdLY || 0), 0);
+      const resignedYtdActual = resignedDocs.reduce((a, d) => a + (d.ytdActual || 0), 0);
+      const revLoss = resignedYtdLY - resignedYtdActual;
+      lines.push("Revenue impact from " + resignedDocs.length + " resigned doctors: AED " + fmt(revLoss) + " YTD revenue gap (LY revenue: AED " + fmt(resignedYtdLY) + ").");
     }
 
     return lines;
