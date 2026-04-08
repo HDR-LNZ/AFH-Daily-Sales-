@@ -86,6 +86,18 @@ const pct = (n) => {
 const varColor = (n) => (n == null || isNaN(n)) ? "#64748b" : n >= 0 ? "#10b981" : "#ef4444";
 const varBg = (n) => (n == null || isNaN(n)) ? "transparent" : n >= 0 ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)";
 
+const MONTHLY_HISTORY = [
+  { month:"Jan 2026", revenue:14862925, lyRevenue:14897705, budget:19506623, opRevenue:9260402, opLY:8971293, ipRevenue:927233, ipLY:926701, ipCases:126, days:31,
+    topClinic:"DSU", topClinicRev:4031995,
+    summary:"Revenue of AED 14.9M, flat vs LY (-0.2%). DSU led with AED 4.0M (+24.2%). IP revenue AED 927K (126 cases). Ramadan impact minimal." },
+  { month:"Feb 2026", revenue:15033816, lyRevenue:14651467, budget:14814809, opRevenue:9006036, opLY:8837767, ipRevenue:875410, ipLY:956761, ipCases:123, days:28,
+    topClinic:"DSU", topClinicRev:4402714,
+    summary:"Strongest month at AED 15.0M. DSU peaked at AED 4.4M (+31.4% vs LY). Qusais underperformed (-10.4%). IP cases: 123 (AED 875K)." },
+  { month:"Mar 2026", revenue:11565488, lyRevenue:12995430, budget:13226062, opRevenue:7087280, opLY:8193061, ipRevenue:653813, ipLY:736021, ipCases:88, days:31,
+    topClinic:"DSU", topClinicRev:2923754,
+    summary:"Revenue declined to AED 11.6M (-11.0% vs LY) due to Ramadan. All clinics impacted. DG -23.8%, Qusais -24.9%. IP cases dropped to 88." },
+];
+
 const C = {
   pageBg: "#1e2230",
   sidebarBg: "#171b26",
@@ -990,6 +1002,27 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
         })}
       </div>
 
+      {sidebarOpen && (
+        <div style={{ padding:"8px 12px", borderTop:"1px solid "+C.border, overflowY:"auto", flex:"0 1 auto" }}>
+          <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Monthly History</div>
+          {MONTHLY_HISTORY.map((m, i) => {
+            const varLY = m.lyRevenue ? ((m.revenue - m.lyRevenue) / m.lyRevenue * 100).toFixed(1) : 0;
+            const isPositive = m.revenue >= m.lyRevenue;
+            return (
+              <div key={m.month} style={{ marginBottom:10, padding:"8px 10px", background:C.cardBg, borderRadius:8, border:"1px solid "+C.border, cursor:"pointer" }}
+                onClick={() => { /* could expand to show details */ }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:C.text }}>{m.month}</span>
+                  <span style={{ fontSize:9, fontWeight:600, color: isPositive ? "#10b981" : "#ef4444", background: isPositive ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", padding:"1px 6px", borderRadius:4 }}>{isPositive ? "+" : ""}{varLY}%</span>
+                </div>
+                <div style={{ fontSize:13, fontWeight:800, color:C.text }}>AED {(m.revenue / 1e6).toFixed(1)}M</div>
+                <div style={{ fontSize:9, color:C.textMuted, marginTop:3, lineHeight:1.4 }}>{m.summary}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Bottom: Upload + Date */}
       <div style={{ padding:"12px 10px", borderTop:"1px solid "+C.border, display:"flex", flexDirection:"column", gap:8 }}>
         {sidebarOpen && <UploadZone onFileLoaded={onFileLoaded} compact />}
@@ -1569,6 +1602,11 @@ function App() {
     const totalClinicMTD = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + l.totalRevenueMTD, 0);
     const southPct = totalClinicMTD ? ((southMTD / totalClinicMTD) * 100).toFixed(1) : 0;
     lines.push("Dubai South clinics (Tecom, JVC, Discovery Gardens, Festival Plaza) contribute " + southPct + "% of total clinic MTD revenue (AED " + fmt(southMTD) + " of AED " + fmt(totalClinicMTD) + ").");
+
+    // Monthly context
+    const bestMonth = MONTHLY_HISTORY.reduce((best, m) => m.revenue > best.revenue ? m : best, MONTHLY_HISTORY[0]);
+    const projectedMonth = Math.round(totals.mtdActual / (dsrTotals.daysElapsed || 1) * 30);
+    lines.push("At current pace, April is projected to reach AED " + fmtK(projectedMonth) + " (" + (projectedMonth > bestMonth.revenue ? "above" : "below") + " " + bestMonth.month + "'s AED " + fmtK(bestMonth.revenue) + ").");
 
     return lines;
   }, [totals, dsrTotals, specialties, locations, ipTotals, doctors]);
