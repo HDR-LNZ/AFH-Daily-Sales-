@@ -106,6 +106,42 @@ const C = {
 };
 const PALETTE = ["#3b82f6","#06b6d4","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#f97316","#14b8a6","#6366f1","#a855f7","#d946ef","#84cc16","#0ea5e9","#e11d48"];
 
+// ─── Doctor Profile Links ───────────────────────────────────────────────────
+
+const HEALTHHUB_DOCTOR_URL = "https://www.healthhubalfuttaim.com/doctor/";
+
+// Active doctors on HealthHub website (190 practitioners scraped from the website)
+// Normalized names: lowercase, no periods, trimmed
+const ACTIVE_DOCTOR_SLUGS = new Set([
+  "dr-abdalla-alhajiri","dr-abdul-manaf-k-m","dr-abdul-raoof-thacharakkal","dr-abhay-kumar-aryan","dr-abhay-pande","dr-abhay-vyankatrao-inamdar","dr-abithraj-kallikadavil","dr-aby-john","dr-alanoud-shatat","dr-ali-akbar-thirkannur-pilathottathil","dr-ali-hasan-aleddey","dr-ali-raza","dr-ali-shorbagi","dr-alvin-clavert-casono","dr-aneesh-kunnath-parambath","dr-ankit-mudgal","dr-anurag-kumar","dr-archana-babanagare","dr-ashita-rastogi","dr-ashraf-aldemiry","dr-bashar-alhasan","dr-benish-khanzada","dr-bhaskar-rao-murari","dr-cecil-kunnappilly","dr-chaula-sangani","dr-chuchendra-lingadahalli","dr-danny-shawaf","dr-deepthi-balakrishnan","dr-deepthi-gopala-reddy","dr-dimple-tiwari","dr-divya-mangal","dr-ebtessam-hassanin","dr-elaheh-allahyari","dr-eman-el-toukhi","dr-farah-al-mulla","dr-fareeha-younis","dr-fatima-qurratulain","dr-fernaz-behlim","dr-firas-david","dr-gada-abdel-hamid","dr-george-cherian","dr-george-simon","dr-george-thachil","dr-ghada-shate","dr-ghoufran-mohideen","dr-girisankar-gangadharan","dr-haitham-sawalmeh","dr-hans-mohammed","dr-hasan-odeh","dr-hassan-alrifai","dr-hilda-atallah","dr-hind-a-majeed-abodaka","dr-husna-karikuzhi","dr-hussain-syed-mohammad-sarwar","dr-ibraheem-basher","dr-ibrahim-riza","dr-ihsan-kommouna","dr-inderpal-deshwal","dr-isteer-wahba","dr-jabraan-shaikh","dr-jacob-george","dr-jay-hontanosas","dr-jimmy-john","dr-jitendra-khachariya","dr-jubin-abraham-raju","dr-karthikesh-omkaram","dr-khaldun-al-shaheen","dr-krishna-amith-kumar","dr-lana-hassan","dr-layla-askar","dr-libey-joy","dr-lubna-malek","dr-madiha-rashid","dr-maemun-alkhosin","dr-malak-wehbe","dr-manaf-kandakji","dr-manal-alsereidi","dr-manish-mulchandani","dr-mariam-javaid","dr-marianne-estaris","dr-marjan-movassaghi","dr-mohamed-amer-dardari","dr-mohamed-el-helbawy","dr-mohammed-alsabbah","dr-mohammed-hassan","dr-mohammed-taha","dr-mohan-kudur","dr-mohsin-azam","dr-mosaddeq-alyousif","dr-mouhsen-alhosein","dr-moutusi-audhya","dr-muhammed-shafi","dr-musarat-ali","dr-nada-altabara","dr-nagendra-prasad-anipindi","dr-naseem-palakkuzhiyil","dr-nazar-khowaja","dr-nesmal-musaliar","dr-nevra-batur","dr-nidhi-maggon","dr-nirmal-sumitha-jerald","dr-nisha-narayanankutty","dr-nivedita-mc","dr-ojusvini-amit-kumar","dr-ola-al-sheikh","dr-omar-eissa-habo","dr-ponnusamy-tamilvendan","dr-prashant-pradeep-agarkar","dr-prashanth-prabhu","dr-preeti-sahu","dr-priti-mishra","dr-pyari-jahan","dr-rakesh-maggon","dr-rami-ismail","dr-ramika-mittal","dr-rasha-alani","dr-razan-taef","dr-rebecca-najem","dr-rehab-abdelrazig","dr-rekha-pandita","dr-renju-dominic","dr-rimzim-gupta","dr-rinku-alex-vaidyan","dr-sachin-lohra","dr-safaa-alawi","dr-sai-soujanya-sarva","dr-sameh-elgouhari","dr-sandeep-kumar","dr-saritha-shetty","dr-seyed-mohammad-kasaei","dr-shailesh-kumar","dr-shaima-alnaqbi","dr-shajahan-abdulkhader","dr-shaji-pallissery-kuzhiyil","dr-shashikant-jadhav","dr-shila-waghmare","dr-shilpa-suryawanshi","dr-shweta-ramesh-chandra-jaiswal","dr-simikiruthiga-senthilkumar","dr-simna-rajan","dr-siva-malikireddy","dr-sobana-bilhanan","dr-somshekhar-mallappa","dr-sourabh-soni","dr-srinivasan-ravindranath","dr-sujatha-rajesh","dr-sundas-maaz","dr-sunitha-mary-mathew","dr-surya-senapathy","dr-tagawa-alnaim","dr-tripti-pathare","dr-tushar-sinhal","dr-uma-bilgi","dr-varsha-arun","dr-venkateswara-gorthi","dr-viji-george","dr-vineetha-oommen-kottakkatu","dr-vinu-rajashekar","dr-yasameen-alamer","dr-yasir-malik","dr-zahra-fazal","dr-zainab-ali-asghar","prof-dr-ahmed-almousa","prof-dr-mohammed-al-jumaily",
+]);
+
+function getDoctorSlug(name) {
+  if (!name) return null;
+  return name.toLowerCase().replace(/\./g, '').replace(/\s+/g, '-').replace(/--+/g, '-').trim();
+}
+
+function getDoctorProfileUrl(name) {
+  const slug = getDoctorSlug(name);
+  if (!slug) return null;
+  if (ACTIVE_DOCTOR_SLUGS.has(slug)) return HEALTHHUB_DOCTOR_URL + slug + "/";
+  // Try without middle names (match on first + last)
+  const parts = slug.split('-').filter(p => p);
+  if (parts.length > 2) {
+    const shortSlug = parts[0] + '-' + parts[parts.length - 1];
+    for (const s of ACTIVE_DOCTOR_SLUGS) {
+      if (s.endsWith('-' + parts[parts.length - 1]) && s.startsWith(parts[0] + '-')) return HEALTHHUB_DOCTOR_URL + s + "/";
+    }
+  }
+  return null;
+}
+
+function DoctorName({ name }) {
+  const url = getDoctorProfileUrl(name);
+  if (url) return <a href={url} target="_blank" rel="noopener noreferrer" style={{ color:C.primaryLight, textDecoration:"none", fontWeight:600 }} onMouseEnter={(e) => e.target.style.textDecoration="underline"} onMouseLeave={(e) => e.target.style.textDecoration="none"}>{name}</a>;
+  return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span> <span style={{ fontSize:9, color:"#ef4444", fontWeight:600, opacity:0.8 }}>Resigned</span></span>;
+}
+
 // ─── Dubai Map Constants ────────────────────────────────────────────────────
 
 const CLINIC_COORDS = {
@@ -1090,7 +1126,7 @@ function ClinicDrillDown({ clinic, onClose }) {
                       const docVar = doc.mtdBudget ? (doc.mtdActual - doc.mtdBudget) / doc.mtdBudget : 0;
                       return (
                         <tr key={doc.name + di} style={{ background: di % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid "+C.border }}>
-                          <td style={{ ...dtd, paddingLeft:32, color:C.textSecondary }}>{doc.name}</td>
+                          <td style={{ ...dtd, paddingLeft:32 }}><DoctorName name={doc.name} /></td>
                           <td style={dtn}>{fmt(doc.today)}</td>
                           <td style={dtn}>{fmt(doc.mtdActual)}</td>
                           <td style={{ ...dtn, color:C.textMuted }}>{fmt(doc.mtdBudget)}</td>
@@ -1193,7 +1229,7 @@ function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
                 return (
                   <tr key={d.name + i} style={{ background: i % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid " + C.border }}>
                     <td style={dtd}>{i + 1}</td>
-                    <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td>
+                    <td style={{ ...dtd }}><DoctorName name={d.name} /></td>
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis" }} title={locsStr}>{shortLocs || "\u2014"}</td>
                     <td style={dtn}>{fmt(d.today)}</td>
                     <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.mtdActual)}</td>
@@ -1730,7 +1766,7 @@ function App() {
                 {topPerformers.map((d,i) => (
                   <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                     <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(245,158,11,0.15)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?C.warning:C.textMuted }}>{i+1}</span></td>
-                    <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
+                    <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
                     <td style={dtn}>{fmt(d.today)}</td><td style={dtn}>{fmt(d.mtdActual)}</td>
                     <td style={{ ...dtn, color:varColor(d.mtdVarBudget), fontWeight:600 }}>{pct(d.mtdVarBudget)}</td>
@@ -1760,7 +1796,7 @@ function App() {
               <tbody>
                 {needsAttention.map((d,i) => (
                   <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
-                    <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
+                    <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
                     <td style={dtn}>{fmt(d.today)}</td><td style={dtn}>{fmt(d.mtdActual)}</td>
                     <td style={dtn}><span style={{ color:"#fff", background:varColor(d.mtdVarLY), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.mtdVarLY)}</span></td>
@@ -1790,7 +1826,7 @@ function App() {
               {bottomPerformers.map((d,i) => (
                 <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                   <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:"rgba(239,68,68,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:C.danger }}>{i+1}</span></td>
-                  <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
+                  <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
                   <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
                   <td style={dtn}>{fmt(d.ytdActual)}</td><td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
                   <td style={dtn}><span style={{ color:"#fff", background:varColor(d.ytdVarLY), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.ytdVarLY)}</span></td>
@@ -1895,7 +1931,7 @@ function App() {
                   {ipDoctors.map((d,i) => (
                     <tr key={d.name+i} style={{ background: i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                       <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(245,158,11,0.15)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?C.warning:C.textMuted }}>{i+1}</span></td>
-                      <td style={{ ...dtd, fontWeight:600, color:C.text }}>{d.name}</td>
+                      <td style={{ ...dtd }}><DoctorName name={d.name} /></td>
                       <td style={{ ...dtd, color:C.textMuted }}>{d.specialty}</td>
                       <td style={dtn}>{fmt(d.mtdRevenue)}</td>
                       <td style={dtn}>{d.mtdCount}</td>
