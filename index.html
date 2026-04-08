@@ -1404,6 +1404,20 @@ function App() {
     return Math.round(scaledDailyRevenue.reduce((a, d) => a + d.total, 0) / scaledDailyRevenue.length);
   }, [scaledDailyRevenue]);
 
+  // Linear regression trendline for daily revenue
+  const dailyWithTrend = useMemo(() => {
+    const data = scaledDailyRevenue;
+    if (data.length < 2) return data;
+    const n = data.length;
+    const sumX = data.reduce((a, _, i) => a + i, 0);
+    const sumY = data.reduce((a, d) => a + d.total, 0);
+    const sumXY = data.reduce((a, d, i) => a + i * d.total, 0);
+    const sumX2 = data.reduce((a, _, i) => a + i * i, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    return data.map((d, i) => ({ ...d, trend: Math.round(intercept + slope * i) }));
+  }, [scaledDailyRevenue]);
+
   const specTotals = useMemo(() => {
     const sum = (k) => specialties.reduce((a,s) => a + (s[k]||0), 0);
     const [tr,mA,mB,mL,yA,yB,yL] = ["today","mtdActual","mtdBudget","mtdLY","ytdActual","ytdBudget","ytdLY"].map(sum);
@@ -1756,7 +1770,7 @@ function App() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={scaledDailyRevenue} margin={{ top:10, right:30, left:0, bottom:5 }}>
+            <AreaChart data={dailyWithTrend} margin={{ top:10, right:30, left:0, bottom:5 }}>
               <defs>
                 <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={C.primary} stopOpacity={0.4} />
@@ -1769,6 +1783,7 @@ function App() {
               <Tooltip content={<ChartTooltip />} cursor={{ stroke:C.primary, strokeDasharray:"4 4" }} />
               {dailyAvg > 0 && <ReferenceLine y={dailyAvg} stroke={C.textMuted} strokeDasharray="6 4" strokeWidth={1} label={{ value:"Avg: " + fmtK(dailyAvg), position:"insideTopRight", fontSize:10, fill:C.textMuted, fontWeight:600 }} />}
               <Area type="natural" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue" dot={{ r:6, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:8, fill:C.primary, stroke:"#fff", strokeWidth:2 }} label={({ x, y, value }) => <text x={x} y={y - 14} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.text}>{fmtK(value)}</text>} />
+              <Line type="linear" dataKey="trend" stroke="#f59e0b" strokeWidth={2} strokeDasharray="8 4" dot={false} name="Trend" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
