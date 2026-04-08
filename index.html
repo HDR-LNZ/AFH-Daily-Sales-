@@ -801,6 +801,73 @@ function aggregateLocationData(rawRows) {
   }).sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
 }
 
+function validateData(parsed) {
+  const warnings = [];
+  const { specialties, doctors, dsrTotals, locations } = parsed;
+
+  if (!dsrTotals) {
+    warnings.push("DSR sheet not found — KPI totals may be incorrect");
+    return warnings;
+  }
+
+  // 1. DSR MTD must be > 0
+  if (!dsrTotals.mtdActual || dsrTotals.mtdActual <= 0) {
+    warnings.push("MTD Revenue is zero or missing from DSR sheet");
+  }
+
+  // 2. DSR MTD should be > Specialty OP total (DSR includes Pharmacy+IP)
+  const opMtd = specialties.reduce((a,s) => a + s.mtdActual, 0);
+  if (dsrTotals.mtdActual && opMtd > dsrTotals.mtdActual) {
+    warnings.push("OP specialty total (" + fmt(opMtd) + ") exceeds DSR total (" + fmt(dsrTotals.mtdActual) + ") — possible cell mapping error");
+  }
+
+  // 3. DSR/OP ratio should be 1.3-2.0x (OP is ~55-75% of total revenue)
+  if (dsrTotals.mtdActual && opMtd > 0) {
+    const ratio = dsrTotals.mtdActual / opMtd;
+    if (ratio < 1.1 || ratio > 2.5) {
+      warnings.push("DSR/OP ratio is " + ratio.toFixed(2) + "x (expected 1.3-2.0x) — check cell references");
+    }
+  }
+
+  // 4. YTD should be >= MTD
+  if (dsrTotals.ytdActual && dsrTotals.mtdActual && dsrTotals.ytdActual < dsrTotals.mtdActual) {
+    warnings.push("YTD (" + fmt(dsrTotals.ytdActual) + ") is less than MTD (" + fmt(dsrTotals.mtdActual) + ")");
+  }
+
+  // 5. Today should be <= MTD
+  if (dsrTotals.todayRev && dsrTotals.mtdActual && dsrTotals.todayRev > dsrTotals.mtdActual) {
+    warnings.push("Today's revenue (" + fmt(dsrTotals.todayRev) + ") exceeds MTD (" + fmt(dsrTotals.mtdActual) + ")");
+  }
+
+  // 6. Days elapsed should be reasonable (1-31)
+  if (dsrTotals.daysElapsed && (dsrTotals.daysElapsed < 1 || dsrTotals.daysElapsed > 31)) {
+    warnings.push("Days elapsed (" + dsrTotals.daysElapsed + ") is out of range");
+  }
+
+  // 7. Location totals should be close to DSR clinic total (not exceed it)
+  if (locations && locations.length > 0) {
+    const locTotal = locations.reduce((a,l) => a + l.totalRevenueMTD, 0);
+    if (dsrTotals.mtdActual && locTotal > dsrTotals.mtdActual * 1.1) {
+      warnings.push("Location total (" + fmt(locTotal) + ") exceeds DSR total — possible double-counting");
+    }
+  }
+
+  // 8. No negative revenues for major metrics
+  if (dsrTotals.todayRev < 0) warnings.push("Today's revenue is negative");
+  if (dsrTotals.mtdActual < 0) warnings.push("MTD revenue is negative");
+  if (dsrTotals.ytdActual < 0) warnings.push("YTD revenue is negative");
+
+  // 9. Report date sanity
+  // (checked separately)
+
+  // 10. Doctor count sanity
+  if (doctors.length < 10) {
+    warnings.push("Only " + doctors.length + " doctors parsed — expected 200+");
+  }
+
+  return warnings;
+}
+
 // ─── Custom Tooltips ─────────────────────────────────────────────────────────
 
 function ChartTooltip({ active, payload, label }) {
@@ -1372,6 +1439,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState("overview");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [dataWarnings, setDataWarnings] = useState([]);
   React.useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handler);
@@ -1403,6 +1471,11 @@ function App() {
     if (dr && dr.length) setDailyRevenue(dr);
     if (dlocs && Object.keys(dlocs).length) setDoctorLocations(dlocs);
     setReportDate(rd);
+    const warnings = validateData({ specialties: specs, doctors: docs, dsrTotals: dst, locations: locs });
+    setDataWarnings(warnings);
+    if (warnings.length > 0) {
+      console.warn("Data validation warnings:", warnings);
+    }
   }, []);
 
   const totals = useMemo(() => {
@@ -1641,6 +1714,19 @@ function App() {
             {isMobile && <UploadZone onFileLoaded={handleFileLoaded} compact />}
           </div>
         </div>
+
+        {/* DATA VALIDATION WARNINGS */}
+        {dataWarnings.length > 0 && (
+          <div style={{ ...card, background:"rgba(245,158,11,0.1)", border:"1px solid rgba(245,158,11,0.3)", padding:"14px 20px", marginBottom:16 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span style={{ fontSize:13, fontWeight:700, color:"#f59e0b" }}>Data Validation Warnings</span>
+            </div>
+            <ul style={{ margin:0, paddingLeft:20, listStyle:"disc" }}>
+              {dataWarnings.map((w, i) => <li key={i} style={{ fontSize:12, color:"#fbbf24", marginBottom:2 }}>{w}</li>)}
+            </ul>
+          </div>
+        )}
 
         {/* EXECUTIVE SUMMARY */}
         <div style={{ ...card, padding: isMobile ? "14px 16px" : "20px 28px", marginBottom:20 }}>
