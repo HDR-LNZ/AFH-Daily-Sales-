@@ -224,18 +224,18 @@ function ClinicLink({ code, label }) {
 }
 
 const DEFAULT_LOCATIONS = [
-  { location:"DSU", totalToday:126597, totalRevenueMTD:665987, mtdBudget:916176, mtdLY:549282, totalRevenueYTD:12024449, ytdBudget:0, ytdLY:10411167, ppcYTD:453, ppcYTDLY:361, specialties:[] },
-  { location:"Qusais", totalToday:61076, totalRevenueMTD:361872, mtdBudget:487206, mtdLY:346814, totalRevenueYTD:5294706, ytdBudget:0, ytdLY:6249647, ppcYTD:281, ppcYTDLY:203, specialties:[] },
-  { location:"Silicon", totalToday:69941, totalRevenueMTD:351543, mtdBudget:458349, mtdLY:392851, totalRevenueYTD:5851220, ytdBudget:0, ytdLY:5951128, ppcYTD:228, ppcYTDLY:175, specialties:[] },
-  { location:"DG", totalToday:52197, totalRevenueMTD:200343, mtdBudget:307460, mtdLY:276915, totalRevenueYTD:3464903, ytdBudget:0, ytdLY:4076168, ppcYTD:222, ppcYTDLY:151, specialties:[] },
-  { location:"Intl City", totalToday:43063, totalRevenueMTD:177355, mtdBudget:262214, mtdLY:195733, totalRevenueYTD:3038431, ytdBudget:0, ytdLY:3174229, ppcYTD:249, ppcYTDLY:183, specialties:[] },
-  { location:"Nahda", totalToday:41590, totalRevenueMTD:168240, mtdBudget:256601, mtdLY:198718, totalRevenueYTD:2580963, ytdBudget:0, ytdLY:3156912, ppcYTD:209, ppcYTDLY:162, specialties:[] },
-  { location:"Warqa", totalToday:27494, totalRevenueMTD:153906, mtdBudget:192724, mtdLY:162489, totalRevenueYTD:2597064, ytdBudget:0, ytdLY:2432148, ppcYTD:209, ppcYTDLY:163, specialties:[] },
-  { location:"Karama", totalToday:32291, totalRevenueMTD:139481, mtdBudget:165358, mtdLY:129026, totalRevenueYTD:2091654, ytdBudget:0, ytdLY:2199572, ppcYTD:188, ppcYTDLY:139, specialties:[] },
-  { location:"Tecom", totalToday:20594, totalRevenueMTD:130086, mtdBudget:184279, mtdLY:173303, totalRevenueYTD:1755173, ytdBudget:0, ytdLY:2893993, ppcYTD:225, ppcYTDLY:178, specialties:[] },
-  { location:"Fest Plaza", totalToday:18027, totalRevenueMTD:126664, mtdBudget:167153, mtdLY:134855, totalRevenueYTD:1917895, ytdBudget:0, ytdLY:2286582, ppcYTD:203, ppcYTDLY:156, specialties:[] },
-  { location:"Arabian", totalToday:27200, totalRevenueMTD:104012, mtdBudget:189189, mtdLY:62089, totalRevenueYTD:1623637, ytdBudget:0, ytdLY:1276622, ppcYTD:288, ppcYTDLY:301, specialties:[] },
-  { location:"JVC", totalToday:11809, totalRevenueMTD:53488, mtdBudget:132366, mtdLY:0, totalRevenueYTD:697271, ytdBudget:0, ytdLY:0, ppcYTD:361, ppcYTDLY:0, specialties:[] },
+  { location:"DSU", totalToday:126597, totalRevenueMTD:665987, mtdBudget:916176, mtdLY:549282, totalRevenueYTD:12024449, ytdBudget:0, ytdLY:10411167, ppcYTD:453, ppcYTDLY:361, opVolMTD:1002, opVolMTDLY:855, specialties:[] },
+  { location:"Qusais", totalToday:61076, totalRevenueMTD:361872, mtdBudget:487206, mtdLY:346814, totalRevenueYTD:5294706, ytdBudget:0, ytdLY:6249647, ppcYTD:281, ppcYTDLY:203, opVolMTD:684, opVolMTDLY:1027, specialties:[] },
+  { location:"Silicon", totalToday:69941, totalRevenueMTD:351543, mtdBudget:458349, mtdLY:392851, totalRevenueYTD:5851220, ytdBudget:0, ytdLY:5951128, ppcYTD:228, ppcYTDLY:175, opVolMTD:840, opVolMTDLY:1186, specialties:[] },
+  { location:"DG", totalToday:52197, totalRevenueMTD:200343, mtdBudget:307460, mtdLY:276915, totalRevenueYTD:3464903, ytdBudget:0, ytdLY:4076168, ppcYTD:222, ppcYTDLY:151, opVolMTD:548, opVolMTDLY:988, specialties:[] },
+  { location:"Intl City", totalToday:43063, totalRevenueMTD:177355, mtdBudget:262214, mtdLY:195733, totalRevenueYTD:3038431, ytdBudget:0, ytdLY:3174229, ppcYTD:249, ppcYTDLY:183, opVolMTD:382, opVolMTDLY:577, specialties:[] },
+  { location:"Nahda", totalToday:41590, totalRevenueMTD:168240, mtdBudget:256601, mtdLY:198718, totalRevenueYTD:2580963, ytdBudget:0, ytdLY:3156912, ppcYTD:209, ppcYTDLY:162, opVolMTD:398, opVolMTDLY:634, specialties:[] },
+  { location:"Warqa", totalToday:27494, totalRevenueMTD:153906, mtdBudget:192724, mtdLY:162489, totalRevenueYTD:2597064, ytdBudget:0, ytdLY:2432148, ppcYTD:209, ppcYTDLY:163, opVolMTD:475, opVolMTDLY:561, specialties:[] },
+  { location:"Karama", totalToday:32291, totalRevenueMTD:139481, mtdBudget:165358, mtdLY:129026, totalRevenueYTD:2091654, ytdBudget:0, ytdLY:2199572, ppcYTD:188, ppcYTDLY:139, opVolMTD:354, opVolMTDLY:439, specialties:[] },
+  { location:"Tecom", totalToday:20594, totalRevenueMTD:130086, mtdBudget:184279, mtdLY:173303, totalRevenueYTD:1755173, ytdBudget:0, ytdLY:2893993, ppcYTD:225, ppcYTDLY:178, opVolMTD:315, opVolMTDLY:577, specialties:[] },
+  { location:"Fest Plaza", totalToday:18027, totalRevenueMTD:126664, mtdBudget:167153, mtdLY:134855, totalRevenueYTD:1917895, ytdBudget:0, ytdLY:2286582, ppcYTD:203, ppcYTDLY:156, opVolMTD:229, opVolMTDLY:347, specialties:[] },
+  { location:"Arabian", totalToday:27200, totalRevenueMTD:104012, mtdBudget:189189, mtdLY:62089, totalRevenueYTD:1623637, ytdBudget:0, ytdLY:1276622, ppcYTD:288, ppcYTDLY:301, opVolMTD:178, opVolMTDLY:125, specialties:[] },
+  { location:"JVC", totalToday:11809, totalRevenueMTD:53488, mtdBudget:132366, mtdLY:0, totalRevenueYTD:697271, ytdBudget:0, ytdLY:0, ppcYTD:361, ppcYTDLY:0, opVolMTD:112, opVolMTDLY:0, specialties:[] },
   { location:"Stationed", totalToday:4309, totalRevenueMTD:16230, mtdBudget:51137, mtdLY:10334, totalRevenueYTD:254127, ytdBudget:0, ytdLY:298433, specialties:[] },
   { location:"Staff DIP", totalToday:1502, totalRevenueMTD:7933, mtdBudget:2712, mtdLY:4398, totalRevenueYTD:103018, ytdBudget:0, ytdLY:79845, specialties:[] },
   { location:"Staff DFC", totalToday:0, totalRevenueMTD:0, mtdBudget:0, mtdLY:34929, totalRevenueYTD:0, ytdBudget:0, ytdLY:303206, specialties:[] },
@@ -652,6 +652,19 @@ function parseExcelFile(data) {
           }
         }
       }
+      // Extract OP volume per clinic from DSR volume section (rows 54-65, offset +28 from revenue)
+      const dsrVolMap = {};
+      for (let i = 53; i < 72; i++) {
+        const r = dsRows2[i]; if (!r) continue;
+        const name = r[6];
+        if (!name || typeof name !== "string") continue;
+        for (const [code, data] of Object.entries(dsrClinicMap)) {
+          const label = CLINIC_COORDS[code]?.label || code;
+          if (name.includes(label) || label.includes(name.trim().split(' ')[0])) {
+            dsrVolMap[code] = { opVolMTD: Math.round(r[12] || 0), opVolMTDLY: Math.round(r[17] || 0) };
+          }
+        }
+      }
       locations.forEach(loc => {
         const dsr = dsrClinicMap[loc.location];
         if (dsr) {
@@ -664,6 +677,8 @@ function parseExcelFile(data) {
         }
         const ppc = dsrPPCMap[loc.location];
         if (ppc) { loc.ppcYTD = ppc.ppcYTD; loc.ppcYTDLY = ppc.ppcYTDLY; }
+        const vol = dsrVolMap[loc.location];
+        if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; }
       });
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
     }
@@ -1561,6 +1576,18 @@ function App() {
       revenue: l.totalRevenueMTD,
     })), [locations]);
 
+  const clinicVolChartData = useMemo(() => {
+    const days = dsrTotals.daysElapsed || 1;
+    return [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.opVolMTD > 0 || (l.opVolMTDLY || 0) > 0))
+      .sort((a, b) => (b.opVolMTD || 0) - (a.opVolMTD || 0))
+      .map(l => ({
+        name: CLINIC_COORDS[l.location]?.label || l.location,
+        code: l.location,
+        "2026": Math.round((l.opVolMTD || 0) / days),
+        "2025": Math.round((l.opVolMTDLY || 0) / days),
+      }));
+  }, [locations, dsrTotals]);
+
   const clinicPPCChartData = useMemo(() =>
     [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.ppcYTD > 0 || (l.ppcYTDLY || 0) > 0))
       .sort((a, b) => (b.ppcYTD || 0) - (a.ppcYTD || 0))
@@ -2163,6 +2190,46 @@ function App() {
                 label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 4} fontSize={10} fontWeight={600} fill={C.text}>AED {value}</text> : null} />
               <Bar dataKey="2025" fill="url(#ppc2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 YTD"
                 label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 12} fontSize={10} fontWeight={600} fill={C.textMuted}>AED {value}</text> : null} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* DAILY AVG OP VOLUME PER CLINIC */}
+        <div style={{ ...card, padding:28, marginTop:20 }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #f59e0b" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Daily Avg OP Volume by Clinic</h2>
+            </div>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Average outpatient visits per day — 2026 vs 2025</p>
+          </div>
+          <ResponsiveContainer width="100%" height={Math.max(400, clinicVolChartData.length * 38)}>
+            <BarChart data={clinicVolChartData} layout="vertical" margin={{ top:5, right:50, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
+              <defs>
+                <linearGradient id="vol2026Grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.9} />
+                </linearGradient>
+                <linearGradient id="vol2025Grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#64748b" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="#94a3b8" stopOpacity={0.4} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 6" stroke={C.border} horizontal={false} />
+              <XAxis type="number" tick={false} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
+                const item = clinicVolChartData.find(d => d.name === payload.value);
+                const url = item && CLINIC_COORDS[item.code]?.url;
+                return url
+                  ? <a href={url} target="_blank" rel="noopener"><text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.primaryLight} style={{cursor:"pointer"}}>{payload.value}</text></a>
+                  : <text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.textSecondary}>{payload.value}</text>;
+              }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(245,158,11,0.04)" }} />
+              <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
+              <Bar dataKey="2026" fill="url(#vol2026Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2026 Avg/Day"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 4} fontSize={10} fontWeight={600} fill={C.text}>{value}</text> : null} />
+              <Bar dataKey="2025" fill="url(#vol2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 Avg/Day"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 12} fontSize={10} fontWeight={600} fill={C.textMuted}>{value}</text> : null} />
             </BarChart>
           </ResponsiveContainer>
         </div>
