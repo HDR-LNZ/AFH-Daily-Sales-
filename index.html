@@ -1997,7 +1997,7 @@ function App() {
               <Bar dataKey="2026" fill="url(#ppc2026Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2026 YTD"
                 label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 4} fontSize={10} fontWeight={600} fill={C.text}>AED {value}</text> : null} />
               <Bar dataKey="2025" fill="url(#ppc2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 YTD"
-                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 4} fontSize={10} fontWeight={600} fill={C.textMuted}>AED {value}</text> : null} />
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 12} fontSize={10} fontWeight={600} fill={C.textMuted}>AED {value}</text> : null} />
             </BarChart>
           </ResponsiveContainer>
         </div>
