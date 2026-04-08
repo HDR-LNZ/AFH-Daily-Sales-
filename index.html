@@ -244,12 +244,12 @@ const DEFAULT_LOCATIONS = [
 // ─── Default Data ────────────────────────────────────────────────────────────
 
 const DEFAULT_DAILY_REVENUE = [
-  { day:1, total:225691, label:"Wed 1", fullLabel:"Wed, Apr 1" },
-  { day:2, total:293467, label:"Thu 2", fullLabel:"Thu, Apr 2" },
-  { day:3, total:276841, label:"Fri 3", fullLabel:"Fri, Apr 3" },
-  { day:4, total:385513, label:"Sat 4", fullLabel:"Sat, Apr 4" },
-  { day:5, total:204238, label:"Sun 5", fullLabel:"Sun, Apr 5" },
-  { day:6, total:314906, label:"Mon 6", fullLabel:"Mon, Apr 6" },
+  { day:1, total:225691, volume:895, label:"Wed 1", fullLabel:"Wed, Apr 1" },
+  { day:2, total:293467, volume:964, label:"Thu 2", fullLabel:"Thu, Apr 2" },
+  { day:3, total:276841, volume:868, label:"Fri 3", fullLabel:"Fri, Apr 3" },
+  { day:4, total:385513, volume:1240, label:"Sat 4", fullLabel:"Sat, Apr 4" },
+  { day:5, total:204238, volume:681, label:"Sun 5", fullLabel:"Sun, Apr 5" },
+  { day:6, total:314906, volume:1146, label:"Mon 6", fullLabel:"Mon, Apr 6" },
 ];
 
 const DEFAULT_REPORT_DATE = "Apr 6, 2026";
@@ -737,16 +737,18 @@ function parseExcelFile(data) {
     const opRows = XLSX.utils.sheet_to_json(opWs, { header: 1, defval: null });
     for (let day = 1; day <= 31; day++) {
       const col = 5 + (day - 1) * 3;
-      let total = 0, hasData = false;
+      const volCol = col + 1;
+      let total = 0, volume = 0, hasData = false;
       for (let i = 5; i < opRows.length; i++) {
-        // ONLY count rows with a doctor name in column 0
         const name = opRows[i] && opRows[i][0];
         if (!name || typeof name !== 'string' || !name.trim()) continue;
         const v = opRows[i][col];
         if (typeof v === 'number' && v !== 0) { total += v; hasData = true; }
+        const vc = opRows[i][volCol];
+        if (typeof vc === 'number' && vc !== 0) { volume += vc; }
       }
       if (!hasData || total === 0) break;
-      dailyRevenue.push({ day, total: Math.round(total) });
+      dailyRevenue.push({ day, total: Math.round(total), volume: Math.round(volume) });
     }
     const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     dailyRevenue = dailyRevenue.map((d, i) => {
@@ -1966,6 +1968,33 @@ function App() {
               {dailyAvg > 0 && <ReferenceLine y={dailyAvg} stroke={C.textMuted} strokeDasharray="6 4" strokeWidth={1} label={{ value:"Avg: " + fmtK(dailyAvg), position:"insideTopRight", fontSize:10, fill:C.textMuted, fontWeight:600 }} />}
               <Area type="natural" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue" dot={{ r:6, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:8, fill:C.primary, stroke:"#fff", strokeWidth:2 }} label={({ x, y, value }) => <text x={x} y={y - 14} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.text}>{fmtK(value)}</text>} />
               <Line type="linear" dataKey="trend" stroke="#f59e0b" strokeWidth={2} strokeDasharray="8 4" dot={false} name="Trend" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* DAILY VOLUME TREND */}
+        <div style={{ ...card, padding:28, marginTop:20 }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #f59e0b" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Daily OP Volume Trend</h2>
+            </div>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Outpatient visits per day — {dailyWithTrend.filter(d => (d.volume||0) > 0).length} days</p>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={dailyWithTrend.map(d => ({ ...d, vol: d.volume || 0, volTrend: (() => { const pts = dailyWithTrend.filter(x => (x.volume||0)>0); if(pts.length<2) return 0; const n=pts.length; const idx=pts.indexOf(d); if(idx<0) return 0; const sumX=pts.reduce((a,_,i)=>a+i,0); const sumY=pts.reduce((a,x)=>a+(x.volume||0),0); const sumXY=pts.reduce((a,x,i)=>a+i*(x.volume||0),0); const sumX2=pts.reduce((a,_,i)=>a+i*i,0); const sl=(n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX); const ic=(sumY-sl*sumX)/n; return Math.round(ic+sl*idx); })() }))} margin={{ top:10, right:30, left:0, bottom:5 }}>
+              <defs>
+                <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize:11, fill:C.textSecondary }} axisLine={{ stroke:C.border }} tickLine={false} />
+              <YAxis tick={{ fontSize:10, fill:C.textMuted }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke:"#f59e0b", strokeDasharray:"4 4" }} />
+              <Area type="natural" dataKey="vol" stroke="#f59e0b" strokeWidth={2.5} fill="url(#volGrad)" name="Visits" dot={{ r:5, fill:"#f59e0b", stroke:"#fff", strokeWidth:2 }} activeDot={{ r:7, fill:"#f59e0b", stroke:"#fff", strokeWidth:2 }} label={({ x, y, value }) => value > 0 ? <text x={x} y={y - 12} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.text}>{value}</text> : null} />
+              <Line type="linear" dataKey="volTrend" stroke="#ef4444" strokeWidth={2} strokeDasharray="8 4" dot={false} name="Trend" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
