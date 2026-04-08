@@ -1803,9 +1803,95 @@ function App() {
           </div>
         </div>
 
-        {/* CLINIC MAP */}
-        <div id="map">
-          <DubaiMap locations={locations} onClinicClick={setSelectedClinic} isMobile={isMobile} />
+        {/* CLINIC MAP + REGION PANEL */}
+        <div id="map" style={{ display:"flex", gap:16, flexDirection: isMobile ? "column" : "row", marginTop:20 }}>
+          <div style={{ flex: isMobile ? "1" : "1 1 70%" }}>
+            <DubaiMap locations={locations} onClinicClick={setSelectedClinic} isMobile={isMobile} />
+          </div>
+          {(() => {
+            const SOUTH = new Set(["Tecom","JVC","DG","Fest Plaza"]);
+            const south = locations.filter(l => SOUTH.has(l.location));
+            const north = locations.filter(l => !SOUTH.has(l.location) && !EXCLUDED_MAP_LOCATIONS.has(l.location));
+            const sMTD = south.reduce((a,l) => a + l.totalRevenueMTD, 0);
+            const nMTD = north.reduce((a,l) => a + l.totalRevenueMTD, 0);
+            const sYTD = south.reduce((a,l) => a + l.totalRevenueYTD, 0);
+            const nYTD = north.reduce((a,l) => a + l.totalRevenueYTD, 0);
+            const sLY = south.reduce((a,l) => a + (l.ytdLY||0), 0);
+            const nLY = north.reduce((a,l) => a + (l.ytdLY||0), 0);
+            const sToday = south.reduce((a,l) => a + l.totalToday, 0);
+            const nToday = north.reduce((a,l) => a + l.totalToday, 0);
+            const sMtdLY = south.reduce((a,l) => a + (l.mtdLY||0), 0);
+            const nMtdLY = north.reduce((a,l) => a + (l.mtdLY||0), 0);
+            const total = sMTD + nMTD || 1;
+            return (
+              <div style={{ flex: isMobile ? "1" : "0 0 30%", display:"flex", flexDirection:"column", gap:12 }}>
+                {/* Dubai South */}
+                <div style={{ ...card, background:C.cardBg, padding:20, flex:1 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                    <div style={{ width:10, height:10, borderRadius:"50%", background:"#3b82f6" }} />
+                    <h3 style={{ margin:0, fontSize:14, fontWeight:700, color:C.text }}>Dubai South</h3>
+                  </div>
+                  <div style={{ fontSize:10, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>Tecom, JVC, Discovery Gardens, Festival Plaza</div>
+                  <div style={{ fontSize:11, color:C.textMuted, marginBottom:4 }}>Today</div>
+                  <div style={{ fontSize:20, fontWeight:800, color:C.text }}>AED {fmt(sToday)}</div>
+                  <div style={{ borderTop:"1px solid "+C.border, marginTop:10, paddingTop:10 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontSize:11, color:C.textMuted }}>MTD Revenue</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:C.text }}>AED {fmt(sMTD)}</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontSize:11, color:C.textMuted }}>MTD LY</span>
+                      <span style={{ fontSize:12, color:C.textMuted }}>{fmt(sMtdLY)}</span>
+                    </div>
+                    <span style={{ fontSize:10, fontWeight:600, color:varColor(sMtdLY ? (sMTD-sMtdLY)/sMtdLY : 0), background:varBg(sMtdLY ? (sMTD-sMtdLY)/sMtdLY : 0), padding:"2px 8px", borderRadius:4 }}>vs LY {pct(sMtdLY ? (sMTD-sMtdLY)/sMtdLY : 0)}</span>
+                  </div>
+                  <div style={{ borderTop:"1px solid "+C.border, marginTop:10, paddingTop:10 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontSize:11, color:C.textMuted }}>YTD Revenue</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:C.text }}>AED {fmt(sYTD)}</span>
+                    </div>
+                    <span style={{ fontSize:10, fontWeight:600, color:varColor(sLY ? (sYTD-sLY)/sLY : 0), background:varBg(sLY ? (sYTD-sLY)/sLY : 0), padding:"2px 8px", borderRadius:4 }}>vs LY {pct(sLY ? (sYTD-sLY)/sLY : 0)}</span>
+                  </div>
+                  <div style={{ marginTop:10, background:C.sidebarBg, borderRadius:6, height:6, overflow:"hidden" }}>
+                    <div style={{ width: Math.round(sMTD/total*100) + "%", height:"100%", background:"linear-gradient(90deg, #3b82f6, #60a5fa)", borderRadius:6 }} />
+                  </div>
+                  <div style={{ fontSize:10, color:C.textMuted, marginTop:4 }}>{Math.round(sMTD/total*100)}% of total MTD</div>
+                </div>
+                {/* Dubai North */}
+                <div style={{ ...card, background:C.cardBg, padding:20, flex:1 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                    <div style={{ width:10, height:10, borderRadius:"50%", background:"#10b981" }} />
+                    <h3 style={{ margin:0, fontSize:14, fontWeight:700, color:C.text }}>Dubai North</h3>
+                  </div>
+                  <div style={{ fontSize:10, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>DSU, Silicon, Qusais, Karama, Nahda, Intl City, Warqa, Arabian</div>
+                  <div style={{ fontSize:11, color:C.textMuted, marginBottom:4 }}>Today</div>
+                  <div style={{ fontSize:20, fontWeight:800, color:C.text }}>AED {fmt(nToday)}</div>
+                  <div style={{ borderTop:"1px solid "+C.border, marginTop:10, paddingTop:10 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontSize:11, color:C.textMuted }}>MTD Revenue</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:C.text }}>AED {fmt(nMTD)}</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontSize:11, color:C.textMuted }}>MTD LY</span>
+                      <span style={{ fontSize:12, color:C.textMuted }}>{fmt(nMtdLY)}</span>
+                    </div>
+                    <span style={{ fontSize:10, fontWeight:600, color:varColor(nMtdLY ? (nMTD-nMtdLY)/nMtdLY : 0), background:varBg(nMtdLY ? (nMTD-nMtdLY)/nMtdLY : 0), padding:"2px 8px", borderRadius:4 }}>vs LY {pct(nMtdLY ? (nMTD-nMtdLY)/nMtdLY : 0)}</span>
+                  </div>
+                  <div style={{ borderTop:"1px solid "+C.border, marginTop:10, paddingTop:10 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontSize:11, color:C.textMuted }}>YTD Revenue</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:C.text }}>AED {fmt(nYTD)}</span>
+                    </div>
+                    <span style={{ fontSize:10, fontWeight:600, color:varColor(nLY ? (nYTD-nLY)/nLY : 0), background:varBg(nLY ? (nYTD-nLY)/nLY : 0), padding:"2px 8px", borderRadius:4 }}>vs LY {pct(nLY ? (nYTD-nLY)/nLY : 0)}</span>
+                  </div>
+                  <div style={{ marginTop:10, background:C.sidebarBg, borderRadius:6, height:6, overflow:"hidden" }}>
+                    <div style={{ width: Math.round(nMTD/total*100) + "%", height:"100%", background:"linear-gradient(90deg, #10b981, #34d399)", borderRadius:6 }} />
+                  </div>
+                  <div style={{ fontSize:10, color:C.textMuted, marginTop:4 }}>{Math.round(nMTD/total*100)}% of total MTD</div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* CLINIC REVENUE COMPARISON */}
