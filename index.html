@@ -680,8 +680,8 @@ function parseExcelFile(data) {
       const r = ipRows[i]; if (!r) continue;
       const name = r[1]; if (!name || typeof name !== "string" || name.toLowerCase() === "total") continue;
       const mtdActual = num(r[3]), mtdLY = num(r[2]), mtdBudget = num(r[4]);
-      const mtdVolume = num(r[9]), mtdVolLY = num(r[8]);
-      if (mtdActual === 0 && mtdLY === 0) continue;
+      const mtdVolume = Math.round(num(r[9]) || 0), mtdVolLY = Math.round(num(r[8]) || 0);
+      if (mtdActual === 0 && mtdLY === 0 && mtdVolume === 0) continue;
       ipSpecialties.push({ name: name.trim(), mtdActual, mtdLY, mtdBudget, mtdVolume, mtdVolLY });
     }
     // Parse YTD (rows 18-31)
@@ -728,9 +728,9 @@ function parseExcelFile(data) {
         const name = opRows[i] && opRows[i][0];
         if (!name || typeof name !== 'string' || !name.trim()) continue;
         const v = opRows[i][col];
-        if (typeof v === 'number') { total += v; hasData = true; }
+        if (typeof v === 'number' && v !== 0) { total += v; hasData = true; }
       }
-      if (!hasData) break;
+      if (!hasData || total === 0) break;
       dailyRevenue.push({ day, total: Math.round(total) });
     }
     const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -863,6 +863,19 @@ function validateData(parsed) {
   // 10. Doctor count sanity
   if (doctors.length < 10) {
     warnings.push("Only " + doctors.length + " doctors parsed — expected 200+");
+  }
+
+  // 11. Daily revenue: days with data should match daysElapsed
+  if (parsed.dailyRevenue && dsrTotals.daysElapsed) {
+    const daysWithRev = parsed.dailyRevenue.filter(d => d.total > 0).length;
+    if (daysWithRev > dsrTotals.daysElapsed + 1) {
+      warnings.push("Daily revenue has " + daysWithRev + " days but DSR shows " + dsrTotals.daysElapsed + " days elapsed");
+    }
+    // Check for zero-revenue days mixed in with real days
+    const zeroMidstream = parsed.dailyRevenue.findIndex((d, i) => d.total === 0 && i < parsed.dailyRevenue.length - 1 && parsed.dailyRevenue[i+1].total > 0);
+    if (zeroMidstream >= 0) {
+      warnings.push("Zero-revenue day found at day " + (zeroMidstream+1) + " with non-zero days after — possible parsing error");
+    }
   }
 
   return warnings;
