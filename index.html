@@ -859,7 +859,18 @@ function parseExcelFile(data) {
       const r = ipRows[i]; if (!r) continue;
       const name = r[1]; if (!name || typeof name !== "string" || name.toLowerCase() === "total") continue;
       const mtdActual = num(r[3]), mtdLY = num(r[2]), mtdBudget = num(r[4]);
-      const mtdVolume = Math.round(num(r[9]) || 0), mtdVolLY = Math.round(num(r[8]) || 0);
+      // Volume columns: scan for integer-like values after revenue cols
+      // C9 (idx 8) = Vol LY, C10 (idx 9) = Vol Current — but handle sparse arrays
+      let mtdVolume = 0, mtdVolLY = 0;
+      for (let c = 7; c <= 12; c++) {
+        const v = r[c];
+        if (typeof v === 'number' && v > 0 && v === Math.round(v) && v < 10000) {
+          if (mtdVolLY === 0 && c <= 9) mtdVolLY = v;
+          else if (mtdVolume === 0) mtdVolume = v;
+        }
+      }
+      // Fallback to specific indices
+      if (mtdVolume === 0 && mtdVolLY === 0) { mtdVolLY = Math.round(num(r[8]) || 0); mtdVolume = Math.round(num(r[9]) || 0); }
       if (mtdActual === 0 && mtdLY === 0 && mtdVolume === 0) continue;
       ipSpecialties.push({ name: name.trim(), mtdActual, mtdLY, mtdBudget, mtdVolume, mtdVolLY });
     }
@@ -2266,9 +2277,27 @@ function App() {
     return lines;
   }, [totals, dsrTotals, specialties, locations, ipTotals, doctors]);
 
-  const topPerformers = useMemo(() => [...doctors].sort((a,b)=>(b.ytdActual||0)-(a.ytdActual||0)).slice(0,10), [doctors]);
-  const needsAttention = useMemo(() => doctors.filter(d=>d.mtdLY>5000&&d.mtdVarLY<-0.2).sort((a,b)=>a.mtdVarLY-b.mtdVarLY).slice(0,10), [doctors]);
-  const bottomPerformers = useMemo(() => doctors.filter(d=>d.ytdLY>50000).sort((a,b)=>a.ytdVarLY-b.ytdVarLY).slice(0,10), [doctors]);
+  // Filter active doctors (exclude resigned)
+  const isActive = (d) => !!getDoctorProfileUrl(d.name);
+  const activeDoctors = useMemo(() => doctors.filter(isActive), [doctors]);
+  const resignedWithRevenue = useMemo(() => {
+    const resigned = doctors.filter(d => !getDoctorProfileUrl(d.name) && (d.ytdLY || 0) > 0);
+    // Group by specialty
+    const specMap = {};
+    resigned.forEach(d => {
+      if (!specMap[d.specialty]) specMap[d.specialty] = { name: d.specialty, doctors: [], ytdLY: 0, ytdActual: 0, mtdLY: 0, mtdActual: 0 };
+      specMap[d.specialty].doctors.push(d);
+      specMap[d.specialty].ytdLY += d.ytdLY || 0;
+      specMap[d.specialty].ytdActual += d.ytdActual || 0;
+      specMap[d.specialty].mtdLY += d.mtdLY || 0;
+      specMap[d.specialty].mtdActual += d.mtdActual || 0;
+    });
+    return Object.values(specMap).sort((a, b) => b.ytdLY - a.ytdLY);
+  }, [doctors]);
+
+  const topPerformers = useMemo(() => [...activeDoctors].sort((a,b)=>(b.ytdActual||0)-(a.ytdActual||0)).slice(0,10), [activeDoctors]);
+  const needsAttention = useMemo(() => activeDoctors.filter(d=>d.mtdLY>5000&&d.mtdVarLY<-0.2).sort((a,b)=>a.mtdVarLY-b.mtdVarLY).slice(0,15), [activeDoctors]);
+  const bottomPerformers = useMemo(() => activeDoctors.filter(d=>d.ytdLY>50000).sort((a,b)=>a.ytdVarLY-b.ytdVarLY).slice(0,10), [activeDoctors]);
 
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.pageBg }}>
@@ -2967,6 +2996,68 @@ function App() {
             </tbody>
           </table>
         </div>
+
+        {/* RESIGNED DOCTORS IMPACT */}
+        {resignedWithRevenue.length > 0 && (
+          <div style={{ ...card, marginTop:20, overflow:"hidden" }}>
+            <div style={{ padding:"16px 24px", background:"linear-gradient(135deg, #64748b, #94a3b8)", display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:32, height:32, borderRadius:8, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
+              </div>
+              <div>
+                <div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Resigned Doctors — Revenue Impact</div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Grouped by specialty — LY revenue lost from departures</div>
+              </div>
+              <div style={{ marginLeft:"auto", background:"rgba(255,255,255,0.2)", borderRadius:20, padding:"3px 12px", fontSize:12, fontWeight:700, color:"#fff" }}>
+                AED {fmtK(resignedWithRevenue.reduce((a,s) => a + s.ytdLY, 0))} LY YTD
+              </div>
+            </div>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap", borderCollapse:"collapse" }}>
+                <thead><tr style={{ background:"#1e293b" }}>
+                  <th style={dth}>Specialty / Doctor</th>
+                  <th style={dth}>Location(s)</th>
+                  <th style={{ ...dth, textAlign:"right" }}>MTD Actual</th>
+                  <th style={{ ...dth, textAlign:"right" }}>MTD LY</th>
+                  <th style={{ ...dth, textAlign:"right" }}>Revenue Gap</th>
+                  <th style={{ ...dth, textAlign:"right" }}>YTD LY</th>
+                </tr></thead>
+                <tbody>
+                  {resignedWithRevenue.map((spec) => (
+                    <React.Fragment key={spec.name}>
+                      <tr style={{ background:"rgba(100,116,139,0.1)", borderBottom:"1px solid "+C.border }}>
+                        <td style={{ ...dtd, fontWeight:700, color:C.textSecondary }}>{spec.name}</td>
+                        <td style={dtd}></td>
+                        <td style={{ ...dtn, fontWeight:700 }}>{fmt(spec.mtdActual)}</td>
+                        <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.mtdLY)}</td>
+                        <td style={{ ...dtn, color:C.danger, fontWeight:700 }}>{fmt(spec.mtdLY - spec.mtdActual)}</td>
+                        <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.ytdLY)}</td>
+                      </tr>
+                      {spec.doctors.map((d, di) => (
+                        <tr key={d.name+di} style={{ background: di % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid "+C.border }}>
+                          <td style={{ ...dtd, paddingLeft:32 }}><DoctorName name={d.name} /></td>
+                          <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
+                          <td style={dtn}>{fmt(d.mtdActual)}</td>
+                          <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
+                          <td style={{ ...dtn, color:C.danger }}>{fmt((d.mtdLY||0) - (d.mtdActual||0))}</td>
+                          <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                  <tr style={{ background:"rgba(100,116,139,0.15)", borderTop:"2px solid "+C.border }}>
+                    <td style={{ ...dtd, fontWeight:800, color:C.text }}>TOTAL IMPACT</td>
+                    <td style={dtd}></td>
+                    <td style={{ ...dtn, fontWeight:800 }}>{fmt(resignedWithRevenue.reduce((a,s) => a + s.mtdActual, 0))}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(resignedWithRevenue.reduce((a,s) => a + s.mtdLY, 0))}</td>
+                    <td style={{ ...dtn, fontWeight:800, color:C.danger }}>{fmt(resignedWithRevenue.reduce((a,s) => a + s.mtdLY - s.mtdActual, 0))}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(resignedWithRevenue.reduce((a,s) => a + s.ytdLY, 0))}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* INPATIENT SECTION */}
         <div id="inpatient" style={{ marginTop:32 }}>
