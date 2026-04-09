@@ -855,39 +855,52 @@ function parseExcelFile(data) {
     const ipWs = wb.Sheets[ipAnalysisName];
     const ipRows = XLSX.utils.sheet_to_json(ipWs, { header: 1, defval: null });
     ipSpecialties = [];
-    // Debug: log first 20 rows to find the data
-    for (let i = 0; i < Math.min(20, ipRows.length); i++) {
-      const r = ipRows[i];
-      if (r) console.log("IP row " + i + ":", JSON.stringify(r.slice(0, 12)));
-    }
-    for (let i = 4; i < 20; i++) {
+    // Find header row to determine column layout
+    let ipNameCol = 1, ipRevLYCol = 2, ipRevCol = 3, ipBgtCol = 4, ipVolLYCol = 8, ipVolCol = 9;
+    for (let i = 0; i < Math.min(6, ipRows.length); i++) {
       const r = ipRows[i]; if (!r) continue;
-      // Try r[1] first, then r[0] for specialty name
-      let name = r[1];
-      if (!name || typeof name !== "string") name = r[0];
-      if (!name || typeof name !== "string") continue;
-      const nameLower = name.trim().toLowerCase();
-      if (nameLower === "total" || nameLower === "specialty" || nameLower.includes("revenue") || nameLower.includes("volume") || nameLower.includes("ppc")) continue;
-      const mtdActual = num(r[3]), mtdLY = num(r[2]), mtdBudget = num(r[4]);
-      // Volume: C9 (0-idx 8) = LY, C10 (0-idx 9) = Current
-      // SheetJS may skip empty C8, shifting indices. Check both positions.
-      let mtdVolLY = 0, mtdVolume = 0;
-      for (let c = 7; c <= 10; c++) {
-        const v = r[c];
-        if (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < 5000) {
-          if (mtdVolLY === 0) mtdVolLY = v;
-          else if (mtdVolume === 0) { mtdVolume = v; break; }
+      // Check if this row has "Specialty" — indicates header
+      for (let c = 0; c < 5; c++) {
+        if (r[c] && typeof r[c] === "string" && r[c].toLowerCase().includes("specialty")) {
+          ipNameCol = c; break;
         }
       }
+      // Check for "Last Year" header to find revenue columns
+      for (let c = 0; c < 10; c++) {
+        if (r[c] && typeof r[c] === "string" && r[c] === "Last Year") { ipRevLYCol = c; ipRevCol = c + 1; ipBgtCol = c + 2; break; }
+      }
+    }
+    // Find volume columns (second group of "Last Year", "Current")
+    for (let i = 0; i < Math.min(6, ipRows.length); i++) {
+      const r = ipRows[i]; if (!r) continue;
+      let foundFirst = false;
+      for (let c = 0; c < 20; c++) {
+        if (r[c] && typeof r[c] === "string" && r[c] === "Last Year") {
+          if (foundFirst) { ipVolLYCol = c; ipVolCol = c + 1; break; }
+          foundFirst = true;
+        }
+      }
+    }
+    console.log("IP columns: name=" + ipNameCol + " revLY=" + ipRevLYCol + " rev=" + ipRevCol + " bgt=" + ipBgtCol + " volLY=" + ipVolLYCol + " vol=" + ipVolCol);
+    for (let i = 4; i < 20; i++) {
+      const r = ipRows[i]; if (!r) continue;
+      const name = r[ipNameCol]; if (!name || typeof name !== "string") continue;
+      const nameLower = name.trim().toLowerCase();
+      if (nameLower === "total" || nameLower === "specialty" || nameLower.includes("revenue") || nameLower.includes("volume") || nameLower.includes("ppc")) continue;
+      const mtdActual = num(r[ipRevCol]), mtdLY = num(r[ipRevLYCol]), mtdBudget = num(r[ipBgtCol]);
+      const mtdVolLY = Math.round(num(r[ipVolLYCol]) || 0);
+      const mtdVolume = Math.round(num(r[ipVolCol]) || 0);
       if (mtdActual === 0 && mtdLY === 0 && mtdVolume === 0) continue;
       ipSpecialties.push({ name: name.trim(), mtdActual, mtdLY, mtdBudget, mtdVolume, mtdVolLY });
     }
-    // Parse YTD (rows 18-31)
+    // Parse YTD (rows 18-31) — use same column layout as MTD
     const ytdMap = {};
-    for (let i = 18; i < 32; i++) {
+    for (let i = 17; i < 35; i++) {
       const r = ipRows[i]; if (!r) continue;
-      const name = r[1]; if (!name || typeof name !== "string" || name.trim().toLowerCase() === "total") continue;
-      ytdMap[name.trim()] = { ytdActual: num(r[3]), ytdLY: num(r[2]), ytdBudget: num(r[4]), ytdVolume: num(r[9]), ytdVolLY: num(r[8]) };
+      const name = r[ipNameCol]; if (!name || typeof name !== "string") continue;
+      const nl = name.trim().toLowerCase();
+      if (nl === "total" || nl === "specialty" || nl.includes("revenue") || nl.includes("volume") || nl.includes("ppc")) continue;
+      ytdMap[name.trim()] = { ytdActual: num(r[ipRevCol]), ytdLY: num(r[ipRevLYCol]), ytdBudget: num(r[ipBgtCol]), ytdVolume: Math.round(num(r[ipVolCol]) || 0), ytdVolLY: Math.round(num(r[ipVolLYCol]) || 0) };
     }
     ipSpecialties.forEach(s => {
       const ytd = ytdMap[s.name];
