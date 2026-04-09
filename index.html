@@ -2883,7 +2883,7 @@ function App() {
               const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
               const buckets = {};
               dayNames.forEach(d => { buckets[d] = { sum:0, count:0 }; });
-              dailyRevenue.forEach(dr => {
+              scaledDailyRevenue.forEach(dr => {
                 // Use the label field to determine day of week (e.g., "Wed 1", "Thu 2")
                 const labelDow = dr.label ? dr.label.split(' ')[0] : null;
                 if (labelDow && dayNames.includes(labelDow)) {
