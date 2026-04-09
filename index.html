@@ -344,10 +344,19 @@ function getDoctorProfileUrl(name) {
   return null;
 }
 
+const CBD_DOCTORS = new Set(["dr-abdalla-alhajeri","dr-alanoud-shatat","dr-fernaz-behlim","dr-saritha-shetty","dr-hasan-odeh","dr-ihsan-kommouna","dr-ali-shorbagi","dr-shailesh-kumar","dr-haitham-sawalmeh","dr-mohammed-taha","dr-mouhsen-hosein","dr-shashikanth-jadhav","dr-mohammed-al-jumaily","dr-ebtessam-hassanin","dr-nada-al-tabbara","dr-ahmed-almousa","dr-hassan-al-rifai","dr-ashraf-demiry","dr-chaula-sangani","dr-mohammed-alsabbah","dr-simikiruthiga-senthilkumar","dr-aleksandar-miladinovic","dr-manaf-kandakji","dr-mohamed-elhelbawy","dr-mosaddeq-al-yousif","dr-firas-david","dr-ibrahim-riza","dr-danny-shawaf","dr-abdulla-al-hajiri"]);
+
+function isCBD(name) {
+  const slug = getDoctorSlug(name);
+  return slug && CBD_DOCTORS.has(slug);
+}
+
 function DoctorName({ name }) {
   const url = getDoctorProfileUrl(name);
-  if (url) return <a href={url} target="_blank" rel="noopener noreferrer" style={{ color:C.primaryLight, textDecoration:"none", fontWeight:600 }} onMouseEnter={(e) => e.target.style.textDecoration="underline"} onMouseLeave={(e) => e.target.style.textDecoration="none"}>{name}</a>;
-  return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span> <span style={{ fontSize:9, color:"#ef4444", fontWeight:600, opacity:0.8 }}>Resigned</span></span>;
+  const cbd = isCBD(name);
+  const cbdLabel = cbd ? <span style={{ fontSize:9, color:"#f59e0b", fontWeight:600, marginLeft:4 }}>CBD</span> : null;
+  if (url) return <span><a href={url} target="_blank" rel="noopener noreferrer" style={{ color:C.primaryLight, textDecoration:"none", fontWeight:600 }} onMouseEnter={(e) => e.target.style.textDecoration="underline"} onMouseLeave={(e) => e.target.style.textDecoration="none"}>{name}</a>{cbdLabel}</span>;
+  return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span> <span style={{ fontSize:9, color:"#ef4444", fontWeight:600, opacity:0.8 }}>Resigned</span>{cbdLabel}</span>;
 }
 
 // ─── Dubai Map Constants ────────────────────────────────────────────────────
@@ -2017,6 +2026,14 @@ function App() {
       const resignedYtdActual = resignedDocs.reduce((a, d) => a + (d.ytdActual || 0), 0);
       const revLoss = resignedYtdLY - resignedYtdActual;
       lines.push("Revenue impact from " + resignedDocs.length + " resigned doctors: AED " + fmt(revLoss) + " YTD revenue gap (LY revenue: AED " + fmt(resignedYtdLY) + ").");
+    }
+
+    // CBD doctors impact
+    const cbdDocs = doctors.filter(d => isCBD(d.name));
+    if (cbdDocs.length > 0) {
+      const cbdMtd = cbdDocs.reduce((a, d) => a + (d.mtdActual || 0), 0);
+      const cbdMtdLY = cbdDocs.reduce((a, d) => a + (d.mtdLY || 0), 0);
+      lines.push(cbdDocs.length + " CBD doctors generating AED " + fmt(cbdMtd) + " MTD (vs LY: AED " + fmt(cbdMtdLY) + "). Potential for increased utilization.");
     }
 
     // Dubai South vs total MTD
