@@ -2465,8 +2465,10 @@ function App() {
               }} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(59,130,246,0.04)" }} />
               <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
-              <Bar dataKey="2026" fill="url(#ytd2026Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2026 YTD" />
-              <Bar dataKey="2025" fill="url(#ytd2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 YTD" />
+              <Bar dataKey="2026" fill="url(#ytd2026Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2026 YTD"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 4} fontSize={10} fontWeight={600} fill={C.text}>{fmtK(value)}</text> : null} />
+              <Bar dataKey="2025" fill="url(#ytd2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 YTD"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 12} fontSize={10} fontWeight={600} fill={C.textMuted}>{fmtK(value)}</text> : null} />
             </BarChart>
           </ResponsiveContainer>
         </div>
