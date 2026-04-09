@@ -416,7 +416,7 @@ const DEFAULT_DAILY_REVENUE = [
   { day:6, total:314906, volume:1146, label:"Mon 6", fullLabel:"Mon, Apr 6" },
 ];
 
-const DEFAULT_REPORT_DATE = "Apr 7, 2026";
+const DEFAULT_REPORT_DATE = "Apr 8, 2026";
 
 const DEFAULT_DSR_TOTALS = {
   todayRev: 548941, mtdActual: 2724642, mtdBudget: 3538000,
@@ -859,9 +859,18 @@ function parseExcelFile(data) {
       const r = ipRows[i]; if (!r) continue;
       const name = r[1]; if (!name || typeof name !== "string" || name.toLowerCase() === "total") continue;
       const mtdActual = num(r[3]), mtdLY = num(r[2]), mtdBudget = num(r[4]);
-      // Volume: C9 (0-idx 8) = LY, C10 (0-idx 9) = Current
-      const mtdVolLY = Math.round(typeof r[8] === 'number' ? r[8] : 0);
-      const mtdVolume = Math.round(typeof r[9] === 'number' ? r[9] : 0);
+      // Volume: find integer values after the revenue columns
+      // SheetJS may or may not include null for empty C8, so scan for volume values
+      let mtdVolLY = 0, mtdVolume = 0;
+      // Try indices 8,9 first (standard: C9=LY, C10=Current)
+      if (typeof r[8] === 'number') mtdVolLY = Math.round(r[8]);
+      if (typeof r[9] === 'number') mtdVolume = Math.round(r[9]);
+      // If both zero, try indices 7,8 (in case SheetJS skipped empty C8)
+      if (mtdVolLY === 0 && mtdVolume === 0) {
+        if (typeof r[7] === 'number' && r[7] > 0 && r[7] < 1000) mtdVolLY = Math.round(r[7]);
+        if (typeof r[8] === 'number' && r[8] > 0 && r[8] < 1000) mtdVolume = Math.round(r[8]);
+      }
+      console.log("IP:", name, "r.length="+r.length, "r[7]="+r[7], "r[8]="+r[8], "r[9]="+r[9], "vol="+mtdVolume, "volLY="+mtdVolLY);
       if (mtdActual === 0 && mtdLY === 0 && mtdVolume === 0) continue;
       ipSpecialties.push({ name: name.trim(), mtdActual, mtdLY, mtdBudget, mtdVolume, mtdVolLY });
     }
