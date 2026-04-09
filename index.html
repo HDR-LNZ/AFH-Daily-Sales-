@@ -2162,7 +2162,7 @@ function App() {
         </div>
 
         {/* PPC STRIP */}
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 10 : 16, marginTop:16 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginTop:16 }}>
           <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #8b5cf6, #a855f7)" }} />
             <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Avg Revenue per OP Visit (MTD)</div>
@@ -2198,6 +2198,27 @@ function App() {
               <span style={{ fontSize:11, fontWeight:600, color:varColor(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), background:varBg(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), padding:"2px 8px", borderRadius:6 }}>{pct(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0)} vs LY</span>
             </div>
           </div>
+          {(() => {
+            const cbdDocs = doctors.filter(d => isCBD(d.name));
+            const cbdMtd = cbdDocs.reduce((a,d) => a + (d.mtdActual||0), 0);
+            const cbdMtdLY = cbdDocs.reduce((a,d) => a + (d.mtdLY||0), 0);
+            const cbdYtd = cbdDocs.reduce((a,d) => a + (d.ytdActual||0), 0);
+            const cbdVar = cbdMtdLY ? (cbdMtd - cbdMtdLY) / cbdMtdLY : 0;
+            return (
+              <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #f59e0b, #fbbf24)" }} />
+                <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>CBD Doctors Revenue (MTD)</div>
+                <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
+                  <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>AED {fmt(cbdMtd)}</div>
+                  <div style={{ fontSize:12, color:C.textMuted }}>{cbdDocs.length} doctors</div>
+                </div>
+                <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+                  <span style={{ fontSize:10, fontWeight:600, color:varColor(cbdVar), background:varBg(cbdVar), padding:"1px 6px", borderRadius:4 }}>vs LY {pct(cbdVar)}</span>
+                  <span style={{ fontSize:10, color:C.textMuted }}>YTD: AED {fmtK(cbdYtd)}</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* INSIGHTS STRIP */}
