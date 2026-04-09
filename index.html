@@ -1895,6 +1895,7 @@ function App() {
   const [ipDoctors, setIpDoctors] = useState(DEFAULT_IP_DOCTORS);
   const [dailyRevenue, setDailyRevenue] = useState(DEFAULT_DAILY_REVENUE);
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
+  const [expandedResigned, setExpandedResigned] = useState(null);
   const [doctorLocations, setDoctorLocations] = useState(DEFAULT_DOCTOR_LOCATIONS);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState("overview");
@@ -3057,15 +3058,18 @@ function App() {
                 <tbody>
                   {resignedWithRevenue.map((spec) => (
                     <React.Fragment key={spec.name}>
-                      <tr style={{ background:"rgba(100,116,139,0.1)", borderBottom:"1px solid "+C.border }}>
-                        <td style={{ ...dtd, fontWeight:700, color:C.textSecondary }}>{spec.name}</td>
+                      <tr style={{ background:"rgba(100,116,139,0.1)", borderBottom:"1px solid "+C.border, cursor:"pointer" }} onClick={() => setExpandedResigned(prev => prev === spec.name ? null : spec.name)}>
+                        <td style={{ ...dtd, fontWeight:700, color:C.textSecondary }}>
+                          <span style={{ display:"inline-block", width:16, fontSize:10, color:C.textMuted }}>{expandedResigned === spec.name ? "\u25BC" : "\u25B6"}</span>
+                          {spec.name} <span style={{ fontSize:10, color:C.textMuted, fontWeight:500 }}>({spec.doctors.length})</span>
+                        </td>
                         <td style={dtd}></td>
                         <td style={{ ...dtn, fontWeight:700 }}>{fmt(spec.mtdActual)}</td>
                         <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.mtdLY)}</td>
                         <td style={{ ...dtn, color:C.danger, fontWeight:700 }}>{fmt(spec.mtdLY - spec.mtdActual)}</td>
                         <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.ytdLY)}</td>
                       </tr>
-                      {spec.doctors.map((d, di) => (
+                      {expandedResigned === spec.name && spec.doctors.map((d, di) => (
                         <tr key={d.name+di} style={{ background: di % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid "+C.border }}>
                           <td style={{ ...dtd, paddingLeft:32 }}><DoctorName name={d.name} /></td>
                           <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
