@@ -859,18 +859,9 @@ function parseExcelFile(data) {
       const r = ipRows[i]; if (!r) continue;
       const name = r[1]; if (!name || typeof name !== "string" || name.toLowerCase() === "total") continue;
       const mtdActual = num(r[3]), mtdLY = num(r[2]), mtdBudget = num(r[4]);
-      // Volume columns: scan for integer-like values after revenue cols
-      // C9 (idx 8) = Vol LY, C10 (idx 9) = Vol Current — but handle sparse arrays
-      let mtdVolume = 0, mtdVolLY = 0;
-      for (let c = 7; c <= 12; c++) {
-        const v = r[c];
-        if (typeof v === 'number' && v > 0 && v === Math.round(v) && v < 10000) {
-          if (mtdVolLY === 0 && c <= 9) mtdVolLY = v;
-          else if (mtdVolume === 0) mtdVolume = v;
-        }
-      }
-      // Fallback to specific indices
-      if (mtdVolume === 0 && mtdVolLY === 0) { mtdVolLY = Math.round(num(r[8]) || 0); mtdVolume = Math.round(num(r[9]) || 0); }
+      // Volume: C9 (0-idx 8) = LY, C10 (0-idx 9) = Current
+      const mtdVolLY = Math.round(typeof r[8] === 'number' ? r[8] : 0);
+      const mtdVolume = Math.round(typeof r[9] === 'number' ? r[9] : 0);
       if (mtdActual === 0 && mtdLY === 0 && mtdVolume === 0) continue;
       ipSpecialties.push({ name: name.trim(), mtdActual, mtdLY, mtdBudget, mtdVolume, mtdVolLY });
     }
@@ -1861,12 +1852,15 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
 function App() {
+  // Load saved state from localStorage if available
+  const savedState = (() => { try { const s = JSON.parse(localStorage.getItem("hh_dashboard_state")); if (s && s.ts && Date.now() - s.ts < 7 * 24 * 3600 * 1000) return s; } catch(e) {} return null; })();
+
   const [specialties, setSpecialties] = useState(DEFAULT_SPECIALTIES);
   const [doctors, setDoctors] = useState(DEFAULT_DOCTORS);
-  const [reportDate, setReportDate] = useState(DEFAULT_REPORT_DATE);
+  const [reportDate, setReportDate] = useState(savedState?.reportDate || DEFAULT_REPORT_DATE);
   const [locations, setLocations] = useState(DEFAULT_LOCATIONS);
   const [selectedClinic, setSelectedClinic] = useState(null);
-  const [dsrTotals, setDsrTotals] = useState(DEFAULT_DSR_TOTALS);
+  const [dsrTotals, setDsrTotals] = useState(savedState?.dsrTotals || DEFAULT_DSR_TOTALS);
   const [ipSpecialties, setIpSpecialties] = useState(DEFAULT_IP_SPECIALTIES);
   const [ipDoctors, setIpDoctors] = useState(DEFAULT_IP_DOCTORS);
   const [dailyRevenue, setDailyRevenue] = useState(DEFAULT_DAILY_REVENUE);
@@ -2026,11 +2020,19 @@ function App() {
     if (dr && dr.length) setDailyRevenue(dr);
     if (dlocs && Object.keys(dlocs).length) setDoctorLocations(dlocs);
     setReportDate(rd);
-    const warnings = validateData({ specialties: specs, doctors: docs, dsrTotals: dst, locations: locs });
+    setHistoricalMonth(null);
+    const warnings = validateData({ specialties: specs, doctors: docs, dsrTotals: dst, locations: locs, dailyRevenue: dr });
     setDataWarnings(warnings);
     if (warnings.length > 0) {
       console.warn("Data validation warnings:", warnings);
     }
+    // Save to localStorage so data persists across refreshes
+    try {
+      localStorage.setItem("hh_dashboard_state", JSON.stringify({
+        reportDate: rd, dsrTotals: dst,
+        ts: Date.now(),
+      }));
+    } catch(e) {}
   }, []);
 
   const totals = useMemo(() => {
