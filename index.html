@@ -388,6 +388,11 @@ function ClinicLink({ code, label }) {
   return <span style={{ fontWeight:700, color:C.text }}>{name}</span>;
 }
 
+// Doctor primary locations from healthhubalfuttaim.com (updated Apr 2026)
+const WEBSITE_DOCTOR_LOCATIONS = {
+  "dr-abdalla-alhajiri":"DSU","dr-abdul-manaf-k-m":"Qusais","dr-abdul-raoof-thacharakkal":"Intl City","dr-abhay-kumar-aryan":"DSU","dr-abhay-pande":"DG","dr-abhay-vyankatrao-inamdar":"Warqa","dr-abithraj-kallikadavil":"DG","dr-aby-john":"DSU","dr-ahmed-almousa":"Silicon","dr-alanoud-shatat":"Arabian","dr-ali-akbar-thirkannur-pilathottathil":"DSU","dr-ali-hasan-aleddey":"Silicon","dr-ali-shorbagi":"Warqa","dr-alvin-clavert-casono":"Nahda","dr-aneesh-kunnath-parambath":"DG","dr-ankit-mudgal":"JVC","dr-anurag-kumar":"Silicon","dr-archana-babanagare":"DG","dr-ashita-rastogi":"DSU","dr-ashraf-aldemiry":"Arabian","dr-bashar-alhasan":"JVC","dr-benish-khanzada":"Warqa","dr-bhaskar-rao-murari":"DG","dr-cecil-kunnappilly":"Karama","dr-chaula-sangani":"DG","dr-chuchendra-lingadahalli":"DSU","dr-danny-shawaf":"DSU","dr-deepthi-balakrishnan":"Qusais","dr-deepthi-gopala-reddy":"JVC","dr-dimple-tiwari":"DG","dr-divya-mangal":"Silicon","dr-ebtessam-hassanin":"Warqa","dr-elaheh-allahyari":"DSU","dr-eman-el-toukhi":"Tecom","dr-farah-al-mulla":"Silicon","dr-fareeha-younis":"Intl City","dr-fatima-qurratulain":"DSU","dr-fernaz-behlim":"DSU","dr-firas-david":"DSU","dr-gada-abdel-hamid":"DSU","dr-george-cherian":"Nahda","dr-george-simon":"Warqa","dr-george-thachil":"Silicon","dr-ghada-shate":"Arabian","dr-ghoufran-mohideen":"Arabian","dr-girisankar-gangadharan":"Intl City","dr-haitham-sawalmeh":"DSU","dr-hans-mohammed":"Fest Plaza","dr-hasan-odeh":"Silicon","dr-hassan-alrifai":"DSU","dr-hilda-atallah":"DSU","dr-hind-a-majeed-abodaka":"Fest Plaza","dr-husna-karikuzhi":"Tecom","dr-hussain-syed-mohammad-sarwar":"Warqa","dr-ibraheem-basher":"Arabian","dr-ibrahim-riza":"DSU","dr-ihsan-kommouna":"JVC","dr-inderpal-deshwal":"Nahda","dr-jabraan-shaikh":"Silicon","dr-jacob-george":"Tecom","dr-jay-hontanosas":"Tecom","dr-jimmy-john":"DSU","dr-jitendra-khachariya":"Intl City","dr-jubin-abraham-raju":"Tecom","dr-karthikesh-omkaram":"DSU","dr-khaldun-al-shaheen":"DSU","dr-krishna-amith-kumar":"DSU","dr-lana-hassan":"Warqa","dr-layla-askar":"Arabian","dr-libey-joy":"DG","dr-lubna-malek":"Warqa","dr-madiha-rashid":"DG","dr-maemun-alkhosin":"DSU","dr-malak-wehbe":"Fest Plaza","dr-manaf-kandakji":"Tecom","dr-manal-alsereidi":"Arabian","dr-mariam-javaid":"Silicon","dr-marianne-estaris":"Tecom","dr-marjan-movassaghi":"DSU","dr-mohamed-amer-dardari":"DSU","dr-mohamed-el-helbawy":"DSU","dr-mohammed-alsabbah":"Arabian","dr-mohammed-hassan":"Qusais","dr-mohammed-taha":"Warqa","dr-mohan-kudur":"Karama","dr-mohsin-azam":"DSU","dr-mosaddeq-alyousif":"DSU","dr-mouhsen-alhosein":"DSU","dr-moutusi-audhya":"Silicon","dr-muhammed-shafi":"DSU","dr-nada-altabara":"Warqa","dr-nagendra-prasad-anipindi":"Intl City","dr-naseem-palakkuzhiyil":"DSU","dr-nazar-khowaja":"DG","dr-nesmal-musaliar":"Intl City","dr-nevra-batur":"JVC","dr-nidhi-maggon":"Silicon","dr-nirmal-sumitha-jerald":"Qusais","dr-nisha-narayanankutty":"Karama","dr-nivedita-mc":"DG","dr-ojusvini-amit-kumar":"Fest Plaza","dr-ola-al-sheikh":"Arabian","dr-omar-eissa-habo":"Tecom","dr-ponnusamy-tamilvendan":"Karama","dr-prashant-pradeep-agarkar":"Silicon","dr-prashanth-prabhu":"Qusais","dr-preeti-sahu":"Silicon","dr-priti-mishra":"Tecom","dr-pyari-jahan":"DSU","dr-rakesh-maggon":"DSU","dr-rami-ismail":"DSU","dr-ramika-mittal":"DSU","dr-rasha-alani":"Arabian","dr-razan-taef":"Warqa","dr-rebecca-najem":"DSU","dr-rehab-abdelrazig":"DG","dr-rekha-pandita":"JVC","dr-renju-dominic":"Arabian","dr-rimzim-gupta":"Intl City","dr-rinku-alex-vaidyan":"Qusais","dr-sachin-lohra":"DG","dr-safaa-alawi":"Silicon","dr-sai-soujanya-sarva":"Intl City","dr-sameh-elgouhari":"JVC","dr-saritha-shetty":"Warqa","dr-seyed-mohammad-kasaei":"Fest Plaza","dr-shailesh-kumar":"Silicon","dr-shaima-alnaqbi":"Arabian","dr-shajahan-abdulkhader":"Qusais","dr-shaji-pallissery-kuzhiyil":"Karama","dr-shashikant-jadhav":"DSU","dr-shila-waghmare":"Karama","dr-shilpa-suryawanshi":"Silicon","dr-shweta-ramesh-chandra-jaiswal":"Intl City","dr-simikiruthiga-senthilkumar":"DG","dr-simna-rajan":"Silicon","dr-siva-malikireddy":"DSU","dr-sobana-bilhanan":"Nahda","dr-somshekhar-mallappa":"Warqa","dr-sourabh-soni":"DG","dr-srinivasan-ravindranath":"Qusais","dr-sujatha-rajesh":"Fest Plaza","dr-sunitha-mary-mathew":"Nahda","dr-surya-senapathy":"Qusais","dr-tagawa-alnaim":"JVC","dr-tripti-pathare":"DSU","dr-tushar-sinhal":"Silicon","dr-uma-bilgi":"DSU","dr-varsha-arun":"DSU","dr-venkateswara-gorthi":"Qusais","dr-viji-george":"JVC","dr-vineetha-oommen-kottakkatu":"Qusais","dr-vinu-rajashekar":"Nahda","dr-yasameen-alamer":"Warqa","dr-yasir-malik":"DSU","dr-zahra-fazal":"Qusais","dr-zainab-ali-asghar":"Nahda","prof-dr-mohammed-al-jumaily":"DSU","mr-jahfar-latheef":"DG","mr-mohammed-riyaz":"Warqa","mr-mostafa-el-sayed":"JVC","mr-rakesh-jayakrishnan":"Intl City","mr-saino-mathew-thomas":"Tecom","mr-simple-markose":"Qusais","ms-amala-aji":"DG","ms-anusha-veettil":"Intl City","ms-ashly-abin":"Silicon","ms-asmaa-refaie-mohamady":"Arabian","ms-elizabeth-joy":"Qusais","ms-hadel-radwan":"Silicon","ms-juwairia-ejaz":"DSU","ms-mehreen-memon":"Warqa","ms-meliza-lara-falla":"DSU","ms-nikhila-ramakrishnan":"Karama","ms-princy-varghese":"Karama","ms-samar-bou-antoun":"DSU","ms-sara-johnson":"DSU","ms-sarah-ahmed":"Silicon","ms-shahana-parambath":"Warqa",
+};
+
 const DEFAULT_LOCATIONS = [];
 
 // ─── Default Data ────────────────────────────────────────────────────────────
@@ -1021,6 +1026,13 @@ const fmtLocs = (locs) => {
   if (arr.length <= 3) return arr.join(', ');
   return arr.slice(0,3).join(', ') + " +" + (arr.length - 3) + " more";
 };
+
+function getDocLocation(name, excelLocs) {
+  const slug = getDoctorSlug(name);
+  const webLoc = slug && WEBSITE_DOCTOR_LOCATIONS[slug];
+  if (webLoc) return CLINIC_COORDS[webLoc]?.label || webLoc;
+  return excelLocs || "";
+}
 
 // ─── Sidebar Component ─────────────────────────────────────────────────────
 
@@ -1904,7 +1916,15 @@ function App() {
       ytdVarBudget: s.ytdBudget ? (s.ytdActual-s.ytdBudget)/s.ytdBudget : 0,
       ytdVarLY: s.ytdLY ? (s.ytdActual-s.ytdLY)/s.ytdLY : 0,
     })));
-    if (docs?.length) setDoctors(docs);
+    // Override locations with website data (more current than Excel)
+    if (docs?.length) {
+      docs.forEach(d => {
+        const slug = getDoctorSlug(d.name);
+        const webLoc = slug && WEBSITE_DOCTOR_LOCATIONS[slug];
+        if (webLoc) d.websiteLocation = webLoc;
+      });
+      setDoctors(docs);
+    }
     if (locs?.length) setLocations(locs);
     if (dst) setDsrTotals(dst);
     if (ipSpecs) setIpSpecialties(ipSpecs);
@@ -2935,7 +2955,7 @@ function App() {
                   <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                     <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(59,130,246,0.2)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?"#60a5fa":C.textMuted }}>{i+1}</span></td>
                     <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
-                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
+                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
                     <td style={dtn}>{fmt(d.today)}</td>
                     <td style={{ ...dtn, fontWeight:700, color:"#60a5fa" }}>{fmt(d.mtdActual)}</td>
                     <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
@@ -2967,7 +2987,7 @@ function App() {
                   <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                     <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(245,158,11,0.15)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?C.warning:C.textMuted }}>{i+1}</span></td>
                     <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
-                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
+                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
                     <td style={dtn}>{fmt(d.mtdActual)}</td>
                     <td style={{ ...dtn, fontWeight:700, color:C.success }}>{fmt(d.ytdActual)}</td>
                     <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
@@ -2998,7 +3018,7 @@ function App() {
                 {needsAttention.map((d,i) => (
                   <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                     <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
-                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
+                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
                     <td style={dtn}>{fmt(d.today)}</td><td style={dtn}>{fmt(d.mtdActual)}</td>
                     <td style={dtn}><span style={{ color:"#fff", background:varColor(d.mtdVarLY), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.mtdVarLY)}</span></td>
                     <td style={{ ...dtn, fontWeight:700 }}>{fmt(d.ytdActual)}</td>
@@ -3028,7 +3048,7 @@ function App() {
                 <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                   <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:"rgba(239,68,68,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:C.danger }}>{i+1}</span></td>
                   <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
-                  <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
+                  <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
                   <td style={dtn}>{fmt(d.ytdActual)}</td><td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
                   <td style={dtn}><span style={{ color:"#fff", background:varColor(d.ytdVarLY), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.ytdVarLY)}</span></td>
                 </tr>
