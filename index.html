@@ -2440,7 +2440,8 @@ function App() {
   const topPerformersYTD = useMemo(() => [...activeDoctors].sort((a,b)=>(b.ytdActual||0)-(a.ytdActual||0)).slice(0,10), [activeDoctors]);
   const topPerformersMTD = useMemo(() => [...activeDoctors].sort((a,b)=>(b.mtdActual||0)-(a.mtdActual||0)).slice(0,10), [activeDoctors]);
   const needsAttention = useMemo(() => activeDoctors.filter(d=>d.mtdLY>5000&&d.mtdVarLY<-0.2).sort((a,b)=>a.mtdVarLY-b.mtdVarLY).slice(0,15), [activeDoctors]);
-  const bottomPerformers = useMemo(() => activeDoctors.filter(d=>d.ytdLY>50000).sort((a,b)=>a.ytdVarLY-b.ytdVarLY).slice(0,10), [activeDoctors]);
+  const EXCLUDED_BOTTOM_SPECS = new Set(["Physiotherapy","Dietician","Nursing Care"]);
+  const bottomPerformers = useMemo(() => activeDoctors.filter(d=>d.ytdLY>50000 && !EXCLUDED_BOTTOM_SPECS.has(d.specialty)).sort((a,b)=>a.ytdVarLY-b.ytdVarLY).slice(0,10), [activeDoctors]);
 
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.pageBg }}>
