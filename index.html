@@ -2437,7 +2437,8 @@ function App() {
     return Object.values(specMap).sort((a, b) => b.ytdResignLoss - a.ytdResignLoss);
   }, [doctors]);
 
-  const topPerformers = useMemo(() => [...activeDoctors].sort((a,b)=>(b.ytdActual||0)-(a.ytdActual||0)).slice(0,10), [activeDoctors]);
+  const topPerformersYTD = useMemo(() => [...activeDoctors].sort((a,b)=>(b.ytdActual||0)-(a.ytdActual||0)).slice(0,10), [activeDoctors]);
+  const topPerformersMTD = useMemo(() => [...activeDoctors].sort((a,b)=>(b.mtdActual||0)-(a.mtdActual||0)).slice(0,10), [activeDoctors]);
   const needsAttention = useMemo(() => activeDoctors.filter(d=>d.mtdLY>5000&&d.mtdVarLY<-0.2).sort((a,b)=>a.mtdVarLY-b.mtdVarLY).slice(0,15), [activeDoctors]);
   const bottomPerformers = useMemo(() => activeDoctors.filter(d=>d.ytdLY>50000).sort((a,b)=>a.ytdVarLY-b.ytdVarLY).slice(0,10), [activeDoctors]);
 
@@ -3094,34 +3095,68 @@ function App() {
 
         {/* DOCTOR PANELS */}
         <div id="doctors" style={{ display:"flex", flexDirection:"column", gap:20, marginTop:24 }}>
-          {/* Top Performers */}
+          {/* Top Performers MTD */}
+          <div style={{ ...card, overflow:"hidden" }}>
+            <div style={{ padding:"16px 24px", background:"linear-gradient(135deg, #3b82f6, #60a5fa)", display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:32, height:32, borderRadius:8, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+              </div>
+              <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Top Performers — MTD</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Highest Month-to-Date Revenue</div></div>
+            </div>
+            <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", fontSize:12 }}>
+              <thead><tr style={{ background:"#1e293b" }}>
+                <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={dth}>Location(s)</th>
+                <th style={{ ...dth, textAlign:"right" }}>Today</th><th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>MTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th>
+              </tr></thead>
+              <tbody>
+                {topPerformersMTD.map((d,i) => (
+                  <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
+                    <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(59,130,246,0.2)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?"#60a5fa":C.textMuted }}>{i+1}</span></td>
+                    <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
+                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
+                    <td style={dtn}>{fmt(d.today)}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:"#60a5fa" }}>{fmt(d.mtdActual)}</td>
+                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
+                    <td style={{ ...dtn, color:varColor(d.mtdVarLY), fontWeight:600 }}>{pct(d.mtdVarLY)}</td>
+                  </tr>
+                ))}
+                {!topPerformersMTD.length && <tr><td colSpan={8} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload data to populate</td></tr>}
+              </tbody>
+            </table>
+            </div>
+          </div>
+
+          {/* Top Performers YTD */}
           <div style={{ ...card, overflow:"hidden" }}>
             <div style={{ padding:"16px 24px", background:`linear-gradient(135deg, ${C.success}, ${C.successLight})`, display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ width:32, height:32, borderRadius:8, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
               </div>
-              <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Top Performers</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Highest YTD Revenue</div></div>
+              <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Top Performers — YTD</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Highest Year-to-Date Revenue</div></div>
             </div>
+            <div style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", fontSize:12 }}>
               <thead><tr style={{ background:"#1e293b" }}>
                 <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={dth}>Location(s)</th>
-                <th style={{ ...dth, textAlign:"right" }}>Today</th><th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>vs Bgt</th><th style={{ ...dth, textAlign:"right" }}>YTD</th><th style={{ ...dth, textAlign:"right" }}>YoY</th>
+                <th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>YTD</th><th style={{ ...dth, textAlign:"right" }}>YTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th>
               </tr></thead>
               <tbody>
-                {topPerformers.map((d,i) => (
+                {topPerformersYTD.map((d,i) => (
                   <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                     <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(245,158,11,0.15)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?C.warning:C.textMuted }}>{i+1}</span></td>
                     <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
-                    <td style={dtn}>{fmt(d.today)}</td><td style={dtn}>{fmt(d.mtdActual)}</td>
-                    <td style={{ ...dtn, color:varColor(d.mtdVarBudget), fontWeight:600 }}>{pct(d.mtdVarBudget)}</td>
+                    <td style={dtn}>{fmt(d.mtdActual)}</td>
                     <td style={{ ...dtn, fontWeight:700, color:C.success }}>{fmt(d.ytdActual)}</td>
+                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
                     <td style={{ ...dtn, color:varColor(d.ytdVarLY), fontWeight:600 }}>{pct(d.ytdVarLY)}</td>
                   </tr>
                 ))}
-                {!topPerformers.length && <tr><td colSpan={9} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload data to populate</td></tr>}
+                {!topPerformersYTD.length && <tr><td colSpan={8} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload data to populate</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Needs Attention */}
