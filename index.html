@@ -755,6 +755,9 @@ function parseExcelFile(data) {
       ytdBudget: numK(10, 22),
     };
     dsrTotals.daysElapsed = (dsRows[11] && typeof dsRows[11][3] === 'number') ? dsRows[11][3] : 6;
+    // IP MTD from DSR R48 C15 (raw AED, not x1000) for cross-validation
+    dsrTotals.dsrIpMTD = Math.round(dsRows[47] && typeof dsRows[47][14] === 'number' ? dsRows[47][14] : 0);
+    dsrTotals.dsrIpVol = Math.round(dsRows[75] && typeof dsRows[75][14] === 'number' ? dsRows[75][14] : 0);
     // OP volume and PPC from DSR R76
     const rawNum = (r, c) => { const v = dsRows[r] && dsRows[r][c]; return typeof v === 'number' ? Math.round(v) : 0; };
     const opMtdVol = rawNum(75, 12); // R76 C13 (0-indexed: row 75, col 12)
@@ -1072,8 +1075,47 @@ function validateData(parsed) {
   if (dsrTotals.mtdActual < 0) warnings.push("MTD revenue is negative");
   if (dsrTotals.ytdActual < 0) warnings.push("YTD revenue is negative");
 
-  // 9. Report date sanity
-  // (checked separately)
+  // 9. IP validation
+  if (parsed.ipSpecialties && parsed.ipSpecialties.length > 0) {
+    const ipTotal = parsed.ipSpecialties.reduce((a,s) => a + s.mtdActual, 0);
+    const ipVol = parsed.ipSpecialties.reduce((a,s) => a + (s.mtdVolume||0), 0);
+
+    // IP revenue should be < DSR total (IP is a fraction of total)
+    if (dsrTotals.mtdActual && ipTotal > dsrTotals.mtdActual * 0.5) {
+      warnings.push("IP revenue (" + fmt(ipTotal) + ") is >50% of DSR total (" + fmt(dsrTotals.mtdActual) + ") — check IP parsing");
+    }
+
+    // IP + OP should ≈ DSR total (within 5% margin for Pharmacy/Corporate)
+    const opPlusIP = opMtd + ipTotal;
+    if (dsrTotals.mtdActual && opPlusIP > dsrTotals.mtdActual) {
+      warnings.push("OP (" + fmt(opMtd) + ") + IP (" + fmt(ipTotal) + ") = " + fmt(opPlusIP) + " exceeds DSR total (" + fmt(dsrTotals.mtdActual) + ")");
+    }
+
+    // IP PPC sanity: should be 3000-20000 per case
+    if (ipVol > 0) {
+      const ipPPC = ipTotal / ipVol;
+      if (ipPPC < 1000 || ipPPC > 25000) {
+        warnings.push("IP PPC is AED " + fmt(Math.round(ipPPC)) + " (" + ipVol + " cases) — outside expected range 3K-20K");
+      }
+    }
+
+    // IP volume should be reasonable (1-500 per month)
+    if (ipVol > 500) {
+      warnings.push("IP volume (" + ipVol + " cases) seems too high");
+    }
+
+    // Cross-check: IP Analysis total should match DSR IP MTD (R48 C15)
+    if (dsrTotals.dsrIpMTD > 0) {
+      const diff = Math.abs(ipTotal - dsrTotals.dsrIpMTD);
+      if (diff > dsrTotals.dsrIpMTD * 0.05) {
+        warnings.push("IP Analysis total (" + fmt(ipTotal) + ") doesn't match DSR IP (" + fmt(dsrTotals.dsrIpMTD) + ") — diff: " + fmt(diff));
+      }
+    }
+    // Cross-check: IP volume should match DSR volume (R76 C15)
+    if (dsrTotals.dsrIpVol > 0 && ipVol !== dsrTotals.dsrIpVol) {
+      warnings.push("IP Analysis cases (" + ipVol + ") doesn't match DSR IP volume (" + dsrTotals.dsrIpVol + ")");
+    }
+  }
 
   // 10. Doctor count sanity
   if (doctors.length < 10) {
