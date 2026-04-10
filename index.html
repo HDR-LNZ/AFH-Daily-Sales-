@@ -1885,18 +1885,22 @@ function App() {
   // Load saved state from localStorage if available
   const savedState = (() => { try { const s = JSON.parse(localStorage.getItem("hh_dashboard_state")); if (s && s.ts && Date.now() - s.ts < 7 * 24 * 3600 * 1000) return s; } catch(e) {} return null; })();
 
-  const [specialties, setSpecialties] = useState(DEFAULT_SPECIALTIES);
-  const [doctors, setDoctors] = useState(DEFAULT_DOCTORS);
+  // Initialize all state from saved or defaults
+  const initSpecs = savedState?.specialties ? savedState.specialties.map(s => ({ ...s, mtdVarBudget: s.mtdBudget?(s.mtdActual-s.mtdBudget)/s.mtdBudget:0, mtdVarLY: s.mtdLY?(s.mtdActual-s.mtdLY)/s.mtdLY:0, ytdVarBudget: s.ytdBudget?(s.ytdActual-s.ytdBudget)/s.ytdBudget:0, ytdVarLY: s.ytdLY?(s.ytdActual-s.ytdLY)/s.ytdLY:0 })) : DEFAULT_SPECIALTIES;
+  const initDocs = savedState?.doctors ? savedState.doctors.map(d => ({ ...d, mtdVarBudget: d.mtdBudget?(d.mtdActual-d.mtdBudget)/d.mtdBudget:0, ytdVarBudget: d.ytdBudget?(d.ytdActual-d.ytdBudget)/d.ytdBudget:0, mtdVarLY: d.mtdLY?(d.mtdActual-d.mtdLY)/d.mtdLY:0, ytdVarLY: d.ytdLY?(d.ytdActual-d.ytdLY)/d.ytdLY:0 })) : DEFAULT_DOCTORS;
+
+  const [specialties, setSpecialties] = useState(initSpecs);
+  const [doctors, setDoctors] = useState(initDocs);
   const [reportDate, setReportDate] = useState(savedState?.reportDate || DEFAULT_REPORT_DATE);
-  const [locations, setLocations] = useState(DEFAULT_LOCATIONS);
+  const [locations, setLocations] = useState(savedState?.locations || DEFAULT_LOCATIONS);
   const [selectedClinic, setSelectedClinic] = useState(null);
   const [dsrTotals, setDsrTotals] = useState(savedState?.dsrTotals || DEFAULT_DSR_TOTALS);
-  const [ipSpecialties, setIpSpecialties] = useState(DEFAULT_IP_SPECIALTIES);
-  const [ipDoctors, setIpDoctors] = useState(DEFAULT_IP_DOCTORS);
-  const [dailyRevenue, setDailyRevenue] = useState(DEFAULT_DAILY_REVENUE);
+  const [ipSpecialties, setIpSpecialties] = useState(savedState?.ipSpecialties || DEFAULT_IP_SPECIALTIES);
+  const [ipDoctors, setIpDoctors] = useState(savedState?.ipDoctors || DEFAULT_IP_DOCTORS);
+  const [dailyRevenue, setDailyRevenue] = useState(savedState?.dailyRevenue || DEFAULT_DAILY_REVENUE);
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
   const [expandedResigned, setExpandedResigned] = useState(null);
-  const [doctorLocations, setDoctorLocations] = useState(DEFAULT_DOCTOR_LOCATIONS);
+  const [doctorLocations, setDoctorLocations] = useState(savedState?.doctorLocations || DEFAULT_DOCTOR_LOCATIONS);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState("overview");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -2008,14 +2012,18 @@ function App() {
       setDailyRevenue(s.dailyRevenue);
       if (s.doctorLocations) setDoctorLocations(s.doctorLocations);
     } else {
-      setDsrTotals(DEFAULT_DSR_TOTALS);
-      setLocations(DEFAULT_LOCATIONS);
-      setReportDate(DEFAULT_REPORT_DATE);
-      setSpecialties(DEFAULT_SPECIALTIES);
-      setDoctors(DEFAULT_DOCTORS);
-      setIpSpecialties(DEFAULT_IP_SPECIALTIES);
-      setIpDoctors(DEFAULT_IP_DOCTORS);
-      setDailyRevenue(DEFAULT_DAILY_REVENUE);
+      // Try localStorage, then fall back to defaults
+      let ls = null;
+      try { const raw = JSON.parse(localStorage.getItem("hh_dashboard_state")); if (raw && raw.ts) ls = raw; } catch(e) {}
+      setDsrTotals(ls?.dsrTotals || DEFAULT_DSR_TOTALS);
+      setLocations(ls?.locations || DEFAULT_LOCATIONS);
+      setReportDate(ls?.reportDate || DEFAULT_REPORT_DATE);
+      setSpecialties(ls?.specialties ? ls.specialties.map(s => ({ ...s, mtdVarBudget:s.mtdBudget?(s.mtdActual-s.mtdBudget)/s.mtdBudget:0, mtdVarLY:s.mtdLY?(s.mtdActual-s.mtdLY)/s.mtdLY:0, ytdVarBudget:s.ytdBudget?(s.ytdActual-s.ytdBudget)/s.ytdBudget:0, ytdVarLY:s.ytdLY?(s.ytdActual-s.ytdLY)/s.ytdLY:0 })) : DEFAULT_SPECIALTIES);
+      setDoctors(ls?.doctors ? ls.doctors.map(d => ({ ...d, mtdVarBudget:d.mtdBudget?(d.mtdActual-d.mtdBudget)/d.mtdBudget:0, ytdVarBudget:d.ytdBudget?(d.ytdActual-d.ytdBudget)/d.ytdBudget:0, mtdVarLY:d.mtdLY?(d.mtdActual-d.mtdLY)/d.mtdLY:0, ytdVarLY:d.ytdLY?(d.ytdActual-d.ytdLY)/d.ytdLY:0 })) : DEFAULT_DOCTORS);
+      setIpSpecialties(ls?.ipSpecialties || DEFAULT_IP_SPECIALTIES);
+      setIpDoctors(ls?.ipDoctors || DEFAULT_IP_DOCTORS);
+      setDailyRevenue(ls?.dailyRevenue || DEFAULT_DAILY_REVENUE);
+      if (ls?.doctorLocations) setDoctorLocations(ls.doctorLocations);
     }
     setDataWarnings([]);
   }, []);
@@ -2057,13 +2065,20 @@ function App() {
     if (warnings.length > 0) {
       console.warn("Data validation warnings:", warnings);
     }
-    // Save to localStorage so data persists across refreshes
+    // Save complete state to localStorage so data persists across refreshes
     try {
       localStorage.setItem("hh_dashboard_state", JSON.stringify({
         reportDate: rd, dsrTotals: dst,
+        specialties: specs.map(s => ({ name:s.name, today:s.today, mtdActual:s.mtdActual, mtdBudget:s.mtdBudget, mtdLY:s.mtdLY, ytdActual:s.ytdActual, ytdBudget:s.ytdBudget, ytdLY:s.ytdLY })),
+        doctors: docs ? docs.map(d => ({ name:d.name, specialty:d.specialty, today:d.today, mtdActual:d.mtdActual, mtdBudget:d.mtdBudget, mtdLY:d.mtdLY, ytdActual:d.ytdActual, ytdBudget:d.ytdBudget, ytdLY:d.ytdLY, locations:d.locations||"" })) : null,
+        locations: locs || null,
+        ipSpecialties: ipSpecs || null,
+        ipDoctors: ipDocs || null,
+        dailyRevenue: dr || null,
+        doctorLocations: dlocs || null,
         ts: Date.now(),
       }));
-    } catch(e) {}
+    } catch(e) { console.warn("Failed to save state:", e); }
   }, []);
 
   const totals = useMemo(() => {
