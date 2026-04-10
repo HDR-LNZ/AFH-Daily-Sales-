@@ -677,14 +677,14 @@ const DEFAULT_SPECIALTIES = [
 ].map((s) => ({ ...s, mtdVarBudget: s.mtdBudget ? (s.mtdActual - s.mtdBudget) / s.mtdBudget : 0, mtdVarLY: s.mtdLY ? (s.mtdActual - s.mtdLY) / s.mtdLY : 0, ytdVarBudget: s.ytdBudget ? (s.ytdActual - s.ytdBudget) / s.ytdBudget : 0, ytdVarLY: s.ytdLY ? (s.ytdActual - s.ytdLY) / s.ytdLY : 0 }));
 
 const DEFAULT_IP_SPECIALTIES = [
-  { name:"General Surgeon", mtdActual:53294, mtdLY:7393, mtdBudget:46527, mtdVolume:8, mtdVolLY:3, ytdActual:522991, ytdLY:590661, ytdBudget:769418, ytdVolume:78, ytdVolLY:109 },
-  { name:"Obstetrics & Gynaecology", mtdActual:25000, mtdLY:18012, mtdBudget:42821, mtdVolume:5, mtdVolLY:3, ytdActual:422062, ytdLY:422966, ytdBudget:708140, ytdVolume:72, ytdVolLY:84 },
-  { name:"Urology", mtdActual:26095, mtdLY:55568, mtdBudget:31860, mtdVolume:2, mtdVolLY:4, ytdActual:402756, ytdLY:444634, ytdBudget:526877, ytdVolume:40, ytdVolLY:54 },
-  { name:"Gastroenterology", mtdActual:2793, mtdLY:21607, mtdBudget:0, mtdVolume:1, mtdVolLY:4, ytdActual:342498, ytdLY:308050, ytdBudget:132789, ytdVolume:63, ytdVolLY:95 },
-  { name:"ENT", mtdActual:14245, mtdLY:19541, mtdBudget:17966, mtdVolume:2, mtdVolLY:2, ytdActual:252212, ytdLY:156957, ytdBudget:297108, ytdVolume:27, ytdVolLY:19 },
-  { name:"Orthopaedics", mtdActual:10164, mtdLY:11088, mtdBudget:26632, mtdVolume:2, mtdVolLY:0, ytdActual:328195, ytdLY:399561, ytdBudget:440414, ytdVolume:48, ytdVolLY:64 },
-  { name:"Ophthalmology", mtdActual:10372, mtdLY:5953, mtdBudget:12636, mtdVolume:1, mtdVolLY:1, ytdActual:144013, ytdLY:209270, ytdBudget:208958, ytdVolume:15, ytdVolLY:32 },
-  { name:"Vascular Surgeon", mtdActual:0, mtdLY:23409, mtdBudget:11344, mtdVolume:0, mtdVolLY:2, ytdActual:166792, ytdLY:153308, ytdBudget:187591, ytdVolume:12, ytdVolLY:16 },
+  { name:"General Surgeon", mtdActual:78660, mtdLY:35230, mtdBudget:63855, mtdVolume:12, mtdVolLY:8 },
+  { name:"Urology", mtdActual:37197, mtdLY:55568, mtdBudget:43726, mtdVolume:4, mtdVolLY:4 },
+  { name:"Obstetrics & Gynaecology", mtdActual:35807, mtdLY:31393, mtdBudget:58776, mtdVolume:8, mtdVolLY:5 },
+  { name:"ENT", mtdActual:24670, mtdLY:19541, mtdBudget:24657, mtdVolume:3, mtdVolLY:2 },
+  { name:"Orthopaedics", mtdActual:19383, mtdLY:30194, mtdBudget:28000, mtdVolume:3, mtdVolLY:1 },
+  { name:"Ophthalmology", mtdActual:18550, mtdLY:5953, mtdBudget:17021, mtdVolume:2, mtdVolLY:1 },
+  { name:"Vascular Surgeon", mtdActual:14492, mtdLY:23409, mtdBudget:35568, mtdVolume:1, mtdVolLY:2 },
+  { name:"Gastroenterology", mtdActual:2793, mtdLY:35047, mtdBudget:1792, mtdVolume:1, mtdVolLY:7 },
 ];
 
 const DEFAULT_IP_DOCTORS = [
@@ -1967,7 +1967,7 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
 
 function App() {
   // Load saved state from localStorage if available
-  const CACHE_VERSION = 8; // Increment to invalidate old caches
+  const CACHE_VERSION = 9; // Increment to invalidate old caches
   const savedState = (() => {
     try {
       const raw = localStorage.getItem("hh_dashboard_state");
