@@ -3122,11 +3122,16 @@ function App() {
                   <th style={dth}>Location(s)</th>
                   <th style={{ ...dth, textAlign:"right" }}>MTD Actual</th>
                   <th style={{ ...dth, textAlign:"right" }}>MTD LY</th>
-                  <th style={{ ...dth, textAlign:"right" }}>Revenue Gap</th>
+                  <th style={{ ...dth, textAlign:"right" }}>MTD Gap</th>
+                  <th style={{ ...dth, textAlign:"right" }}>YTD Actual</th>
                   <th style={{ ...dth, textAlign:"right" }}>YTD LY</th>
+                  <th style={{ ...dth, textAlign:"right" }}>YTD Gap</th>
                 </tr></thead>
                 <tbody>
-                  {resignedWithRevenue.map((spec) => (
+                  {resignedWithRevenue.map((spec) => {
+                    const mtdGap = spec.mtdActual - spec.mtdLY;
+                    const ytdGap = spec.ytdActual - spec.ytdLY;
+                    return (
                     <React.Fragment key={spec.name}>
                       <tr style={{ background:"rgba(100,116,139,0.1)", borderBottom:"1px solid "+C.border, cursor:"pointer" }} onClick={() => setExpandedResigned(prev => prev === spec.name ? null : spec.name)}>
                         <td style={{ ...dtd, fontWeight:700, color:C.textSecondary }}>
@@ -3136,29 +3141,50 @@ function App() {
                         <td style={dtd}></td>
                         <td style={{ ...dtn, fontWeight:700 }}>{fmt(spec.mtdActual)}</td>
                         <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.mtdLY)}</td>
-                        <td style={{ ...dtn, color:C.danger, fontWeight:700 }}>{fmt(spec.mtdLY - spec.mtdActual)}</td>
+                        <td style={{ ...dtn, color: mtdGap >= 0 ? C.success : C.danger, fontWeight:700 }}>{mtdGap >= 0 ? "+" : ""}{fmt(mtdGap)}</td>
+                        <td style={{ ...dtn, fontWeight:700 }}>{fmt(spec.ytdActual)}</td>
                         <td style={{ ...dtn, color:C.textMuted }}>{fmt(spec.ytdLY)}</td>
+                        <td style={{ ...dtn, color: ytdGap >= 0 ? C.success : C.danger, fontWeight:700 }}>{ytdGap >= 0 ? "+" : ""}{fmt(ytdGap)}</td>
                       </tr>
-                      {expandedResigned === spec.name && spec.doctors.map((d, di) => (
+                      {expandedResigned === spec.name && spec.doctors.map((d, di) => {
+                        const dMtdGap = (d.mtdActual||0) - (d.mtdLY||0);
+                        const dYtdGap = (d.ytdActual||0) - (d.ytdLY||0);
+                        return (
                         <tr key={d.name+di} style={{ background: di % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid "+C.border }}>
                           <td style={{ ...dtd, paddingLeft:32 }}><DoctorName name={d.name} /></td>
                           <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{fmtLocs(d.locations)}</td>
                           <td style={dtn}>{fmt(d.mtdActual)}</td>
                           <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
-                          <td style={{ ...dtn, color:C.danger }}>{fmt((d.mtdLY||0) - (d.mtdActual||0))}</td>
+                          <td style={{ ...dtn, color: dMtdGap >= 0 ? C.success : C.danger, fontWeight:600 }}>{dMtdGap >= 0 ? "+" : ""}{fmt(dMtdGap)}</td>
+                          <td style={dtn}>{fmt(d.ytdActual)}</td>
                           <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
+                          <td style={{ ...dtn, color: dYtdGap >= 0 ? C.success : C.danger, fontWeight:600 }}>{dYtdGap >= 0 ? "+" : ""}{fmt(dYtdGap)}</td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </React.Fragment>
-                  ))}
-                  <tr style={{ background:"rgba(100,116,139,0.15)", borderTop:"2px solid "+C.border }}>
-                    <td style={{ ...dtd, fontWeight:800, color:C.text }}>TOTAL IMPACT</td>
-                    <td style={dtd}></td>
-                    <td style={{ ...dtn, fontWeight:800 }}>{fmt(resignedWithRevenue.reduce((a,s) => a + s.mtdActual, 0))}</td>
-                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(resignedWithRevenue.reduce((a,s) => a + s.mtdLY, 0))}</td>
-                    <td style={{ ...dtn, fontWeight:800, color:C.danger }}>{fmt(resignedWithRevenue.reduce((a,s) => a + s.mtdLY - s.mtdActual, 0))}</td>
-                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(resignedWithRevenue.reduce((a,s) => a + s.ytdLY, 0))}</td>
-                  </tr>
+                    );
+                  })}
+                  {(() => {
+                    const tMtdA = resignedWithRevenue.reduce((a,s) => a + s.mtdActual, 0);
+                    const tMtdLY = resignedWithRevenue.reduce((a,s) => a + s.mtdLY, 0);
+                    const tYtdA = resignedWithRevenue.reduce((a,s) => a + s.ytdActual, 0);
+                    const tYtdLY = resignedWithRevenue.reduce((a,s) => a + s.ytdLY, 0);
+                    const tMtdGap = tMtdA - tMtdLY;
+                    const tYtdGap = tYtdA - tYtdLY;
+                    return (
+                    <tr style={{ background:"rgba(100,116,139,0.15)", borderTop:"2px solid "+C.border }}>
+                      <td style={{ ...dtd, fontWeight:800, color:C.text }}>TOTAL IMPACT</td>
+                      <td style={dtd}></td>
+                      <td style={{ ...dtn, fontWeight:800 }}>{fmt(tMtdA)}</td>
+                      <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(tMtdLY)}</td>
+                      <td style={{ ...dtn, fontWeight:800, color: tMtdGap >= 0 ? C.success : C.danger }}>{tMtdGap >= 0 ? "+" : ""}{fmt(tMtdGap)}</td>
+                      <td style={{ ...dtn, fontWeight:800 }}>{fmt(tYtdA)}</td>
+                      <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(tYtdLY)}</td>
+                      <td style={{ ...dtn, fontWeight:800, color: tYtdGap >= 0 ? C.success : C.danger }}>{tYtdGap >= 0 ? "+" : ""}{fmt(tYtdGap)}</td>
+                    </tr>
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>
