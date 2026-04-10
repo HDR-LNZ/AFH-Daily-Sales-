@@ -1927,13 +1927,15 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
 
 function App() {
   // Load saved state from localStorage if available
+  const CACHE_VERSION = 2; // Increment to invalidate old caches
   const savedState = (() => {
     try {
       const raw = localStorage.getItem("hh_dashboard_state");
       if (!raw) { console.log("No saved dashboard state found"); return null; }
       const s = JSON.parse(raw);
       if (!s || !s.ts) { console.log("Saved state invalid (no timestamp)"); return null; }
-      if (Date.now() - s.ts > 7 * 24 * 3600 * 1000) { console.log("Saved state expired"); return null; }
+      if (s.version !== CACHE_VERSION) { console.log("Cache version mismatch (old:", s.version, "current:", CACHE_VERSION, ") — clearing stale data"); localStorage.removeItem("hh_dashboard_state"); return null; }
+      if (Date.now() - s.ts > 7 * 24 * 3600 * 1000) { console.log("Saved state expired"); localStorage.removeItem("hh_dashboard_state"); return null; }
       console.log("Restoring saved state from", new Date(s.ts).toLocaleString(), "- date:", s.reportDate, "specs:", s.specialties?.length, "docs:", s.doctors?.length);
       return s;
     } catch(e) { console.warn("Failed to load saved state:", e); return null; }
@@ -2130,6 +2132,7 @@ function App() {
         ipDoctors: ipDocs || null,
         dailyRevenue: dr || null,
         doctorLocations: dlocs || null,
+        version: CACHE_VERSION,
         ts: Date.now(),
       }));
       console.log("Dashboard state saved to localStorage - date:", rd, "specs:", specs.length, "docs:", docs?.length, "size:", Math.round(localStorage.getItem("hh_dashboard_state").length/1024) + "KB");
