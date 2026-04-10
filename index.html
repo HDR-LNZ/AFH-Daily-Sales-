@@ -891,7 +891,8 @@ function parseExcelFile(data) {
       const r = ipRows[i]; if (!r) continue;
       const name = r[ipNameCol]; if (!name || typeof name !== "string") continue;
       const nameLower = name.trim().toLowerCase();
-      if (nameLower === "total" || nameLower === "specialty" || nameLower.includes("revenue") || nameLower.includes("volume") || nameLower.includes("ppc")) continue;
+      if (nameLower === "total") break; // Stop at Total row — don't continue into YTD section
+      if (nameLower === "specialty" || nameLower.includes("revenue") || nameLower.includes("volume") || nameLower.includes("ppc")) continue;
       const mtdActual = num(r[ipRevCol]), mtdLY = num(r[ipRevLYCol]), mtdBudget = num(r[ipBgtCol]);
       const mtdVolLY = Math.round(num(r[ipVolLYCol]) || 0);
       const mtdVolume = Math.round(num(r[ipVolCol]) || 0);
@@ -1927,7 +1928,7 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
 
 function App() {
   // Load saved state from localStorage if available
-  const CACHE_VERSION = 2; // Increment to invalidate old caches
+  const CACHE_VERSION = 3; // Increment to invalidate old caches
   const savedState = (() => {
     try {
       const raw = localStorage.getItem("hh_dashboard_state");
