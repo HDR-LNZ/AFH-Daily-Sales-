@@ -711,6 +711,8 @@ function parseExcelFile(data) {
     const r = rows[i]; if (!r) continue;
     const colA = r[0], colB = r[1];
     if (!colB || typeof colB !== "string" || colB.toLowerCase().includes("grand total")) continue;
+    const colBL = colB.toLowerCase();
+    if (colBL.includes("lutetia") || colBL.includes("not required")) continue;
     const today=num(r[2]),mtdBudget=num(r[3]),mtdActual=num(r[4]),mtdLY=num(r[5]),mtdVBR=num(r[6]),mtdVLR=num(r[7]),ytdBudget=num(r[8]),ytdActual=num(r[9]),ytdLY=num(r[10]);
     if (colB.includes("Total")) {
       const name = colB.replace(/\s*Total\s*/i,"").trim(); if (!name) continue;
