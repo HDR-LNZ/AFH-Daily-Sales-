@@ -388,312 +388,35 @@ function ClinicLink({ code, label }) {
   return <span style={{ fontWeight:700, color:C.text }}>{name}</span>;
 }
 
-const DEFAULT_LOCATIONS = [
-  { location:"DSU", totalToday:165582, totalRevenueMTD:982581, mtdBudget:1221568, mtdLY:800444, totalRevenueYTD:12341043, ytdBudget:0, ytdLY:10670179, ppcYTD:455, ppcYTDLY:362, opVolMTD:1355, opVolMTDLY:1196, specialties:[] },
-  { location:"Qusais", totalToday:55662, totalRevenueMTD:478132, mtdBudget:649608, mtdLY:469529, totalRevenueYTD:5410966, ytdBudget:0, ytdLY:6372362, ppcYTD:281, ppcYTDLY:203, opVolMTD:910, opVolMTDLY:1471, specialties:[] },
-  { location:"Silicon", totalToday:57039, totalRevenueMTD:468690, mtdBudget:611132, mtdLY:526767, totalRevenueYTD:5968366, ytdBudget:0, ytdLY:6085043, ppcYTD:229, ppcYTDLY:175, opVolMTD:1122, opVolMTDLY:1638, specialties:[] },
-  { location:"DG", totalToday:27778, totalRevenueMTD:268872, mtdBudget:409947, mtdLY:396054, totalRevenueYTD:3533432, ytdBudget:0, ytdLY:4195307, ppcYTD:222, ppcYTDLY:151, opVolMTD:713, opVolMTDLY:1438, specialties:[] },
-  { location:"Intl City", totalToday:49098, totalRevenueMTD:256774, mtdBudget:349618, mtdLY:250610, totalRevenueYTD:3117850, ytdBudget:0, ytdLY:3229106, ppcYTD:250, ppcYTDLY:183, opVolMTD:534, opVolMTDLY:755, specialties:[] },
-  { location:"Nahda", totalToday:43520, totalRevenueMTD:241040, mtdBudget:342135, mtdLY:263482, totalRevenueYTD:2653763, ytdBudget:0, ytdLY:3221676, ppcYTD:211, ppcYTDLY:162, opVolMTD:535, opVolMTDLY:869, specialties:[] },
-  { location:"Warqa", totalToday:23821, totalRevenueMTD:216326, mtdBudget:256966, mtdLY:220605, totalRevenueYTD:2659484, ytdBudget:0, ytdLY:2490264, ppcYTD:210, ppcYTDLY:164, opVolMTD:650, opVolMTDLY:770, specialties:[] },
-  { location:"Tecom", totalToday:18767, totalRevenueMTD:188689, mtdBudget:245705, mtdLY:247776, totalRevenueYTD:1813776, ytdBudget:0, ytdLY:2968466, ppcYTD:227, ppcYTDLY:178, opVolMTD:417, opVolMTDLY:819, specialties:[] },
-  { location:"Karama", totalToday:20301, totalRevenueMTD:186108, mtdBudget:220478, mtdLY:179803, totalRevenueYTD:2138281, ytdBudget:0, ytdLY:2250349, ppcYTD:188, ppcYTDLY:139, opVolMTD:468, opVolMTDLY:640, specialties:[] },
-  { location:"Fest Plaza", totalToday:14253, totalRevenueMTD:161710, mtdBudget:222871, mtdLY:193644, totalRevenueYTD:1952941, ytdBudget:0, ytdLY:2345371, ppcYTD:203, ppcYTDLY:155, opVolMTD:281, opVolMTDLY:493, specialties:[] },
-  { location:"Arabian", totalToday:15749, totalRevenueMTD:147073, mtdBudget:252252, mtdLY:86248, totalRevenueYTD:1666697, ytdBudget:0, ytdLY:1300780, ppcYTD:290, ppcYTDLY:301, opVolMTD:253, opVolMTDLY:172, specialties:[] },
-  { location:"JVC", totalToday:8926, totalRevenueMTD:76775, mtdBudget:176489, mtdLY:0, totalRevenueYTD:720558, ytdBudget:0, ytdLY:0, ppcYTD:360, ppcYTDLY:0, opVolMTD:150, opVolMTDLY:0, specialties:[] },
-  { location:"Stationed", totalToday:3500, totalRevenueMTD:22484, mtdBudget:68183, mtdLY:17748, totalRevenueYTD:260382, ytdBudget:0, ytdLY:305847, ppcYTD:0, ppcYTDLY:0, opVolMTD:155, opVolMTDLY:251, specialties:[] },
-  { location:"Staff DIP", totalToday:1366, totalRevenueMTD:10957, mtdBudget:3617, mtdLY:6699, totalRevenueYTD:106043, ytdBudget:0, ytdLY:82147, ppcYTD:42, ppcYTDLY:57, opVolMTD:245, opVolMTDLY:115, specialties:[] },
-  { location:"Staff DFC", totalToday:0, totalRevenueMTD:0, mtdBudget:0, mtdLY:34929, totalRevenueYTD:0, ytdBudget:0, ytdLY:303206, ppcYTD:0, ppcYTDLY:0, opVolMTD:0, opVolMTDLY:0, specialties:[] },
-];
+const DEFAULT_LOCATIONS = [];
 
 // ─── Default Data ────────────────────────────────────────────────────────────
 
-const DEFAULT_DAILY_REVENUE = [
-  { day:1, total:225691, volume:895, label:"Wed 1", fullLabel:"Wed, Apr 1" },
-  { day:2, total:293467, volume:964, label:"Thu 2", fullLabel:"Thu, Apr 2" },
-  { day:3, total:276841, volume:868, label:"Fri 3", fullLabel:"Fri, Apr 3" },
-  { day:4, total:385513, volume:1240, label:"Sat 4", fullLabel:"Sat, Apr 4" },
-  { day:5, total:204238, volume:681, label:"Sun 5", fullLabel:"Sun, Apr 5" },
-  { day:6, total:314906, volume:1146, label:"Mon 6", fullLabel:"Mon, Apr 6" },
-];
+const DEFAULT_DAILY_REVENUE = [];
 
-const DEFAULT_REPORT_DATE = "Apr 8, 2026";
+const DEFAULT_REPORT_DATE = "";
 
 const DEFAULT_DSR_TOTALS = {
-  todayRev: 516612, mtdActual: 3796214, mtdBudget: 4959717,
-  mtdLY: 3511853, ytdActual: 45258443, ytdBudget: 52579062, ytdLY: 46354999,
-  daysElapsed: 8,
-  opMtdVolume: 7788, opMtdRevenue: 2319747, opMtdPPC: 0,
-  opMtdLYRevenue: 2145983, opMtdLYVolume: 10903, opMtdLYPPC: 0
+  todayRev: 0, mtdActual: 0, mtdBudget: 0,
+  mtdLY: 0, ytdActual: 0, ytdBudget: 0, ytdLY: 0,
+  daysElapsed: 0,
+  opMtdVolume: 0, opMtdRevenue: 0, opMtdPPC: 0,
+  opMtdLYRevenue: 0, opMtdLYVolume: 0, opMtdLYPPC: 0
 };
 
 const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed"]);
 
-const DEFAULT_DOCTOR_LOCATIONS = {
-  "Dr. Madiha Rashid": "DG",
-  "Dr. Mohammed Abul Hassan Boopathy": "Arabian,DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa",
-  "Dr. Shila Waghmare": "DG,DSU,Intl City,Karama,Nahda,Qusais,Warqa",
-  "Dr. George Thachil": "DSU,Fest Plaza,Intl City,Nahda,Qusais,Silicon,Warqa",
-  "Dr. Srinivasan Ravindranath": "DG,DSU,Qusais",
-  "Dr. Deepthi Balakrishnan": "DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa",
-  "Dr. Zainab Ali Asghar": "DSU,Nahda,Qusais,Tecom",
-  "Dr. Rakesh Maggon": "DSU,Qusais",
-  "Dr. Ghoufran Mohideen": "Arabian,DSU,JVC,Tecom",
-  "Dr. Shajahan Abdulkhader": "DSU,Nahda,Qusais",
-  "Dr. Shweta Jaiswal": "DSU,Intl City,Karama,Nahda,Qusais,Warqa",
-  "Dr. Ali Akbar Thirkannur": "DSU",
-  "Dr. Khaldun Alshaheen": "DG,DSU,Fest Plaza,Intl City,Karama,Qusais,Silicon",
-  "Dr. Venkateswara Gorthi": "DG,DSU,Qusais",
-  "Dr. Inderpal Deshwal": "DSU,Nahda,Qusais",
-};
+const DEFAULT_DOCTOR_LOCATIONS = {};
 
 const DEFAULT_DOCTORS = [
-  { name:"Dr. Gada Abdelhamid", specialty:"Anesthesia", today:1543, mtdActual:2645, mtdBudget:0, mtdLY:0, ytdActual:19520, ytdBudget:0, ytdLY:67, locations:"DSU" },
-  { name:"Dr. Elaheh Allahyari", specialty:"Anesthesia", today:0, mtdActual:1054, mtdBudget:0, mtdLY:0, ytdActual:12301, ytdBudget:0, ytdLY:67, locations:"DSU" },
-  { name:"Dr. Chuchendra Shadakshari", specialty:"Anesthesia", today:0, mtdActual:-35, mtdBudget:0, mtdLY:0, ytdActual:9018, ytdBudget:0, ytdLY:0, locations:"DSU" },
-  { name:"Dr. Srinivasan Ravindranath", specialty:"Cardiology", today:3502, mtdActual:29772, mtdBudget:41798, mtdLY:-872, ytdActual:432080, ytdBudget:624078, ytdLY:386221, locations:"DG,DSU,Qusais" },
-  { name:"Dr. Seyed Mohammad Kasaei", specialty:"Cardiology", today:733, mtdActual:10096, mtdBudget:11477, mtdLY:0, ytdActual:132014, ytdBudget:171356, ytdLY:0, locations:"DG,DSU,Fest Plaza,Tecom" },
-  { name:"Dr. Jabraan Shaikh", specialty:"Cardiology", today:2680, mtdActual:11118, mtdBudget:20107, mtdLY:7577, ytdActual:186063, ytdBudget:300213, ytdLY:195110, locations:"DSU,Intl City,Silicon" },
-  { name:"Dr. Ibraheem Basher", specialty:"Cardiology", today:1910, mtdActual:6362, mtdBudget:14134, mtdLY:870, ytdActual:95966, ytdBudget:211030, ytdLY:72442, locations:"Arabian,DSU,Tecom" },
-  { name:"Dr. Fatima Qurratulain", specialty:"Cardiology", today:104, mtdActual:10778, mtdBudget:18175, mtdLY:9797, ytdActual:284561, ytdBudget:271363, ytdLY:167940, locations:"DSU" },
-  { name:"Dr. Abhay Pande", specialty:"Cardiology", today:0, mtdActual:-102, mtdBudget:12798, mtdLY:18487, ytdActual:158585, ytdBudget:191080, ytdLY:141218, locations:"DG,DSU,Silicon,Tecom" },
-  { name:"Dr. Abdalla Alhajeri", specialty:"Cardiology", today:530, mtdActual:2052, mtdBudget:0, mtdLY:0, ytdActual:2539, ytdBudget:0, ytdLY:0, locations:"DSU" },
-  { name:"Dr. Zahra Fazal", specialty:"Dentist", today:2216, mtdActual:15279, mtdBudget:23336, mtdLY:7424, ytdActual:270363, ytdBudget:348420, ytdLY:223807, locations:"Qusais" },
-  { name:"Dr. Fernaz Behlim", specialty:"Dentist", today:0, mtdActual:6104, mtdBudget:1178, mtdLY:1814, ytdActual:36725, ytdBudget:17590, ytdLY:28524, locations:"DSU,Silicon,Tecom,Warqa" },
-  { name:"Dr. Aby John", specialty:"Dentist", today:2246, mtdActual:8083, mtdBudget:14502, mtdLY:11222, ytdActual:186910, ytdBudget:216525, ytdLY:189266, locations:"DSU" },
-  { name:"Dr. Alanoud Shatat", specialty:"Dentist", today:1464, mtdActual:7797, mtdBudget:6108, mtdLY:980, ytdActual:97197, ytdBudget:91194, ytdLY:60367, locations:"Arabian,DSU,Warqa" },
-  { name:"Dr. Shaima Alnaqbi", specialty:"Dentist", today:0, mtdActual:1687, mtdBudget:0, mtdLY:268, ytdActual:6107, ytdBudget:0, ytdLY:7852, locations:"Arabian" },
-  { name:"Dr. Saritha Shetty", specialty:"Dentist", today:2463, mtdActual:15431, mtdBudget:3634, mtdLY:0, ytdActual:208908, ytdBudget:54265, ytdLY:0, locations:"Arabian,Silicon,Warqa" },
-  { name:"Dr. Farah Al Mulla", specialty:"Dentist", today:853, mtdActual:9417, mtdBudget:19341, mtdLY:8195, ytdActual:162111, ytdBudget:288771, ytdLY:183392, locations:"Silicon" },
-  { name:"Dr. Yasameen Alamer", specialty:"Dentist", today:2563, mtdActual:11965, mtdBudget:10688, mtdLY:9735, ytdActual:125919, ytdBudget:159582, ytdLY:128189, locations:"Warqa" },
-  { name:"Dr. Madiha Rashid", specialty:"Dentist", today:11465, mtdActual:55053, mtdBudget:30352, mtdLY:20104, ytdActual:572392, ytdBudget:453184, ytdLY:399574, locations:"DG" },
-  { name:"Dr. Vinu Rajashekar", specialty:"Dentist", today:1085, mtdActual:6634, mtdBudget:10702, mtdLY:6965, ytdActual:150169, ytdBudget:159796, ytdLY:132491, locations:"Nahda" },
-  { name:"Dr. Husna Karikuzhi", specialty:"Dentist", today:668, mtdActual:8879, mtdBudget:8227, mtdLY:2442, ytdActual:103417, ytdBudget:122829, ytdLY:101482, locations:"DG,Tecom,Warqa" },
-  { name:"Dr. Ghoufran Mohideen", specialty:"Dermatology", today:9284, mtdActual:22712, mtdBudget:19147, mtdLY:7647, ytdActual:303847, ytdBudget:285881, ytdLY:209505, locations:"Arabian,DSU,JVC,Tecom" },
-  { name:"Dr. Varsha Arun", specialty:"Dermatology", today:3598, mtdActual:16618, mtdBudget:13528, mtdLY:11507, ytdActual:237444, ytdBudget:201978, ytdLY:144945, locations:"DSU,Qusais" },
-  { name:"Dr. Dimple Tiwari", specialty:"Dermatology", today:1862, mtdActual:6659, mtdBudget:14154, mtdLY:10257, ytdActual:128957, ytdBudget:211332, ytdLY:146454, locations:"DG,Fest Plaza" },
-  { name:"Dr. Moutusi Audhya", specialty:"Dermatology", today:5231, mtdActual:11659, mtdBudget:8153, mtdLY:7588, ytdActual:149001, ytdBudget:121734, ytdLY:145228, locations:"Silicon,Warqa" },
-  { name:"Dr. Mohan Kudur", specialty:"Dermatology", today:3896, mtdActual:12105, mtdBudget:15320, mtdLY:6062, ytdActual:176111, ytdBudget:228735, ytdLY:121544, locations:"Karama,Qusais" },
-  { name:"Dr. Aneesh Kunnath Parambath", specialty:"Dermatology", today:0, mtdActual:12220, mtdBudget:11356, mtdLY:10318, ytdActual:135688, ytdBudget:169555, ytdLY:95408, locations:"DG,Tecom" },
-  { name:"Ms. Samar Bou Antoun", specialty:"Dietician", today:0, mtdActual:0, mtdBudget:1584, mtdLY:0, ytdActual:5460, ytdBudget:23648, ytdLY:4283, locations:"Arabian,DSU,Fest Plaza,JVC" },
-  { name:"Dr. Mohammed Abul Hassan Boopathy", specialty:"Endocrinology", today:3325, mtdActual:48357, mtdBudget:39727, mtdLY:25611, ytdActual:474049, ytdBudget:593154, ytdLY:414510, locations:"Arabian,DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Mhd Amer Dardari", specialty:"Endocrinology", today:2339, mtdActual:23225, mtdBudget:19456, mtdLY:17670, ytdActual:242435, ytdBudget:290489, ytdLY:228273, locations:"DG,DSU,Karama,Nahda,Qusais,Silicon,Tecom" },
-  { name:"Dr. Layla Askar Alsalama", specialty:"Endocrinology", today:2919, mtdActual:11859, mtdBudget:12925, mtdLY:4187, ytdActual:109953, ytdBudget:192986, ytdLY:65534, locations:"Arabian,DG,DSU,Intl City,Nahda,Silicon,Tecom,Warqa" },
-  { name:"Dr. Prashanth Prabhu", specialty:"ENT", today:2310, mtdActual:10125, mtdBudget:15791, mtdLY:18902, ytdActual:195152, ytdBudget:235772, ytdLY:244641, locations:"DSU,Qusais,Silicon,Warqa" },
-  { name:"Dr. Muhammed  Shafi Shamsu", specialty:"ENT", today:2958, mtdActual:6858, mtdBudget:5769, mtdLY:10233, ytdActual:91469, ytdBudget:86140, ytdLY:143363, locations:"DG,DSU,Qusais,Tecom" },
-  { name:"Dr. Archana Babanagare", specialty:"ENT", today:2137, mtdActual:7098, mtdBudget:12573, mtdLY:20644, ytdActual:170655, ytdBudget:187728, ytdLY:274117, locations:"DG,DSU,Tecom" },
-  { name:"Dr. Nidhi Maggon", specialty:"ENT", today:4667, mtdActual:13115, mtdBudget:15415, mtdLY:9466, ytdActual:179830, ytdBudget:230159, ytdLY:168199, locations:"Arabian,DSU,Intl City,Karama,Silicon" },
-  { name:"Dr. Rajan Sachdeva", specialty:"ENT", today:0, mtdActual:0, mtdBudget:0, mtdLY:11829, ytdActual:458, ytdBudget:0, ytdLY:139944, locations:"Arabian,DSU,Silicon,Warqa" },
-  { name:"Dr. Sourabh Soni", specialty:"ENT", today:921, mtdActual:3600, mtdBudget:7982, mtdLY:0, ytdActual:145224, ytdBudget:119181, ytdLY:0, locations:"DG,DSU,Silicon,Warqa" },
-  { name:"Dr. Abhay Vyankatrao Inamdar", specialty:"ENT", today:960, mtdActual:3728, mtdBudget:10466, mtdLY:0, ytdActual:114793, ytdBudget:156260, ytdLY:0, locations:"DSU,Silicon,Warqa" },
-  { name:"Dr. Rinku  Alex", specialty:"ENT", today:2419, mtdActual:10455, mtdBudget:10870, mtdLY:0, ytdActual:142714, ytdBudget:162296, ytdLY:0, locations:"DSU,Qusais,Warqa" },
-  { name:"Dr. Nirmal Sumitha Jerald", specialty:"Family Medicine", today:4526, mtdActual:12624, mtdBudget:18552, mtdLY:17499, ytdActual:240203, ytdBudget:276990, ytdLY:271860, locations:"DSU,Qusais,Silicon,Warqa" },
-  { name:"Dr. Zainab Ali Asghar", specialty:"Family Medicine", today:4214, mtdActual:23720, mtdBudget:29922, mtdLY:32095, ytdActual:325239, ytdBudget:446755, ytdLY:430864, locations:"DSU,Nahda,Qusais,Tecom" },
-  { name:"Dr. Safaa Alawi", specialty:"Family Medicine", today:-416, mtdActual:19144, mtdBudget:24240, mtdLY:15769, ytdActual:383151, ytdBudget:361920, ytdLY:317178, locations:"DSU,Intl City,Silicon,Warqa" },
-  { name:"Dr. Omar Eissa Abdelshafy Habo", specialty:"Family Medicine", today:215, mtdActual:3547, mtdBudget:13418, mtdLY:17422, ytdActual:126531, ytdBudget:200336, ytdLY:234891, locations:"DG,DSU,Tecom" },
-  { name:"Dr. Libey Joy", specialty:"Family Medicine", today:3855, mtdActual:7364, mtdBudget:14807, mtdLY:18262, ytdActual:198906, ytdBudget:221075, ytdLY:203088, locations:"DG,DSU,Fest Plaza,Karama,Tecom" },
-  { name:"Dr. Omar Farooq Abdul Kadir", specialty:"Family Medicine", today:0, mtdActual:0, mtdBudget:16490, mtdLY:15118, ytdActual:91365, ytdBudget:246204, ytdLY:209499, locations:"DSU,Warqa" },
-  { name:"Dr. Divya Mangal", specialty:"Family Medicine", today:4360, mtdActual:16837, mtdBudget:22282, mtdLY:15947, ytdActual:352479, ytdBudget:332681, ytdLY:228763, locations:"DSU,Intl City,Karama,Qusais,Silicon,Tecom" },
-  { name:"Dr. Malak Wehbe", specialty:"Family Medicine", today:0, mtdActual:6296, mtdBudget:0, mtdLY:0, ytdActual:61388, ytdBudget:0, ytdLY:0, locations:"Fest Plaza,JVC" },
-  { name:"Dr. Nisha Narayanankutty", specialty:"Family Medicine", today:955, mtdActual:12087, mtdBudget:8708, mtdLY:0, ytdActual:167171, ytdBudget:130013, ytdLY:0, locations:"DSU,Intl City,Karama" },
-  { name:"Dr. Rebecca Najem", specialty:"Family Medicine", today:0, mtdActual:15663, mtdBudget:7868, mtdLY:0, ytdActual:240129, ytdBudget:117473, ytdLY:0, locations:"DSU,Karama,Tecom" },
-  { name:"Dr. Hind Alaa Majeed Abodaka", specialty:"Family Medicine", today:748, mtdActual:4522, mtdBudget:9331, mtdLY:0, ytdActual:100318, ytdBudget:139314, ytdLY:0, locations:"DG,DSU,Fest Plaza,Tecom" },
-  { name:"Dr. Rasha Alani", specialty:"Family Medicine", today:0, mtdActual:-445, mtdBudget:14516, mtdLY:0, ytdActual:138545, ytdBudget:216732, ytdLY:0, locations:"Arabian" },
-  { name:"Dr. Vineetha Oommen Kottakkattu", specialty:"Family Medicine", today:733, mtdActual:12903, mtdBudget:7713, mtdLY:0, ytdActual:138632, ytdBudget:115165, ytdLY:0, locations:"DSU,Intl City,Nahda,Qusais" },
-  { name:"Dr. Nevra Batur", specialty:"Family Medicine", today:0, mtdActual:0, mtdBudget:9914, mtdLY:0, ytdActual:62326, ytdBudget:148024, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Tecom" },
-  { name:"Dr. Fareeha Younis", specialty:"Family Medicine", today:155, mtdActual:12352, mtdBudget:17478, mtdLY:20898, ytdActual:238592, ytdBudget:260956, ytdLY:288433, locations:"DG,DSU,Intl City,Qusais,Silicon" },
-  { name:"Dr. Shailesh Kumar", specialty:"Gastroenterology", today:779, mtdActual:6804, mtdBudget:10638, mtdLY:6541, ytdActual:111687, ytdBudget:158836, ytdLY:119283, locations:"DG,DSU,Intl City,Karama,Qusais,Silicon,Tecom" },
-  { name:"Dr. ALI  SHORBAGI", specialty:"Gastroenterology", today:0, mtdActual:1086, mtdBudget:2689, mtdLY:1776, ytdActual:22170, ytdBudget:40146, ytdLY:44993, locations:"DSU,Intl City,Nahda,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Khaldun  Alshaheen", specialty:"Gastroenterology", today:4824, mtdActual:18532, mtdBudget:11442, mtdLY:9292, ytdActual:198302, ytdBudget:170839, ytdLY:148553, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Qusais,Silicon" },
-  { name:"Dr. Riham Abdelaal", specialty:"Gastroenterology", today:0, mtdActual:0, mtdBudget:17316, mtdLY:7937, ytdActual:267206, ytdBudget:258540, ytdLY:158723, locations:"Arabian,DG,DSU,Intl City,Karama,Nahda,Silicon,Tecom" },
-  { name:"Dr. Hasan Odeh", specialty:"Gastroenterology", today:512, mtdActual:3992, mtdBudget:2897, mtdLY:0, ytdActual:20298, ytdBudget:43254, ytdLY:0, locations:"Arabian,DSU,Intl City,JVC,Silicon" },
-  { name:"Dr. Ihsan Kommouna", specialty:"Gastroenterology", today:0, mtdActual:0, mtdBudget:2992, mtdLY:0, ytdActual:13481, ytdBudget:44669, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Karama,Silicon,Tecom" },
-  { name:"Dr. Ali Aleddey", specialty:"Gastroenterology", today:2442, mtdActual:5954, mtdBudget:6919, mtdLY:0, ytdActual:78908, ytdBudget:103307, ytdLY:0, locations:"Arabian,DSU,Intl City,JVC,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Manish Mulchandani", specialty:"General Practice", today:1502, mtdActual:7933, mtdBudget:2407, mtdLY:6561, ytdActual:99529, ytdBudget:35937, ytdLY:112572, locations:"DG,DSU,Qusais,Staff DFC,Staff DIP,Stationed,Warqa" },
-  { name:"Dr. Uma Bilgi", specialty:"General Practice", today:3317, mtdActual:3317, mtdBudget:20428, mtdLY:6700, ytdActual:209470, ytdBudget:305010, ytdLY:124078, locations:"DSU,Staff DFC,Stationed" },
-  { name:"Dr. Lubna Malek", specialty:"Family Medicine", today:1227, mtdActual:12486, mtdBudget:15207, mtdLY:-4, ytdActual:192110, ytdBudget:227048, ytdLY:202120, locations:"DSU,Staff DFC,Stationed,Warqa" },
-  { name:"Dr. Rasha Alsaoud Resha", specialty:"General Practice", today:0, mtdActual:0, mtdBudget:16356, mtdLY:10287, ytdActual:137930, ytdBudget:244203, ytdLY:173797, locations:"Arabian,DSU,Intl City" },
-  { name:"Dr. Renju Dominic", specialty:"General Practice", today:0, mtdActual:8150, mtdBudget:8748, mtdLY:7672, ytdActual:74524, ytdBudget:130612, ytdLY:103302, locations:"Arabian,DG,DSU,Intl City,Karama,Qusais,Silicon,Staff DIP,Stationed,Tecom,Warqa" },
-  { name:"Dr. Sandeep Kumar", specialty:"General Practice", today:55, mtdActual:4702, mtdBudget:4840, mtdLY:7084, ytdActual:40468, ytdBudget:72270, ytdLY:115848, locations:"Arabian,DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Qusais,Silicon,Staff DFC,Staff DIP,Stationed,Tecom,Warqa" },
-  { name:"Dr. Nazar Khowaja", specialty:"General Practice", today:396, mtdActual:7346, mtdBudget:11651, mtdLY:0, ytdActual:125613, ytdBudget:173965, ytdLY:202906, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Tecom" },
-  { name:"Dr. Surya Senapathy", specialty:"General Practice", today:1145, mtdActual:5269, mtdBudget:11526, mtdLY:4698, ytdActual:117397, ytdBudget:172092, ytdLY:170882, locations:"DSU,Fest Plaza,Karama,Nahda,Qusais,Tecom" },
-  { name:"Dr. Musarat Ali", specialty:"General Practice", today:281, mtdActual:6692, mtdBudget:6313, mtdLY:6468, ytdActual:50942, ytdBudget:94255, ytdLY:91089, locations:"Arabian,DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Qusais,Silicon,Staff DFC,Staff DIP,Stationed,Tecom,Warqa" },
-  { name:"Dr. Pyari Jahan", specialty:"General Practice", today:3232, mtdActual:9595, mtdBudget:15102, mtdLY:0, ytdActual:167190, ytdBudget:225485, ytdLY:180820, locations:"DSU,Nahda,Qusais,Stationed,Warqa" },
-  { name:"Dr. Isteer Nashed Makhaly Wahba", specialty:"General Practice", today:2409, mtdActual:11629, mtdBudget:11257, mtdLY:6696, ytdActual:139125, ytdBudget:168078, ytdLY:158729, locations:"Arabian,DG,DSU,Fest Plaza,Intl City,Karama,Silicon,Stationed,Tecom,Warqa" },
-  { name:"Dr. Lana Hassan", specialty:"General Practice", today:5573, mtdActual:13602, mtdBudget:12901, mtdLY:11279, ytdActual:138318, ytdBudget:192626, ytdLY:184004, locations:"Arabian,DSU,Intl City,Qusais,Warqa" },
-  { name:"Dr. Girisankar Gangadharan", specialty:"General Practice", today:2871, mtdActual:11662, mtdBudget:19030, mtdLY:16579, ytdActual:177985, ytdBudget:284133, ytdLY:298359, locations:"DSU,Intl City,Qusais,Silicon" },
-  { name:"Dr. Sundas Maaz", specialty:"General Practice", today:515, mtdActual:5946, mtdBudget:7864, mtdLY:5567, ytdActual:62034, ytdBudget:117423, ytdLY:148939, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Qusais,Silicon,Staff DFC,Stationed,Tecom,Warqa" },
-  { name:"Dr. Ali Raza", specialty:"General Practice", today:0, mtdActual:3312, mtdBudget:15103, mtdLY:17999, ytdActual:102395, ytdBudget:225507, ytdLY:217636, locations:"DG,Fest Plaza,Karama,Nahda,Tecom" },
-  { name:"Dr. Alvin Clavert Casono", specialty:"General Practice", today:592, mtdActual:8428, mtdBudget:18533, mtdLY:6059, ytdActual:139901, ytdBudget:276709, ytdLY:45783, locations:"DG,DSU,Nahda,Qusais" },
-  { name:"Dr. Jay Edwarde Hontanosas", specialty:"General Practice", today:4715, mtdActual:12831, mtdBudget:16235, mtdLY:13294, ytdActual:179268, ytdBudget:242397, ytdLY:249648, locations:"DSU,Karama,Silicon,Tecom" },
-  { name:"Dr. Cecil  Kunnappilly", specialty:"General Surgeon", today:911, mtdActual:7097, mtdBudget:5817, mtdLY:2646, ytdActual:104404, ytdBudget:86853, ytdLY:111984, locations:"Arabian,DSU,Intl City,Karama,Silicon,Warqa" },
-  { name:"Dr. Siva  Malikireddy", specialty:"General Surgeon", today:1100, mtdActual:4894, mtdBudget:7569, mtdLY:5661, ytdActual:69162, ytdBudget:113005, ytdLY:94803, locations:"DSU,Nahda,Qusais,Silicon" },
-  { name:"Dr. Sachin Lohra", specialty:"General Surgeon", today:635, mtdActual:7118, mtdBudget:4718, mtdLY:5113, ytdActual:70261, ytdBudget:70450, ytdLY:116524, locations:"DG,DSU,Fest Plaza,Tecom" },
-  { name:"Dr. Mouhsen  Hosein", specialty:"General Surgeon", today:0, mtdActual:1017, mtdBudget:901, mtdLY:570, ytdActual:6322, ytdBudget:13456, ytdLY:25216, locations:"DSU,Intl City" },
-  { name:"Dr. Shashikanth Jadhav", specialty:"General Surgeon", today:2230, mtdActual:4490, mtdBudget:1782, mtdLY:3986, ytdActual:33427, ytdBudget:26614, ytdLY:30055, locations:"DG,DSU,Nahda,Qusais,Silicon" },
-  { name:"Dr. Nagendra Prasad  Anipindi", specialty:"General Surgeon", today:2013, mtdActual:5591, mtdBudget:3366, mtdLY:0, ytdActual:61891, ytdBudget:50250, ytdLY:0, locations:"DG,DSU,Intl City,Qusais,Silicon,Warqa" },
-  { name:"Dr. Lateefa Alnuaimi", specialty:"General Surgeon", today:0, mtdActual:0, mtdBudget:462, mtdLY:0, ytdActual:-470, ytdBudget:6897, ytdLY:0, locations:"Arabian,DSU" },
-  { name:"Dr. Sudheer Kutty", specialty:"General Surgeon", today:0, mtdActual:0, mtdBudget:3637, mtdLY:0, ytdActual:18895, ytdBudget:54306, ytdLY:0, locations:"DSU,JVC,Qusais" },
-  { name:"Dr. Mohammed Taha", specialty:"General Surgeon", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:211, ytdBudget:0, ytdLY:0, locations:"Warqa" },
-  { name:"Dr. Haitham Sawalmeh", specialty:"General Surgeon", today:497, mtdActual:5837, mtdBudget:661, mtdLY:0, ytdActual:25780, ytdBudget:9870, ytdLY:0, locations:"DSU" },
-  { name:"Dr. Ponnusamy Tamilvendan", specialty:"Internal Medicine", today:-186, mtdActual:6527, mtdBudget:15532, mtdLY:11608, ytdActual:143674, ytdBudget:231913, ytdLY:182346, locations:"DG,DSU,Karama,Qusais,Silicon" },
-  { name:"Dr. Abdul Raoof Thacharakkal", specialty:"Internal Medicine", today:3511, mtdActual:14015, mtdBudget:14590, mtdLY:12072, ytdActual:209113, ytdBudget:217833, ytdLY:235213, locations:"DSU,Intl City,Nahda,Silicon,Tecom,Warqa" },
-  { name:"Dr. Ola Alsheikh", specialty:"Internal Medicine", today:1158, mtdActual:17670, mtdBudget:21751, mtdLY:16957, ytdActual:305779, ytdBudget:324762, ytdLY:256161, locations:"Arabian,DSU,Silicon,Warqa" },
-  { name:"Dr. George Thachil", specialty:"Internal Medicine", today:5814, mtdActual:33555, mtdBudget:31936, mtdLY:26361, ytdActual:525203, ytdBudget:476830, ytdLY:501127, locations:"DSU,Fest Plaza,Intl City,Nahda,Qusais,Silicon,Warqa" },
-  { name:"Dr. Hans Mohammed Hanif", specialty:"Internal Medicine", today:2028, mtdActual:13248, mtdBudget:12259, mtdLY:15757, ytdActual:233778, ytdBudget:183035, ytdLY:284758, locations:"DG,DSU,Fest Plaza,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Shajahan Abdulkhader", specialty:"Internal Medicine", today:5310, mtdActual:22340, mtdBudget:19872, mtdLY:22593, ytdActual:306307, ytdBudget:296709, ytdLY:313860, locations:"DSU,Nahda,Qusais" },
-  { name:"Dr. Abithraj Kallikadavil", specialty:"Internal Medicine", today:4351, mtdActual:17236, mtdBudget:20564, mtdLY:20051, ytdActual:234731, ytdBudget:307042, ytdLY:249778, locations:"DG,DSU,Karama,Nahda" },
-  { name:"Dr. George Cherian", specialty:"Internal Medicine", today:3753, mtdActual:12478, mtdBudget:15034, mtdLY:12767, ytdActual:240718, ytdBudget:224466, ytdLY:102516, locations:"DSU,Karama,Nahda,Qusais,Silicon" },
-  { name:"Dr. Jacob George", specialty:"Internal Medicine", today:478, mtdActual:7483, mtdBudget:9163, mtdLY:8526, ytdActual:133555, ytdBudget:136807, ytdLY:68901, locations:"DG,DSU,Nahda,Qusais,Tecom" },
-  { name:"Dr. Ali Akbar Thirkannur Pilathottathil", specialty:"Internal Medicine", today:3578, mtdActual:20580, mtdBudget:21001, mtdLY:11790, ytdActual:359026, ytdBudget:313563, ytdLY:203949, locations:"DSU,Karama" },
-  { name:"Dr. Sameh Elgouhari", specialty:"Internal Medicine", today:1811, mtdActual:9254, mtdBudget:10816, mtdLY:0, ytdActual:101824, ytdBudget:161490, ytdLY:0, locations:"Arabian,DG,DSU,Fest Plaza,JVC,Qusais,Tecom" },
-  { name:"Dr. Viji George", specialty:"Internal Medicine", today:494, mtdActual:6798, mtdBudget:10816, mtdLY:0, ytdActual:75149, ytdBudget:161490, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Tecom" },
-  { name:"Dr. George Simon", specialty:"Internal Medicine", today:2203, mtdActual:8881, mtdBudget:17959, mtdLY:13488, ytdActual:224567, ytdBudget:268141, ytdLY:24120, locations:"DSU,Silicon,Warqa" },
-  { name:"Ms. Sharifa solomon", specialty:"Laser Technician", today:0, mtdActual:3731, mtdBudget:2663, mtdLY:357, ytdActual:28380, ytdBudget:39762, ytdLY:25264, locations:"Arabian" },
-  { name:"Dr. Naseem Palakkuzhiyil", specialty:"Neurology", today:3901, mtdActual:17356, mtdBudget:16700, mtdLY:4088, ytdActual:254478, ytdBudget:249345, ytdLY:207323, locations:"DSU,Fest Plaza,Qusais" },
-  { name:"Dr. Mohammed Al Jumaily", specialty:"Neurology", today:0, mtdActual:4262, mtdBudget:0, mtdLY:0, ytdActual:17730, ytdBudget:0, ytdLY:0, locations:"DSU,Silicon" },
-  { name:"Dr. Ramika Mittal", specialty:"Obstetrics & Gynaecology", today:2441, mtdActual:18400, mtdBudget:30589, mtdLY:8232, ytdActual:370915, ytdBudget:456726, ytdLY:273892, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Qusais,Silicon,Warqa" },
-  { name:"Dr. Shila Waghmare", specialty:"Obstetrics & Gynaecology", today:8095, mtdActual:36247, mtdBudget:20489, mtdLY:20493, ytdActual:333801, ytdBudget:305922, ytdLY:315616, locations:"DG,DSU,Intl City,Karama,Nahda,Qusais,Warqa" },
-  { name:"Dr. Sobana  Bilhanan", specialty:"Obstetrics & Gynaecology", today:7676, mtdActual:36150, mtdBudget:26870, mtdLY:18373, ytdActual:358093, ytdBudget:401194, ytdLY:381493, locations:"Arabian,DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Sai Soujanya", specialty:"Obstetrics & Gynaecology", today:592, mtdActual:9128, mtdBudget:11022, mtdLY:4985, ytdActual:171438, ytdBudget:164571, ytdLY:199981, locations:"DSU,Intl City,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Deepthi  Balakrishnan", specialty:"Obstetrics & Gynaecology", today:63, mtdActual:25407, mtdBudget:24084, mtdLY:21624, ytdActual:290490, ytdBudget:359596, ytdLY:293695, locations:"DG,DSU,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Ojusvini Amit Kumar", specialty:"Obstetrics & Gynaecology", today:0, mtdActual:7011, mtdBudget:10316, mtdLY:14272, ytdActual:130513, ytdBudget:154032, ytdLY:193793, locations:"DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Marjan Movassaghi", specialty:"Obstetrics & Gynaecology", today:3087, mtdActual:20443, mtdBudget:16302, mtdLY:5504, ytdActual:267876, ytdBudget:243404, ytdLY:237477, locations:"DG,DSU,Karama,Silicon" },
-  { name:"Dr. Preeti Sahu", specialty:"Obstetrics & Gynaecology", today:3612, mtdActual:20430, mtdBudget:23612, mtdLY:16909, ytdActual:316011, ytdBudget:352551, ytdLY:308422, locations:"DG,DSU,Intl City,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Nivedita M C", specialty:"Obstetrics & Gynaecology", today:6730, mtdActual:16819, mtdBudget:25427, mtdLY:20229, ytdActual:235225, ytdBudget:379640, ytdLY:297626, locations:"DG,DSU,Fest Plaza,Qusais,Tecom" },
-  { name:"Dr. Eman  El Toukhi", specialty:"Obstetrics & Gynaecology", today:2478, mtdActual:23767, mtdBudget:26677, mtdLY:21517, ytdActual:284709, ytdBudget:398313, ytdLY:365613, locations:"DG,DSU,Fest Plaza,Intl City,JVC,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Nada Altabara", specialty:"Obstetrics & Gynaecology", today:2016, mtdActual:5497, mtdBudget:2025, mtdLY:2571, ytdActual:43912, ytdBudget:30235, ytdLY:47359, locations:"DSU,Intl City,JVC,Silicon,Tecom,Warqa" },
-  { name:"Dr. Shilpa Suryawanshi", specialty:"Obstetrics & Gynaecology", today:3165, mtdActual:15247, mtdBudget:21132, mtdLY:14805, ytdActual:281623, ytdBudget:315512, ytdLY:218061, locations:"Arabian,DG,DSU,Intl City,JVC,Qusais,Silicon,Warqa" },
-  { name:"Dr. Sunitha Mary Mathew", specialty:"Obstetrics & Gynaecology", today:0, mtdActual:0, mtdBudget:6557, mtdLY:0, ytdActual:72041, ytdBudget:97907, ytdLY:0, locations:"DSU,Nahda,Qusais,Silicon" },
-  { name:"Dr. Shweta Jaiswal", specialty:"Obstetrics & Gynaecology", today:8508, mtdActual:21773, mtdBudget:17141, mtdLY:16421, ytdActual:244805, ytdBudget:255933, ytdLY:139208, locations:"DSU,Intl City,Karama,Nahda,Qusais,Warqa" },
-  { name:"Dr. Priti Mishra", specialty:"Obstetrics & Gynaecology", today:448, mtdActual:1594, mtdBudget:5553, mtdLY:0, ytdActual:89227, ytdBudget:82915, ytdLY:0, locations:"DG,DSU,Karama,Qusais,Tecom" },
-  { name:"Dr. Benish Khanzda", specialty:"Obstetrics & Gynaecology", today:125, mtdActual:9126, mtdBudget:11683, mtdLY:0, ytdActual:115638, ytdBudget:174442, ytdLY:0, locations:"DSU,Intl City,Nahda,Silicon,Warqa" },
-  { name:"Dr. Ghada Shate", specialty:"Obstetrics & Gynaecology", today:1441, mtdActual:3952, mtdBudget:7087, mtdLY:0, ytdActual:119263, ytdBudget:105811, ytdLY:0, locations:"Arabian,DSU,Warqa" },
-  { name:"Dr. Rekha Pandita", specialty:"Obstetrics & Gynaecology", today:19, mtdActual:3058, mtdBudget:7300, mtdLY:0, ytdActual:65915, ytdBudget:108992, ytdLY:0, locations:"DSU,JVC,Tecom" },
-  { name:"Dr. Ebtessam  Hassanin", specialty:"Obstetrics & Gynaecology", today:322, mtdActual:2507, mtdBudget:0, mtdLY:0, ytdActual:61958, ytdBudget:0, ytdLY:0, locations:"DSU,Warqa" },
-  { name:"Dr. Rakesh Maggon", specialty:"Opthalmology", today:4144, mtdActual:23382, mtdBudget:18077, mtdLY:17512, ytdActual:276952, ytdBudget:269909, ytdLY:201688, locations:"DSU,Qusais" },
-  { name:"Dr. Rahul  Verma", specialty:"Opthalmology", today:0, mtdActual:0, mtdBudget:9104, mtdLY:8456, ytdActual:29855, ytdBudget:135929, ytdLY:124927, locations:"DSU,Qusais" },
-  { name:"Dr. Shaji  Kuzhiyil", specialty:"Orthopaedics", today:2468, mtdActual:6755, mtdBudget:10614, mtdLY:4883, ytdActual:141183, ytdBudget:158477, ytdLY:164592, locations:"DSU,Karama" },
-  { name:"Dr. Mohsin E Azam", specialty:"Orthopaedics", today:5021, mtdActual:17318, mtdBudget:31153, mtdLY:19701, ytdActual:307268, ytdBudget:465135, ytdLY:308381, locations:"DG,DSU,Qusais,Silicon" },
-  { name:"Dr. Venkateswara Gorthi", specialty:"Orthopaedics", today:3804, mtdActual:18273, mtdBudget:18578, mtdLY:19043, ytdActual:300686, ytdBudget:277379, ytdLY:338133, locations:"DG,DSU,Qusais" },
-  { name:"Dr. Somshekhar Mallappa", specialty:"Orthopaedics", today:4329, mtdActual:15582, mtdBudget:16298, mtdLY:18261, ytdActual:285339, ytdBudget:243338, ytdLY:274321, locations:"DSU,Intl City,Karama,Silicon,Warqa" },
-  { name:"Dr. Jitendra Khachariya", specialty:"Orthopaedics", today:6102, mtdActual:6102, mtdBudget:18117, mtdLY:11707, ytdActual:199200, ytdBudget:270504, ytdLY:221478, locations:"DSU,Intl City,Silicon,Warqa" },
-  { name:"Dr. Bhaskar  Rao Murari", specialty:"Orthopaedics", today:2788, mtdActual:10184, mtdBudget:13585, mtdLY:9616, ytdActual:158405, ytdBudget:202836, ytdLY:238759, locations:"DG,DSU,Fest Plaza" },
-  { name:"Dr. Prashant Agarkar", specialty:"Orthopaedics", today:39, mtdActual:17913, mtdBudget:9576, mtdLY:0, ytdActual:168968, ytdBudget:142976, ytdLY:0, locations:"DSU,Silicon,Warqa" },
-  { name:"Dr. Ahmed Almousa", specialty:"Orthopaedics", today:0, mtdActual:0, mtdBudget:4319, mtdLY:0, ytdActual:44663, ytdBudget:64487, ytdLY:0, locations:"Arabian,DSU,Silicon" },
-  { name:"Dr. Ankit Mudgal", specialty:"Orthopaedics", today:1711, mtdActual:8687, mtdBudget:8200, mtdLY:0, ytdActual:103168, ytdBudget:122433, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Silicon,Tecom" },
-  { name:"Dr. Hassan Al Rifai", specialty:"Orthopaedics", today:536, mtdActual:805, mtdBudget:0, mtdLY:0, ytdActual:27913, ytdBudget:0, ytdLY:0, locations:"DSU" },
-  { name:"Dr. Jubin Abraham Raju", specialty:"Orthopaedics", today:1314, mtdActual:5374, mtdBudget:9526, mtdLY:0, ytdActual:114361, ytdBudget:142229, ytdLY:0, locations:"Arabian,DG,DSU,JVC,Tecom" },
-  { name:"Dr. Krishna Amith Kumar", specialty:"Orthopaedics", today:2463, mtdActual:14349, mtdBudget:0, mtdLY:0, ytdActual:110762, ytdBudget:0, ytdLY:0, locations:"DSU,Nahda" },
-  { name:"Dr. Chaula Sangani", specialty:"Paediatrics", today:1292, mtdActual:6372, mtdBudget:5418, mtdLY:2527, ytdActual:85727, ytdBudget:80896, ytdLY:76681, locations:"DG,DSU,Fest Plaza,Intl City,Nahda,Tecom" },
-  { name:"Dr. Inderpal Deshwal", specialty:"Paediatrics", today:3863, mtdActual:16289, mtdBudget:26475, mtdLY:15590, ytdActual:310128, ytdBudget:395297, ytdLY:342668, locations:"DSU,Nahda,Qusais" },
-  { name:"Dr. Nesmal Musaliar", specialty:"Paediatrics", today:1366, mtdActual:13354, mtdBudget:20413, mtdLY:5441, ytdActual:221915, ytdBudget:304783, ytdLY:235755, locations:"DG,DSU,Intl City,Qusais,Silicon,Warqa" },
-  { name:"Dr. Razan Taef", specialty:"Paediatrics", today:976, mtdActual:12432, mtdBudget:16009, mtdLY:7124, ytdActual:183288, ytdBudget:239030, ytdLY:208566, locations:"Intl City,Silicon,Warqa" },
-  { name:"Dr. Rehab  Abdelrazig", specialty:"Paediatrics", today:676, mtdActual:6723, mtdBudget:16257, mtdLY:8017, ytdActual:157939, ytdBudget:242730, ytdLY:223005, locations:"DSU" },
-  { name:"Dr. Swagata Mallick", specialty:"Paediatrics", today:0, mtdActual:0, mtdBudget:24534, mtdLY:25738, ytdActual:66975, ytdBudget:366308, ytdLY:341299, locations:"DG,DSU" },
-  { name:"Dr. Sujatha Chella Rajesh", specialty:"Paediatrics", today:998, mtdActual:10004, mtdBudget:17195, mtdLY:9397, ytdActual:138607, ytdBudget:256729, ytdLY:222840, locations:"DG,DSU,Fest Plaza" },
-  { name:"Dr. Simna Rajan", specialty:"Paediatrics", today:1064, mtdActual:5265, mtdBudget:19172, mtdLY:8490, ytdActual:161085, ytdBudget:286251, ytdLY:285043, locations:"DSU,Intl City,Silicon" },
-  { name:"Dr. Abdul Manaf", specialty:"Paediatrics", today:404, mtdActual:4562, mtdBudget:15866, mtdLY:13779, ytdActual:181528, ytdBudget:236893, ytdLY:218790, locations:"DSU,Qusais,Silicon" },
-  { name:"Dr. Tusharkumar Deepak Sinhal", specialty:"Paediatrics", today:598, mtdActual:7412, mtdBudget:11647, mtdLY:7043, ytdActual:153526, ytdBudget:173898, ytdLY:22946, locations:"Arabian,DSU,Intl City,Silicon" },
-  { name:"Dr. Rimzim Gupta", specialty:"Paediatrics", today:0, mtdActual:0, mtdBudget:9830, mtdLY:10133, ytdActual:121845, ytdBudget:146767, ytdLY:47248, locations:"DSU,Intl City,Warqa" },
-  { name:"Dr. Simikiruthiga Senthilkumar", specialty:"Paediatrics", today:2795, mtdActual:7831, mtdBudget:0, mtdLY:8284, ytdActual:108188, ytdBudget:0, ytdLY:166842, locations:"DG,Fest Plaza,Tecom" },
-  { name:"Dr. Hussain Syed Mohammad Sarwar", specialty:"Paediatrics", today:130, mtdActual:1524, mtdBudget:0, mtdLY:0, ytdActual:55429, ytdBudget:0, ytdLY:0, locations:"Arabian,Tecom,Warqa" },
-  { name:"Dr. Jimmy John", specialty:"Paediatrics", today:148, mtdActual:2720, mtdBudget:12295, mtdLY:0, ytdActual:106275, ytdBudget:183579, ytdLY:0, locations:"DSU,Warqa" },
-  { name:"Dr. Mohammed Alsabbah", specialty:"Paediatrics", today:299, mtdActual:1129, mtdBudget:0, mtdLY:0, ytdActual:35677, ytdBudget:0, ytdLY:0, locations:"Arabian,Tecom" },
-  { name:"Dr. Deepthi Reddy", specialty:"Paediatrics", today:0, mtdActual:1096, mtdBudget:8974, mtdLY:0, ytdActual:15628, ytdBudget:133994, ytdLY:0, locations:"JVC,Tecom" },
-  { name:"Dr. Ashraf Demiry", specialty:"Paediatrics", today:250, mtdActual:1012, mtdBudget:0, mtdLY:0, ytdActual:29588, ytdBudget:0, ytdLY:0, locations:"Arabian,DSU" },
-  { name:"Dr. Bashar Alhasan", specialty:"Paediatrics", today:180, mtdActual:763, mtdBudget:8974, mtdLY:0, ytdActual:10444, ytdBudget:133994, ytdLY:0, locations:"JVC" },
-  { name:"Ms. Sara Johnson", specialty:"Physiotherapy", today:244, mtdActual:5961, mtdBudget:3782, mtdLY:4454, ytdActual:89635, ytdBudget:56473, ytdLY:84548, locations:"DSU" },
-  { name:"Ms. Gayathri Rajeesh", specialty:"Physiotherapy", today:0, mtdActual:6368, mtdBudget:6166, mtdLY:4644, ytdActual:60664, ytdBudget:92061, ytdLY:38375, locations:"Nahda,Qusais" },
-  { name:"Ms. Princy Varghese", specialty:"Physiotherapy", today:1493, mtdActual:4797, mtdBudget:9082, mtdLY:3195, ytdActual:125259, ytdBudget:135609, ytdLY:122981, locations:"Karama" },
-  { name:"Ms. Richa Saklani", specialty:"Physiotherapy", today:654, mtdActual:4170, mtdBudget:5095, mtdLY:2719, ytdActual:69769, ytdBudget:76071, ytdLY:71129, locations:"Fest Plaza" },
-  { name:"Ms. Anusha Veettil", specialty:"Physiotherapy", today:0, mtdActual:5114, mtdBudget:4928, mtdLY:4382, ytdActual:78379, ytdBudget:73584, ytdLY:96741, locations:"Intl City,Qusais" },
-  { name:"Ms. Amala Aji", specialty:"Physiotherapy", today:458, mtdActual:1466, mtdBudget:7305, mtdLY:6104, ytdActual:71213, ytdBudget:109072, ytdLY:96638, locations:"DG,DSU,Fest Plaza,Karama,Nahda,Qusais" },
-  { name:"Mr. Jahfar Latheef", specialty:"Physiotherapy", today:547, mtdActual:616, mtdBudget:5862, mtdLY:2380, ytdActual:57418, ytdBudget:87522, ytdLY:93501, locations:"DG" },
-  { name:"Ms. Ashly Abin", specialty:"Physiotherapy", today:1159, mtdActual:5611, mtdBudget:3739, mtdLY:5408, ytdActual:83563, ytdBudget:55820, ytdLY:112392, locations:"Silicon" },
-  { name:"Mr. John Apuyan", specialty:"Physiotherapy", today:905, mtdActual:3079, mtdBudget:6410, mtdLY:4376, ytdActual:73172, ytdBudget:95714, ytdLY:59447, locations:"Nahda" },
-  { name:"Mr. Simple Markose", specialty:"Physiotherapy", today:2743, mtdActual:8123, mtdBudget:0, mtdLY:448, ytdActual:140737, ytdBudget:0, ytdLY:156783, locations:"Qusais" },
-  { name:"Ms. Elizabeth Joy", specialty:"Physiotherapy", today:1460, mtdActual:6132, mtdBudget:8231, mtdLY:7687, ytdActual:108658, ytdBudget:122896, ytdLY:131980, locations:"Nahda,Qusais" },
-  { name:"Ms. Mehreen Memon", specialty:"Physiotherapy", today:2371, mtdActual:9273, mtdBudget:6919, mtdLY:5304, ytdActual:111322, ytdBudget:103309, ytdLY:89077, locations:"Warqa" },
-  { name:"Ms. Shahana Kunhiraman", specialty:"Physiotherapy", today:962, mtdActual:5436, mtdBudget:5062, mtdLY:4159, ytdActual:94437, ytdBudget:75585, ytdLY:80114, locations:"Arabian,Intl City,Nahda,Warqa" },
-  { name:"Ms. Juwairia Ejaz", specialty:"Physiotherapy", today:1628, mtdActual:8454, mtdBudget:7398, mtdLY:4324, ytdActual:84581, ytdBudget:110455, ytdLY:79395, locations:"DSU,Qusais" },
-  { name:"Mr. Rakesh Jayakrishnan", specialty:"Physiotherapy", today:1045, mtdActual:5052, mtdBudget:5792, mtdLY:7265, ytdActual:119393, ytdBudget:86485, ytdLY:101835, locations:"Intl City,Qusais" },
-  { name:"Ms. Hadel Radwan", specialty:"Physiotherapy", today:0, mtdActual:4002, mtdBudget:8289, mtdLY:0, ytdActual:70952, ytdBudget:123758, ytdLY:117871, locations:"Silicon" },
-  { name:"Ms. Sarah Ahmed", specialty:"Physiotherapy", today:0, mtdActual:5088, mtdBudget:6475, mtdLY:6307, ytdActual:84332, ytdBudget:96670, ytdLY:89951, locations:"Silicon" },
-  { name:"Mr. Mohammed Riyaz", specialty:"Physiotherapy", today:0, mtdActual:0, mtdBudget:3970, mtdLY:0, ytdActual:87190, ytdBudget:59282, ytdLY:0, locations:"DSU,Tecom,Warqa" },
-  { name:"Ms. Nikhila Ramakrishnan", specialty:"Physiotherapy", today:0, mtdActual:0, mtdBudget:5231, mtdLY:0, ytdActual:24081, ytdBudget:78099, ytdLY:0, locations:"Karama,Nahda" },
-  { name:"Mr. Saino Thomas", specialty:"Physiotherapy", today:746, mtdActual:5071, mtdBudget:4523, mtdLY:0, ytdActual:61752, ytdBudget:67538, ytdLY:0, locations:"Tecom" },
-  { name:"Ms. Sonia Jamil Khan", specialty:"Physiotherapy", today:0, mtdActual:2745, mtdBudget:0, mtdLY:0, ytdActual:37486, ytdBudget:0, ytdLY:0, locations:"Fest Plaza,Karama,Nahda,Tecom" },
-  { name:"Ms. Ella Francisco", specialty:"Physiotherapy", today:272, mtdActual:2725, mtdBudget:7395, mtdLY:4397, ytdActual:37001, ytdBudget:110408, ytdLY:81770, locations:"Fest Plaza,JVC,Tecom" },
-  { name:"Ms. Asmaa Ahmed", specialty:"Physiotherapy", today:629, mtdActual:1041, mtdBudget:0, mtdLY:0, ytdActual:19345, ytdBudget:0, ytdLY:0, locations:"Arabian" },
-  { name:"Mr. Mostafa Mohamed", specialty:"Physiotherapy", today:855, mtdActual:2073, mtdBudget:0, mtdLY:0, ytdActual:26442, ytdBudget:0, ytdLY:0, locations:"DSU,JVC,Tecom" },
-  { name:"Dr. Jamil Aljamali", specialty:"Plastic Surgeon", today:0, mtdActual:0, mtdBudget:55, mtdLY:0, ytdActual:701, ytdBudget:827, ytdLY:0, locations:"DSU,Fest Plaza" },
-  { name:"Dr. Yasir Malik", specialty:"Psychiatry", today:546, mtdActual:1146, mtdBudget:2775, mtdLY:0, ytdActual:38134, ytdBudget:41430, ytdLY:0, locations:"Arabian,DSU,Qusais,Silicon" },
-  { name:"Dr. Mariam Javaid", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:1709, ytdBudget:0, ytdLY:872, locations:"Fest Plaza,Qusais" },
-  { name:"Dr. Hilda Atallah", specialty:"Radiology", today:0, mtdActual:1297, mtdBudget:0, mtdLY:0, ytdActual:1505, ytdBudget:0, ytdLY:85, locations:"DSU,Intl City,Silicon,Warqa" },
-  { name:"Dr. Tripti Nitin Pathare", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:226, ytdBudget:0, ytdLY:0, locations:"DSU,Karama,Tecom" },
-  { name:"Dr. Ashita Rastogi", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:1198, ytdBudget:0, ytdLY:0, locations:"DG,DSU,Silicon,Warqa" },
-  { name:"Ms. Rowena Dela Cruz", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:-250, ytdBudget:0, ytdLY:0, locations:"Arabian,Warqa" },
-  { name:"Dr. Tagawa Alnaim", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:3656, ytdBudget:0, ytdLY:0, locations:"DSU,JVC,Tecom" },
-  { name:"Dr. Mohamed Elhelbawy", specialty:"Urology", today:1475, mtdActual:6481, mtdBudget:12115, mtdLY:13775, ytdActual:78538, ytdBudget:180882, ytdLY:126019, locations:"DSU,Silicon,Tecom,Warqa" },
-  { name:"Dr. Aleksandar Miladinovic", specialty:"Urology", today:0, mtdActual:0, mtdBudget:1784, mtdLY:2770, ytdActual:36832, ytdBudget:26633, ytdLY:53667, locations:"DSU,Intl City,Nahda,Silicon,Tecom,Warqa" },
-  { name:"Dr. Karthikesh Omkaram", specialty:"Urology", today:3955, mtdActual:15120, mtdBudget:18198, mtdLY:11816, ytdActual:217448, ytdBudget:271714, ytdLY:219520, locations:"Arabian,DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Manaf Kandakji", specialty:"Urology", today:375, mtdActual:6082, mtdBudget:2889, mtdLY:675, ytdActual:24048, ytdBudget:43130, ytdLY:5998, locations:"DG,DSU,Fest Plaza,Silicon,Tecom" },
-  { name:"Dr. Mosaddeq Al Yousif", specialty:"Urology", today:0, mtdActual:3548, mtdBudget:7901, mtdLY:0, ytdActual:46284, ytdBudget:117963, ytdLY:0, locations:"DSU" },
-  { name:"Dr. Anurag Kumar", specialty:"Urology", today:3449, mtdActual:12062, mtdBudget:13731, mtdLY:0, ytdActual:194984, ytdBudget:205022, ytdLY:0, locations:"Arabian,DG,DSU,Intl City,Karama,Qusais,Silicon,Tecom,Warqa" },
-  { name:"Dr. Rami Ismail", specialty:"Urology", today:0, mtdActual:5592, mtdBudget:15625, mtdLY:0, ytdActual:85203, ytdBudget:233298, ytdLY:0, locations:"DSU,JVC,Nahda,Tecom" },
-  { name:"Dr. Dani Abboud", specialty:"Urology", today:0, mtdActual:0, mtdBudget:1937, mtdLY:155, ytdActual:7477, ytdBudget:28918, ytdLY:155, locations:"Arabian,DSU,Intl City,Silicon" },
-  { name:"Dr. Ibrahim Riza", specialty:"Vascular Surgeon", today:0, mtdActual:2332, mtdBudget:0, mtdLY:0, ytdActual:5463, ytdBudget:0, ytdLY:0, locations:"DSU" },
-  { name:"Dr. Firas David", specialty:"Vascular Surgeon", today:184, mtdActual:1757, mtdBudget:1969, mtdLY:352, ytdActual:27598, ytdBudget:29393, ytdLY:27391, locations:"DSU,JVC,Qusais,Silicon" },
-  { name:"Nursing Care calendar", specialty:"Nursing Care", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:1324, ytdBudget:0, ytdLY:0, locations:"DSU,JVC" },
-  { name:"Dr. Maemun Alkhosin", specialty:"Hair Transplant", today:0, mtdActual:15271, mtdBudget:39711, mtdLY:0, ytdActual:403401, ytdBudget:592912, ytdLY:0, locations:"Arabian,DSU,Silicon" },
-  { name:"Mr. Musab Henno", specialty:"Hair Transplant", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:953, ytdBudget:0, ytdLY:0, locations:"DSU" }
 ].map((d) => ({ ...d, mtdVarBudget: d.mtdBudget ? (d.mtdActual - d.mtdBudget) / d.mtdBudget : 0, ytdVarBudget: d.ytdBudget ? (d.ytdActual - d.ytdBudget) / d.ytdBudget : 0, mtdVarLY: d.mtdLY ? (d.mtdActual - d.mtdLY) / d.mtdLY : 0, ytdVarLY: d.ytdLY ? (d.ytdActual - d.ytdLY) / d.ytdLY : 0 }));
 
 const DEFAULT_SPECIALTIES = [
-  { name:"Anesthesia", today:0, mtdActual:3665, mtdBudget:0, mtdLY:0, ytdActual:40839, ytdBudget:0, ytdLY:133 },
-  { name:"Cardiology", today:3502, mtdActual:70076, mtdBudget:118488, mtdLY:36875, ytdActual:1291809, ytdBudget:1769120, ytdLY:1046553 },
-  { name:"Dentist", today:25025, mtdActual:146330, mtdBudget:128068, mtdLY:69148, ytdActual:1920220, ytdBudget:1912157, ytdLY:1482290 },
-  { name:"Dermatology", today:23871, mtdActual:81973, mtdBudget:92254, mtdLY:87371, ytdActual:1131049, ytdBudget:1377431, ytdLY:1288470 },
-  { name:"Dietician", today:0, mtdActual:0, mtdBudget:1584, mtdLY:0, ytdActual:5460, ytdBudget:23648, ytdLY:4283 },
-  { name:"Endocrinology", today:5664, mtdActual:83441, mtdBudget:72108, mtdLY:47468, ytdActual:826437, ytdBudget:1076629, ytdLY:708317 },
-  { name:"ENT", today:16372, mtdActual:54979, mtdBudget:78866, mtdLY:80356, ytdActual:1040295, ytdBudget:1177537, ytdLY:1154044 },
-  { name:"Family Medicine", today:13539, mtdActual:146613, mtdBudget:215235, mtdLY:160429, ytdActual:2864974, ytdBudget:3213637, ytdLY:2378410 },
-  { name:"Gastroenterology", today:4824, mtdActual:36367, mtdBudget:54893, mtdLY:34726, ytdActual:712054, ytdBudget:819592, ytdLY:583221 },
-  { name:"General Practice", today:27828, mtdActual:132898, mtdBudget:213501, mtdLY:179922, ytdActual:2154201, ytdBudget:3187749, ytdLY:4199221 },
-  { name:"General Surgeon", today:0, mtdActual:36044, mtdBudget:28913, mtdLY:19254, ytdActual:389884, ytdBudget:431701, ytdLY:407657 },
-  { name:"Internal Medicine", today:34305, mtdActual:190067, mtdBudget:231110, mtdLY:171969, ytdActual:3093425, ytdBudget:3450660, ytdLY:2551045 },
-  { name:"Laser Technician", today:0, mtdActual:3731, mtdBudget:2663, mtdLY:357, ytdActual:28380, ytdBudget:39762, ytdLY:25264 },
-  { name:"Neurology", today:3901, mtdActual:21618, mtdBudget:16700, mtdLY:25312, ytdActual:272208, ytdBudget:249345, ytdLY:454720 },
-  { name:"Obstetrics & Gynaecology", today:50817, mtdActual:276555, mtdBudget:304989, mtdLY:204657, ytdActual:3853454, ytdBudget:4553741, ytdLY:3544924 },
-  { name:"Opthalmology", today:0, mtdActual:23382, mtdBudget:27181, mtdLY:25968, ytdActual:306807, ytdBudget:405837, ytdLY:326615 },
-  { name:"Orthopaedics", today:30576, mtdActual:121343, mtdBudget:148998, mtdLY:126098, ytdActual:1961916, ytdBudget:2224667, ytdLY:2459477 },
-  { name:"Paediatrics", today:15040, mtdActual:98489, mtdBudget:220285, mtdLY:132959, ytdActual:2143793, ytdBudget:3289041, ytdLY:2800676 },
-  { name:"Physiotherapy", today:18171, mtdActual:102397, mtdBudget:121655, mtdLY:77554, ytdActual:1816781, ytdBudget:1816411, ytdLY:1704528 },
-  { name:"Psychiatry", today:0, mtdActual:1146, mtdBudget:2775, mtdLY:0, ytdActual:38134, ytdBudget:41430, ytdLY:0 },
-  { name:"Urology", today:4500, mtdActual:48885, mtdBudget:85371, mtdLY:36679, ytdActual:690816, ytdBudget:1274656, ytdLY:518617 },
-  { name:"Vascular Surgeon", today:0, mtdActual:4089, mtdBudget:2863, mtdLY:352, ytdActual:33061, ytdBudget:42740, ytdLY:27391 },
-  { name:"Hair Transplant", today:0, mtdActual:15271, mtdBudget:39711, mtdLY:0, ytdActual:404354, ytdBudget:592912, ytdLY:0 },
 ].map((s) => ({ ...s, mtdVarBudget: s.mtdBudget ? (s.mtdActual - s.mtdBudget) / s.mtdBudget : 0, mtdVarLY: s.mtdLY ? (s.mtdActual - s.mtdLY) / s.mtdLY : 0, ytdVarBudget: s.ytdBudget ? (s.ytdActual - s.ytdBudget) / s.ytdBudget : 0, ytdVarLY: s.ytdLY ? (s.ytdActual - s.ytdLY) / s.ytdLY : 0 }));
 
-const DEFAULT_IP_SPECIALTIES = [
-  { name:"General Surgeon", mtdActual:78660, mtdLY:35230, mtdBudget:63855, mtdVolume:12, mtdVolLY:8 },
-  { name:"Urology", mtdActual:37197, mtdLY:55568, mtdBudget:43726, mtdVolume:4, mtdVolLY:4 },
-  { name:"Obstetrics & Gynaecology", mtdActual:35807, mtdLY:31393, mtdBudget:58776, mtdVolume:8, mtdVolLY:5 },
-  { name:"ENT", mtdActual:24670, mtdLY:19541, mtdBudget:24657, mtdVolume:3, mtdVolLY:2 },
-  { name:"Orthopaedics", mtdActual:19383, mtdLY:30194, mtdBudget:28000, mtdVolume:3, mtdVolLY:1 },
-  { name:"Ophthalmology", mtdActual:18550, mtdLY:5953, mtdBudget:17021, mtdVolume:2, mtdVolLY:1 },
-  { name:"Vascular Surgeon", mtdActual:14492, mtdLY:23409, mtdBudget:35568, mtdVolume:1, mtdVolLY:2 },
-  { name:"Gastroenterology", mtdActual:2793, mtdLY:35047, mtdBudget:1792, mtdVolume:1, mtdVolLY:7 },
-];
+const DEFAULT_IP_SPECIALTIES = [];
 
-const DEFAULT_IP_DOCTORS = [
-  { name:"Dr. Muhammed Shafi Shamsu", specialty:"ENT", mtdRevenue:10426, mtdCount:1 },
-  { name:"Dr. Deepak Dubey", specialty:"General Surgeon", mtdRevenue:19850, mtdCount:3 },
-  { name:"Dr. Mohamed Elfarash", specialty:"General Surgeon", mtdRevenue:16200, mtdCount:2 },
-  { name:"Dr. Aashish Deshpande", specialty:"Orthopaedics", mtdRevenue:10164, mtdCount:2 },
-  { name:"Dr. Ahmad Al Taher", specialty:"Urology", mtdRevenue:26095, mtdCount:2 },
-];
+const DEFAULT_IP_DOCTORS = [];
 
 // ─── Excel Parser ────────────────────────────────────────────────────────────
 
@@ -1300,7 +1023,8 @@ const fmtLocs = (locs) => {
 
 // ─── Sidebar Component ─────────────────────────────────────────────────────
 
-function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarOpen, setSidebarOpen, isMobile, loadHistoricalMonth, loadCurrentMonth, historicalMonth }) {
+function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarOpen, setSidebarOpen, isMobile, loadHistoricalMonth, loadCurrentMonth, historicalMonth, dsrTotals }) {
+  const hasData = dsrTotals && dsrTotals.mtdActual > 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navItems = [
     { id: "overview", label: "Overview", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> },
@@ -1320,7 +1044,7 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
           <img src="https://www.healthhubalfuttaim.com/wp-content/uploads/sites/17/2020/11/Logo.png" alt="HealthHub" style={{ height:28, objectFit:"contain" }} />
-          <div style={{ fontSize:11, fontWeight:600, color:C.primaryLight, textAlign:"right", minWidth:70 }}>{reportDate}</div>
+          <div style={{ fontSize:11, fontWeight:600, color:C.primaryLight, textAlign:"right", minWidth:70 }}>{reportDate || "No data"}</div>
         </div>
 
         {/* Mobile Full-Screen Overlay Menu */}
@@ -1344,7 +1068,19 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
                 );
               })}
             </div>
+            {/* No Data — Upload Prompt (mobile sidebar) */}
+            {!hasData && (
+              <div style={{ padding:"20px 16px", borderTop:"1px solid "+C.border, textAlign:"center" }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="1.5" style={{ marginBottom:10 }}>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:6 }}>No Data Loaded</div>
+                <div style={{ fontSize:11, color:C.textSecondary, marginBottom:14, lineHeight:1.5 }}>Upload a DSR Excel file to get started.</div>
+                <UploadZone onFileLoaded={onFileLoaded} compact />
+              </div>
+            )}
             {/* Monthly History */}
+            {hasData && (
             <div style={{ padding:"8px 12px", borderTop:"1px solid "+C.border, overflowY:"auto", flex:"0 1 auto" }}>
               <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Monthly History</div>
               {historicalMonth && (
@@ -1367,13 +1103,16 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
                 );
               })}
             </div>
+            )}
             {/* Bottom: Upload + Date */}
             <div style={{ padding:"16px", borderTop:"1px solid "+C.border, display:"flex", flexDirection:"column", gap:10 }}>
               <UploadZone onFileLoaded={onFileLoaded} compact />
+              {hasData && (
               <div style={{ padding:"8px 10px", borderRadius:6, background:"rgba(59,130,246,0.08)", textAlign:"center" }}>
                 <div style={{ fontSize:9, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Report</div>
                 <div style={{ fontSize:12, fontWeight:600, color:C.primaryLight }}>{reportDate}</div>
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -1411,7 +1150,19 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
         })}
       </div>
 
-      {sidebarOpen && (
+      {/* No Data — Upload Prompt (desktop sidebar) */}
+      {sidebarOpen && !hasData && (
+        <div style={{ padding:"16px 12px", borderTop:"1px solid "+C.border, textAlign:"center" }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="1.5" style={{ marginBottom:8 }}>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:4 }}>No Data Loaded</div>
+          <div style={{ fontSize:10, color:C.textSecondary, marginBottom:12, lineHeight:1.5 }}>Upload a DSR Excel file to populate the dashboard.</div>
+          <UploadZone onFileLoaded={onFileLoaded} compact />
+        </div>
+      )}
+
+      {sidebarOpen && hasData && (
         <div style={{ padding:"8px 12px", borderTop:"1px solid "+C.border, overflowY:"auto", flex:"0 1 auto" }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Monthly History</div>
           {historicalMonth && (
@@ -1440,7 +1191,7 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
       {/* Bottom: Upload + Date */}
       <div style={{ padding:"12px 10px", borderTop:"1px solid "+C.border, display:"flex", flexDirection:"column", gap:8 }}>
         {sidebarOpen && <UploadZone onFileLoaded={onFileLoaded} compact />}
-        {sidebarOpen && (
+        {sidebarOpen && hasData && (
           <div style={{ padding:"6px 10px", borderRadius:6, background:"rgba(59,130,246,0.08)", textAlign:"center" }}>
             <div style={{ fontSize:9, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Report</div>
             <div style={{ fontSize:12, fontWeight:600, color:C.primaryLight }}>{reportDate}</div>
@@ -2487,7 +2238,7 @@ function App() {
 
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.pageBg }}>
-      <Sidebar activeSection={activeSection} onNavigate={scrollToSection} reportDate={reportDate} onFileLoaded={handleFileLoaded} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} loadHistoricalMonth={loadHistoricalMonth} loadCurrentMonth={loadCurrentMonth} historicalMonth={historicalMonth} />
+      <Sidebar activeSection={activeSection} onNavigate={scrollToSection} reportDate={reportDate} onFileLoaded={handleFileLoaded} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} loadHistoricalMonth={loadHistoricalMonth} loadCurrentMonth={loadCurrentMonth} historicalMonth={historicalMonth} dsrTotals={dsrTotals} />
 
       <main style={{ flex:1, marginLeft: isMobile ? 0 : (sidebarOpen ? 220 : 64), transition:"margin-left 0.3s", padding: isMobile ? "68px 12px 16px" : "24px 32px", maxWidth:1400, overflowX:"hidden" }}>
 
@@ -2498,13 +2249,34 @@ function App() {
             <p style={{ fontSize: isMobile ? 12 : 13, color:C.textMuted, margin:"4px 0 0" }}>Al-Futtaim Health — Daily Sales Report</p>
           </div>
           <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-            {!isMobile && <div style={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:8, padding:"6px 14px" }}>
+            {!isMobile && reportDate && <div style={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:8, padding:"6px 14px" }}>
               <span style={{ fontSize:11, color:C.textMuted }}>Report Date</span>
               <span style={{ fontSize:13, fontWeight:600, color:C.text, marginLeft:8 }}>{reportDate}</span>
             </div>}
             {isMobile && <UploadZone onFileLoaded={handleFileLoaded} compact />}
           </div>
         </div>
+
+        {/* NO DATA — UPLOAD PROMPT */}
+        {dsrTotals.mtdActual === 0 && !historicalMonth && (
+          <div style={{ ...card, padding:"40px 28px", marginBottom:24, textAlign:"center" }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="1.5" style={{ marginBottom:16 }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <h2 style={{ margin:"0 0 8px", fontSize:20, fontWeight:700, color:C.text }}>Upload Your Daily Sales Report</h2>
+            <p style={{ fontSize:14, color:C.textSecondary, margin:"0 0 20px", maxWidth:500, marginLeft:"auto", marginRight:"auto", lineHeight:1.6 }}>
+              Upload the latest AFH DSR Excel file to populate the dashboard with current revenue data, clinic performance, and doctor analytics.
+            </p>
+            <UploadZone onFileLoaded={handleFileLoaded} />
+            <div style={{ marginTop:20, fontSize:12, color:C.textMuted }}>
+              Supported: .xlsx files (e.g., "4.AFH - DSR_Apr 01-08, 2026.xlsx")
+            </div>
+          </div>
+        )}
+
+        {/* DASHBOARD CONTENT — only shown when data is loaded */}
+        {(dsrTotals.mtdActual > 0 || historicalMonth) && (
+        <React.Fragment>
 
         {/* DATA VALIDATION WARNINGS */}
         {dataWarnings.length > 0 && (
@@ -3530,6 +3302,9 @@ function App() {
         )}
 
         <div style={{ textAlign:"center", padding:"28px 0 12px", color:C.textMuted, fontSize:11 }}>Al-Futtaim Health — HealthHub Executive Revenue Summary — All values in AED</div>
+
+        </React.Fragment>
+        )}
       </main>
 
       {selectedClinic && (() => {
