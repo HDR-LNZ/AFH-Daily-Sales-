@@ -1885,7 +1885,17 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
 
 function App() {
   // Load saved state from localStorage if available
-  const savedState = (() => { try { const s = JSON.parse(localStorage.getItem("hh_dashboard_state")); if (s && s.ts && Date.now() - s.ts < 7 * 24 * 3600 * 1000) return s; } catch(e) {} return null; })();
+  const savedState = (() => {
+    try {
+      const raw = localStorage.getItem("hh_dashboard_state");
+      if (!raw) { console.log("No saved dashboard state found"); return null; }
+      const s = JSON.parse(raw);
+      if (!s || !s.ts) { console.log("Saved state invalid (no timestamp)"); return null; }
+      if (Date.now() - s.ts > 7 * 24 * 3600 * 1000) { console.log("Saved state expired"); return null; }
+      console.log("Restoring saved state from", new Date(s.ts).toLocaleString(), "- date:", s.reportDate, "specs:", s.specialties?.length, "docs:", s.doctors?.length);
+      return s;
+    } catch(e) { console.warn("Failed to load saved state:", e); return null; }
+  })();
 
   // Initialize all state from saved or defaults
   const initSpecs = savedState?.specialties ? savedState.specialties.map(s => ({ ...s, mtdVarBudget: s.mtdBudget?(s.mtdActual-s.mtdBudget)/s.mtdBudget:0, mtdVarLY: s.mtdLY?(s.mtdActual-s.mtdLY)/s.mtdLY:0, ytdVarBudget: s.ytdBudget?(s.ytdActual-s.ytdBudget)/s.ytdBudget:0, ytdVarLY: s.ytdLY?(s.ytdActual-s.ytdLY)/s.ytdLY:0 })) : DEFAULT_SPECIALTIES;
@@ -2080,6 +2090,7 @@ function App() {
         doctorLocations: dlocs || null,
         ts: Date.now(),
       }));
+      console.log("Dashboard state saved to localStorage - date:", rd, "specs:", specs.length, "docs:", docs?.length, "size:", Math.round(localStorage.getItem("hh_dashboard_state").length/1024) + "KB");
     } catch(e) { console.warn("Failed to save state:", e); }
   }, []);
 
