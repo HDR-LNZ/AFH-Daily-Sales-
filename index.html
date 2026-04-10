@@ -1931,7 +1931,7 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
 
 function App() {
   // Load saved state from localStorage if available
-  const CACHE_VERSION = 6; // Increment to invalidate old caches
+  const CACHE_VERSION = 7; // Increment to invalidate old caches
   const savedState = (() => {
     try {
       const raw = localStorage.getItem("hh_dashboard_state");
@@ -2410,14 +2410,16 @@ function App() {
       const ytdL = d.ytdLY || 0;
       const mtdA = d.mtdActual || 0;
       const mtdL = d.mtdLY || 0;
-      // "Fully resigned" = zero revenue this year (all LY revenue is pure loss)
-      // "Partial year" = has some revenue this year (worked before leaving)
-      d.fullyResigned = ytdA === 0 && mtdA === 0;
-      // Resign Loss = LY revenue ONLY from fully-resigned doctors (zero current revenue)
-      // Volume Drop = gap from partial-year doctors (worked some months then left)
-      d.ytdResignLoss = d.fullyResigned ? ytdL : 0;
+      // "Fully resigned" = zero MTD revenue (not generating revenue NOW)
+      // They may have YTD revenue from months worked before leaving
+      // "Still active but declining" = has MTD revenue but below LY
+      d.fullyResigned = mtdA <= 0;
+      // Resign Loss = LY revenue lost because doctor is no longer active
+      //   At YTD level: LY YTD minus whatever they earned this year before leaving
+      // Volume Drop = gap from doctors still active but underperforming LY
+      d.ytdResignLoss = d.fullyResigned ? Math.max(0, ytdL - ytdA) : 0;
       d.ytdVolumeDrop = !d.fullyResigned ? Math.max(0, ytdL - ytdA) : 0;
-      d.mtdResignLoss = d.fullyResigned ? mtdL : 0;
+      d.mtdResignLoss = d.fullyResigned ? Math.max(0, mtdL) : 0;
       d.mtdVolumeDrop = !d.fullyResigned ? Math.max(0, mtdL - mtdA) : 0;
     });
     // Group by specialty
@@ -3228,7 +3230,7 @@ function App() {
                         return (
                         <tr key={d.name+di} style={{ background: di % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid "+C.border }}>
                           <td style={{ ...dtd, paddingLeft:32 }}><DoctorName name={d.name} /></td>
-                          <td style={{ ...dtd, fontSize:10, color: d.fullyResigned ? "#ef4444" : "#f59e0b" }}>{d.fullyResigned ? "Left (zero rev)" : "Partial year"}</td>
+                          <td style={{ ...dtd, fontSize:10, color: d.fullyResigned ? "#ef4444" : "#f59e0b" }}>{d.fullyResigned ? "No MTD rev" : "Still active"}</td>
                           <td style={dtn}>{fmt(d.ytdActual)}</td>
                           <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
                           <td style={{ ...dtn, color: dYtdGap >= 0 ? C.success : C.danger, fontWeight:600 }}>{dYtdGap >= 0 ? "+" : ""}{fmt(dYtdGap)}</td>
