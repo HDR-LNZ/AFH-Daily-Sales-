@@ -1177,53 +1177,58 @@ function BudgetGauge({ label, actual, comparison, size = 120 }) {
   const pctVal = comparison ? actual / comparison : 0;
   const pctDisplay = Math.round(pctVal * 100);
   const color = pctVal >= 1 ? C.success : pctVal >= 0.9 ? C.warning : C.danger;
-  // Scale: 100% = full gauge. Cap at 115% for display
-  const capped = Math.min(Math.max(pctVal, 0), 1.15);
-  const w = size, h = size * 0.85;
-  const cx = w / 2, cy = h * 0.62;
-  const arcR = Math.min(cx, cy) * 0.88;
+  // 100% = full arc. Clamp between 0 and 110%
+  const capped = Math.min(Math.max(pctVal, 0), 1.1);
+  const w = size, h = size * 0.82;
+  const cx = w / 2, cy = h * 0.65;
+  const arcR = Math.min(cx, cy) * 0.85;
   const trackW = 10;
   const toRad = (deg) => deg * Math.PI / 180;
-  const startDeg = 220, endDeg = -40, sweep = 260;
-  // 100% maps to the full sweep. >100% goes slightly past
-  const valDeg = startDeg - Math.min(capped, 1.15) * sweep / 1.15;
+  const startDeg = 225, endDeg = -45, sweep = 270;
+  // 100% = endDeg. >100% stays at endDeg (fully filled)
+  const valDeg = pctVal >= 1.0 ? endDeg : startDeg - capped * sweep;
   const arcXY = (deg, r) => [cx + r * Math.cos(toRad(deg)), cy - r * Math.sin(toRad(deg))];
   const arcD = (d1, d2, r) => {
     const [x1,y1] = arcXY(d1, r), [x2,y2] = arcXY(d2, r);
     const large = Math.abs(d1 - d2) > 180 ? 1 : 0;
     return "M"+x1+","+y1+" A"+r+","+r+" 0 "+large+",1 "+x2+","+y2;
   };
-  const needleLen = arcR * 0.72;
-  const [nx, ny] = arcXY(valDeg, needleLen);
-  // Ticks at 0, 25, 50, 75, 100%
-  const ticks = [0, 0.25, 0.5, 0.75, 1.0].map(p => {
-    const deg = startDeg - (p / 1.15) * sweep;
-    const [ox, oy] = arcXY(deg, arcR + 5);
-    const [ix, iy] = arcXY(deg, arcR - 3);
-    return { p, ox, oy, ix, iy };
-  });
+  // Needle
+  const needleLen = arcR * 0.7;
+  const needleDeg = startDeg - capped * sweep;
+  const [nx, ny] = arcXY(needleDeg, needleLen);
+  // Wider needle base for visibility
+  const baseR = 3;
+  const perpDeg = needleDeg + 90;
+  const [bx1, by1] = arcXY(perpDeg, baseR);
+  const [bx2, by2] = arcXY(perpDeg + 180, baseR);
+  const b1x = cx + (bx1-cx), b1y = cy + (by1-cy);
+  const b2x = cx - (bx1-cx), b2y = cy - (by1-cy);
   return (
     <div style={{ textAlign:"center" }}>
       <svg width={w} height={h} viewBox={"0 0 "+w+" "+h}>
         {/* Track */}
         <path d={arcD(startDeg, endDeg, arcR)} fill="none" stroke="#2f3548" strokeWidth={trackW} strokeLinecap="round" />
         {/* Red zone 0-80% */}
-        <path d={arcD(startDeg, startDeg-(0.8/1.15)*sweep, arcR)} fill="none" stroke="rgba(239,68,68,0.2)" strokeWidth={trackW} strokeLinecap="round" />
+        <path d={arcD(startDeg, startDeg-0.8*sweep, arcR)} fill="none" stroke="rgba(239,68,68,0.25)" strokeWidth={trackW} strokeLinecap="round" />
         {/* Amber 80-100% */}
-        <path d={arcD(startDeg-(0.8/1.15)*sweep, startDeg-(1.0/1.15)*sweep, arcR)} fill="none" stroke="rgba(245,158,11,0.25)" strokeWidth={trackW} strokeLinecap="round" />
-        {/* Green 100-115% */}
-        <path d={arcD(startDeg-(1.0/1.15)*sweep, endDeg, arcR)} fill="none" stroke="rgba(16,185,129,0.2)" strokeWidth={trackW} strokeLinecap="round" />
+        <path d={arcD(startDeg-0.8*sweep, endDeg, arcR)} fill="none" stroke="rgba(245,158,11,0.3)" strokeWidth={trackW} strokeLinecap="round" />
         {/* Active fill */}
         <path d={arcD(startDeg, valDeg, arcR)} fill="none" stroke={color} strokeWidth={trackW} strokeLinecap="round" />
-        {/* Ticks */}
-        {ticks.map((t,i) => <line key={i} x1={t.ix} y1={t.iy} x2={t.ox} y2={t.oy} stroke="#475569" strokeWidth={1.5} />)}
-        {/* Needle */}
-        <polygon points={(cx-2)+","+cy+" "+(cx+2)+","+cy+" "+nx+","+ny} fill={color} />
-        <circle cx={cx} cy={cy} r={5} fill={color} />
-        <circle cx={cx} cy={cy} r={2} fill={C.pageBg} />
+        {/* Tick marks */}
+        {[0, 0.25, 0.5, 0.75, 1.0].map((p,i) => {
+          const deg = startDeg - p * sweep;
+          const [ox,oy] = arcXY(deg, arcR + 6);
+          const [ix,iy] = arcXY(deg, arcR - 3);
+          return <line key={i} x1={ix} y1={iy} x2={ox} y2={oy} stroke="#64748b" strokeWidth={1.5} />;
+        })}
+        {/* Needle as a thick line */}
+        <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={color} strokeWidth={3} strokeLinecap="round" />
+        {/* Center hub */}
+        <circle cx={cx} cy={cy} r={6} fill={color} />
+        <circle cx={cx} cy={cy} r={3} fill={C.pageBg} />
       </svg>
-      {/* Text below gauge */}
-      <div style={{ marginTop:-4 }}>
+      <div style={{ marginTop:-2 }}>
         <div style={{ fontSize:22, fontWeight:800, color, letterSpacing:"-0.02em" }}>{pctDisplay}%</div>
         <div style={{ fontSize:9, fontWeight:600, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.08em", marginTop:2 }}>{label}</div>
       </div>
