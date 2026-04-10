@@ -283,7 +283,7 @@ const HEALTHHUB_DOCTOR_URL = "https://www.healthhubalfuttaim.com/doctor/";
 // Active doctors on HealthHub website (190 practitioners scraped from the website)
 // Normalized names: lowercase, no periods, trimmed
 const ACTIVE_DOCTOR_SLUGS = new Set([
-  "dr-abdalla-alhajiri","dr-abdul-manaf-k-m","dr-abdul-raoof-thacharakkal","dr-abhay-kumar-aryan","dr-abhay-pande","dr-abhay-vyankatrao-inamdar","dr-abithraj-kallikadavil","dr-aby-john","dr-ali-akbar-thirkannur-pilathottathil","dr-ali-hasan-aleddey","dr-ali-shorbagi","dr-alvin-clavert-casono","dr-aneesh-kunnath-parambath","dr-ankit-mudgal","dr-anurag-kumar","dr-archana-babanagare","dr-ashita-rastogi","dr-bashar-alhasan","dr-benish-khanzada","dr-bhaskar-rao-murari","dr-cecil-kunnappilly","dr-chuchendra-lingadahalli","dr-danny-shawaf","dr-deepthi-balakrishnan","dr-deepthi-gopala-reddy","dr-dimple-tiwari","dr-divya-mangal","dr-ebtessam-hassanin","dr-elaheh-allahyari","dr-eman-el-toukhi","dr-fareeha-younis","dr-fatima-qurratulain","dr-fernaz-behlim","dr-firas-david","dr-gada-abdel-hamid","dr-george-cherian","dr-george-thachil","dr-ghada-shate","dr-ghoufran-mohideen","dr-girisankar-gangadharan","dr-haitham-sawalmeh","dr-hans-mohammed","dr-hasan-odeh","dr-hassan-alrifai","dr-hind-a-majeed-abodaka","dr-husna-karikuzhi","dr-hussain-syed-mohammad-sarwar","dr-ibraheem-basher","dr-ibrahim-riza","dr-ihsan-kommouna","dr-inderpal-deshwal","dr-isteer-wahba","dr-jabraan-shaikh","dr-jacob-george","dr-jay-hontanosas","dr-jimmy-john","dr-jitendra-khachariya","dr-jubin-abraham-raju","dr-karthikesh-omkaram","dr-khaldun-al-shaheen","dr-krishna-amith-kumar","dr-lana-hassan","dr-layla-askar","dr-lubna-malek","dr-madiha-rashid","dr-maemun-alkhosin","dr-malak-wehbe","dr-manaf-kandakji","dr-manal-alsereidi","dr-manish-mulchandani","dr-mariam-javaid","dr-marianne-estaris","dr-marjan-movassaghi","dr-mohamed-amer-dardari","dr-mohamed-el-helbawy","dr-mohammed-alsabbah","dr-mohammed-hassan","dr-mohammed-taha","dr-mohan-kudur","dr-mosaddeq-alyousif","dr-mouhsen-alhosein","dr-moutusi-audhya","dr-muhammed-shafi","dr-musarat-ali","dr-nada-altabara","dr-naseem-palakkuzhiyil","dr-nazar-khowaja","dr-nesmal-musaliar","dr-nevra-batur","dr-nirmal-sumitha-jerald","dr-nisha-narayanankutty","dr-ojusvini-amit-kumar","dr-ola-al-sheikh","dr-omar-eissa-habo","dr-ponnusamy-tamilvendan","dr-prashant-pradeep-agarkar","dr-prashanth-prabhu","dr-preeti-sahu","dr-priti-mishra","dr-pyari-jahan","dr-rakesh-maggon","dr-rami-ismail","dr-ramika-mittal","dr-rasha-alani","dr-razan-taef","dr-rebecca-najem","dr-rekha-pandita","dr-renju-dominic","dr-rimzim-gupta","dr-rinku-alex-vaidyan","dr-sachin-lohra","dr-safaa-alawi","dr-sameh-elgouhari","dr-sandeep-kumar","dr-saritha-shetty","dr-shailesh-kumar","dr-shaima-alnaqbi","dr-shajahan-abdulkhader","dr-shashikant-jadhav","dr-shila-waghmare","dr-shilpa-suryawanshi","dr-shweta-ramesh-chandra-jaiswal","dr-simikiruthiga-senthilkumar","dr-simna-rajan","dr-siva-malikireddy","dr-sobana-bilhanan","dr-somshekhar-mallappa","dr-sourabh-soni","dr-srinivasan-ravindranath","dr-sujatha-rajesh","dr-sundas-maaz","dr-sunitha-mary-mathew","dr-surya-senapathy","dr-tagawa-alnaim","dr-tripti-pathare","dr-tushar-sinhal","dr-uma-bilgi","dr-varsha-arun","dr-venkateswara-gorthi","dr-viji-george","dr-vineetha-oommen-kottakkatu","dr-vinu-rajashekar","dr-yasameen-alamer","dr-yasir-malik","dr-zahra-fazal","dr-zainab-ali-asghar","prof-dr-ahmed-almousa","prof-dr-mohammed-al-jumaily","mr-jahfar-latheef","mr-john-apuyan","mr-mohammed-riyaz","mr-mostafa-el-sayed","mr-rakesh-jayakrishnan","mr-saino-mathew-thomas","mr-simple-markose","ms-amala-aji","ms-anusha-veettil","ms-ashly-abin","ms-asmaa-refaie-mohamady","ms-elizabeth-joy","ms-ella-laine-francisco","ms-gayathri-rajeesh","ms-hadel-radwan","ms-juwairia-ejaz","ms-mehreen-memon","ms-meliza-lara-falla","ms-mina-tomic","ms-nikhila-ramakrishnan","ms-princy-varghese","ms-richa-saklani","ms-samar-bou-antoun","ms-sara-johnson","ms-sarah-ahmed","ms-shahana-parambath",
+  "dr-abdalla-alhajiri","dr-abdul-manaf-k-m","dr-abdul-raoof-thacharakkal","dr-abhay-kumar-aryan","dr-abhay-pande","dr-abhay-vyankatrao-inamdar","dr-abithraj-kallikadavil","dr-aby-john","dr-ali-akbar-thirkannur-pilathottathil","dr-ali-hasan-aleddey","dr-ali-shorbagi","dr-alvin-clavert-casono","dr-aneesh-kunnath-parambath","dr-ankit-mudgal","dr-anurag-kumar","dr-archana-babanagare","dr-ashita-rastogi","dr-bashar-alhasan","dr-benish-khanzada","dr-bhaskar-rao-murari","dr-cecil-kunnappilly","dr-chuchendra-lingadahalli","dr-danny-shawaf","dr-deepthi-balakrishnan","dr-deepthi-gopala-reddy","dr-dimple-tiwari","dr-divya-mangal","dr-ebtessam-hassanin","dr-elaheh-allahyari","dr-eman-el-toukhi","dr-fareeha-younis","dr-fatima-qurratulain","dr-fernaz-behlim","dr-firas-david","dr-gada-abdel-hamid","dr-george-cherian","dr-george-thachil","dr-ghada-shate","dr-ghoufran-mohideen","dr-girisankar-gangadharan","dr-haitham-sawalmeh","dr-hans-mohammed","dr-hasan-odeh","dr-hassan-alrifai","dr-hind-a-majeed-abodaka","dr-husna-karikuzhi","dr-hussain-syed-mohammad-sarwar","dr-ibraheem-basher","dr-ibrahim-riza","dr-ihsan-kommouna","dr-inderpal-deshwal","dr-isteer-wahba","dr-jabraan-shaikh","dr-jacob-george","dr-jay-hontanosas","dr-jimmy-john","dr-jitendra-khachariya","dr-jubin-abraham-raju","dr-karthikesh-omkaram","dr-khaldun-al-shaheen","dr-krishna-amith-kumar","dr-lana-hassan","dr-layla-askar","dr-lubna-malek","dr-madiha-rashid","dr-maemun-alkhosin","dr-malak-wehbe","dr-manaf-kandakji","dr-manal-alsereidi","dr-manish-mulchandani","dr-mariam-javaid","dr-marianne-estaris","dr-marjan-movassaghi","dr-mohamed-amer-dardari","dr-mohamed-el-helbawy","dr-mohammed-alsabbah","dr-mohammed-hassan","dr-mohammed-taha","dr-mohan-kudur","dr-mosaddeq-alyousif","dr-mouhsen-alhosein","dr-moutusi-audhya","dr-muhammed-shafi","dr-musarat-ali","dr-nada-altabara","dr-naseem-palakkuzhiyil","dr-nazar-khowaja","dr-nesmal-musaliar","dr-nevra-batur","dr-nirmal-sumitha-jerald","dr-nisha-narayanankutty","dr-ojusvini-amit-kumar","dr-ola-al-sheikh","dr-omar-eissa-habo","dr-ponnusamy-tamilvendan","dr-prashant-pradeep-agarkar","dr-prashanth-prabhu","dr-preeti-sahu","dr-priti-mishra","dr-pyari-jahan","dr-rakesh-maggon","dr-rami-ismail","dr-ramika-mittal","dr-rasha-alani","dr-razan-taef","dr-rebecca-najem","dr-rekha-pandita","dr-renju-dominic","dr-rimzim-gupta","dr-rinku-alex-vaidyan","dr-sachin-lohra","dr-safaa-alawi","dr-sameh-elgouhari","dr-sandeep-kumar","dr-saritha-shetty","dr-shailesh-kumar","dr-shaima-alnaqbi","dr-shajahan-abdulkhader","dr-shashikant-jadhav","dr-shila-waghmare","dr-shilpa-suryawanshi","dr-shweta-ramesh-chandra-jaiswal","dr-simikiruthiga-senthilkumar","dr-simna-rajan","dr-siva-malikireddy","dr-sobana-bilhanan","dr-somshekhar-mallappa","dr-sourabh-soni","dr-srinivasan-ravindranath","dr-sujatha-rajesh","dr-sundas-maaz","dr-sunitha-mary-mathew","dr-surya-senapathy","dr-tagawa-alnaim","dr-tripti-pathare","dr-tushar-sinhal","dr-uma-bilgi","dr-varsha-arun","dr-venkateswara-gorthi","dr-viji-george","dr-vineetha-oommen-kottakkatu","dr-vinu-rajashekar","dr-yasameen-alamer","dr-yasir-malik","dr-zahra-fazal","dr-zainab-ali-asghar","prof-dr-ahmed-almousa","prof-dr-mohammed-al-jumaily","dr-shaji-kuzhiyil","dr-shaji-pallissery-kuzhiyil","dr-mohsin-azam","dr-mohsin-e-azam","dr-chaula-sangani","dr-rehab-abdelrazig","dr-sai-soujanya","dr-sai-soujanya-sarva","dr-nivedita-mc","dr-nivedita-m-c","dr-nidhi-maggon","dr-libey-joy","dr-mohamed-elhelbawy","dr-george-simon","dr-alanoud-shatat","dr-farah-al-mulla","dr-seyed-mohammad-kasaei","dr-hilda-atallah","dr-nagendra-prasad-anipindi","ms-sharifa-solomon","mr-jahfar-latheef","mr-john-apuyan","mr-mohammed-riyaz","mr-mostafa-el-sayed","mr-rakesh-jayakrishnan","mr-saino-mathew-thomas","mr-simple-markose","ms-amala-aji","ms-anusha-veettil","ms-ashly-abin","ms-asmaa-refaie-mohamady","ms-elizabeth-joy","ms-ella-laine-francisco","ms-gayathri-rajeesh","ms-hadel-radwan","ms-juwairia-ejaz","ms-mehreen-memon","ms-meliza-lara-falla","ms-mina-tomic","ms-nikhila-ramakrishnan","ms-princy-varghese","ms-richa-saklani","ms-samar-bou-antoun","ms-sara-johnson","ms-sarah-ahmed","ms-shahana-parambath",
 ]);
 
 function getDoctorSlug(name) {
@@ -345,7 +345,7 @@ function getDoctorProfileUrl(name) {
   return null;
 }
 
-const CBD_DOCTORS = new Set(["dr-abdalla-alhajeri","dr-alanoud-shatat","dr-fernaz-behlim","dr-saritha-shetty","dr-hasan-odeh","dr-ihsan-kommouna","dr-ali-shorbagi","dr-shailesh-kumar","dr-haitham-sawalmeh","dr-mohammed-taha","dr-mouhsen-hosein","dr-shashikanth-jadhav","dr-mohammed-al-jumaily","dr-ebtessam-hassanin","dr-nada-al-tabbara","dr-ahmed-almousa","dr-hassan-al-rifai","dr-ashraf-demiry","dr-chaula-sangani","dr-mohammed-alsabbah","dr-simikiruthiga-senthilkumar","dr-aleksandar-miladinovic","dr-manaf-kandakji","dr-mohamed-elhelbawy","dr-mosaddeq-al-yousif","dr-firas-david","dr-ibrahim-riza","dr-danny-shawaf","dr-abdulla-al-hajiri"]);
+const CBD_DOCTORS = new Set(["dr-abdalla-alhajeri","dr-alanoud-shatat","dr-fernaz-behlim","dr-saritha-shetty","dr-hasan-odeh","dr-ihsan-kommouna","dr-ali-shorbagi","dr-shailesh-kumar","dr-haitham-sawalmeh","dr-mohammed-taha","dr-mouhsen-hosein","dr-shashikanth-jadhav","dr-mohammed-al-jumaily","dr-ebtessam-hassanin","dr-nada-al-tabbara","dr-ahmed-almousa","dr-hassan-al-rifai","dr-ashraf-demiry","dr-mohammed-alsabbah","dr-simikiruthiga-senthilkumar","dr-aleksandar-miladinovic","dr-manaf-kandakji","dr-mohamed-elhelbawy","dr-mosaddeq-al-yousif","dr-firas-david","dr-ibrahim-riza","dr-danny-shawaf","dr-abdulla-al-hajiri"]);
 
 function isCBD(name) {
   const slug = getDoctorSlug(name);
@@ -487,20 +487,20 @@ const DEFAULT_DOCTORS = [
   { name:"Dr. Sourabh Soni", specialty:"ENT", today:921, mtdActual:3600, mtdBudget:7982, mtdLY:0, ytdActual:145224, ytdBudget:119181, ytdLY:0, locations:"DG,DSU,Silicon,Warqa" },
   { name:"Dr. Abhay Vyankatrao Inamdar", specialty:"ENT", today:960, mtdActual:3728, mtdBudget:10466, mtdLY:0, ytdActual:114793, ytdBudget:156260, ytdLY:0, locations:"DSU,Silicon,Warqa" },
   { name:"Dr. Rinku  Alex", specialty:"ENT", today:2419, mtdActual:10455, mtdBudget:10870, mtdLY:0, ytdActual:142714, ytdBudget:162296, ytdLY:0, locations:"DSU,Qusais,Warqa" },
-  { name:"Dr. Nirmal Sumitha Jerald", specialty:"Family medicine", today:4526, mtdActual:12624, mtdBudget:18552, mtdLY:17499, ytdActual:240203, ytdBudget:276990, ytdLY:271860, locations:"DSU,Qusais,Silicon,Warqa" },
+  { name:"Dr. Nirmal Sumitha Jerald", specialty:"Family Medicine", today:4526, mtdActual:12624, mtdBudget:18552, mtdLY:17499, ytdActual:240203, ytdBudget:276990, ytdLY:271860, locations:"DSU,Qusais,Silicon,Warqa" },
   { name:"Dr. Zainab Ali Asghar", specialty:"Family Medicine", today:4214, mtdActual:23720, mtdBudget:29922, mtdLY:32095, ytdActual:325239, ytdBudget:446755, ytdLY:430864, locations:"DSU,Nahda,Qusais,Tecom" },
-  { name:"Dr. Safaa Alawi", specialty:"Family medicine", today:-416, mtdActual:19144, mtdBudget:24240, mtdLY:15769, ytdActual:383151, ytdBudget:361920, ytdLY:317178, locations:"DSU,Intl City,Silicon,Warqa" },
-  { name:"Dr. Omar Eissa Abdelshafy Habo", specialty:"Family medicine", today:215, mtdActual:3547, mtdBudget:13418, mtdLY:17422, ytdActual:126531, ytdBudget:200336, ytdLY:234891, locations:"DG,DSU,Tecom" },
+  { name:"Dr. Safaa Alawi", specialty:"Family Medicine", today:-416, mtdActual:19144, mtdBudget:24240, mtdLY:15769, ytdActual:383151, ytdBudget:361920, ytdLY:317178, locations:"DSU,Intl City,Silicon,Warqa" },
+  { name:"Dr. Omar Eissa Abdelshafy Habo", specialty:"Family Medicine", today:215, mtdActual:3547, mtdBudget:13418, mtdLY:17422, ytdActual:126531, ytdBudget:200336, ytdLY:234891, locations:"DG,DSU,Tecom" },
   { name:"Dr. Libey Joy", specialty:"Family Medicine", today:3855, mtdActual:7364, mtdBudget:14807, mtdLY:18262, ytdActual:198906, ytdBudget:221075, ytdLY:203088, locations:"DG,DSU,Fest Plaza,Karama,Tecom" },
   { name:"Dr. Omar Farooq Abdul Kadir", specialty:"Family Medicine", today:0, mtdActual:0, mtdBudget:16490, mtdLY:15118, ytdActual:91365, ytdBudget:246204, ytdLY:209499, locations:"DSU,Warqa" },
   { name:"Dr. Divya Mangal", specialty:"Family Medicine", today:4360, mtdActual:16837, mtdBudget:22282, mtdLY:15947, ytdActual:352479, ytdBudget:332681, ytdLY:228763, locations:"DSU,Intl City,Karama,Qusais,Silicon,Tecom" },
   { name:"Dr. Malak Wehbe", specialty:"Family Medicine", today:0, mtdActual:6296, mtdBudget:0, mtdLY:0, ytdActual:61388, ytdBudget:0, ytdLY:0, locations:"Fest Plaza,JVC" },
   { name:"Dr. Nisha Narayanankutty", specialty:"Family Medicine", today:955, mtdActual:12087, mtdBudget:8708, mtdLY:0, ytdActual:167171, ytdBudget:130013, ytdLY:0, locations:"DSU,Intl City,Karama" },
   { name:"Dr. Rebecca Najem", specialty:"Family Medicine", today:0, mtdActual:15663, mtdBudget:7868, mtdLY:0, ytdActual:240129, ytdBudget:117473, ytdLY:0, locations:"DSU,Karama,Tecom" },
-  { name:"Dr. Hind Alaa Majeed Abodaka", specialty:"Family medicine", today:748, mtdActual:4522, mtdBudget:9331, mtdLY:0, ytdActual:100318, ytdBudget:139314, ytdLY:0, locations:"DG,DSU,Fest Plaza,Tecom" },
-  { name:"Dr. Rasha Alani", specialty:"Family medicine", today:0, mtdActual:-445, mtdBudget:14516, mtdLY:0, ytdActual:138545, ytdBudget:216732, ytdLY:0, locations:"Arabian" },
-  { name:"Dr. Vineetha Oommen Kottakkattu", specialty:"Family medicine", today:733, mtdActual:12903, mtdBudget:7713, mtdLY:0, ytdActual:138632, ytdBudget:115165, ytdLY:0, locations:"DSU,Intl City,Nahda,Qusais" },
-  { name:"Dr. Nevra Batur", specialty:"Family medicine", today:0, mtdActual:0, mtdBudget:9914, mtdLY:0, ytdActual:62326, ytdBudget:148024, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Tecom" },
+  { name:"Dr. Hind Alaa Majeed Abodaka", specialty:"Family Medicine", today:748, mtdActual:4522, mtdBudget:9331, mtdLY:0, ytdActual:100318, ytdBudget:139314, ytdLY:0, locations:"DG,DSU,Fest Plaza,Tecom" },
+  { name:"Dr. Rasha Alani", specialty:"Family Medicine", today:0, mtdActual:-445, mtdBudget:14516, mtdLY:0, ytdActual:138545, ytdBudget:216732, ytdLY:0, locations:"Arabian" },
+  { name:"Dr. Vineetha Oommen Kottakkattu", specialty:"Family Medicine", today:733, mtdActual:12903, mtdBudget:7713, mtdLY:0, ytdActual:138632, ytdBudget:115165, ytdLY:0, locations:"DSU,Intl City,Nahda,Qusais" },
+  { name:"Dr. Nevra Batur", specialty:"Family Medicine", today:0, mtdActual:0, mtdBudget:9914, mtdLY:0, ytdActual:62326, ytdBudget:148024, ytdLY:0, locations:"DG,DSU,Fest Plaza,JVC,Tecom" },
   { name:"Dr. Fareeha Younis", specialty:"Family Medicine", today:155, mtdActual:12352, mtdBudget:17478, mtdLY:20898, ytdActual:238592, ytdBudget:260956, ytdLY:288433, locations:"DG,DSU,Intl City,Qusais,Silicon" },
   { name:"Dr. Shailesh Kumar", specialty:"Gastroenterology", today:779, mtdActual:6804, mtdBudget:10638, mtdLY:6541, ytdActual:111687, ytdBudget:158836, ytdLY:119283, locations:"DG,DSU,Intl City,Karama,Qusais,Silicon,Tecom" },
   { name:"Dr. ALI  SHORBAGI", specialty:"Gastroenterology", today:0, mtdActual:1086, mtdBudget:2689, mtdLY:1776, ytdActual:22170, ytdBudget:40146, ytdLY:44993, locations:"DSU,Intl City,Nahda,Qusais,Silicon,Tecom,Warqa" },
@@ -713,7 +713,9 @@ function parseExcelFile(data) {
     const colA = r[0], colB = r[1];
     if (!colB || typeof colB !== "string" || colB.toLowerCase().includes("grand total")) continue;
     const colBL = colB.toLowerCase();
-    if (colBL.includes("lutetia") || colBL.includes("not required")) continue;
+    if (colBL.includes("lutetia") || colBL.includes("not required") || colBL.includes("radiology") || colBL.includes("sonographer") || colBL.includes("laser technician")) continue;
+    // Normalize "Family medicine" → "Family Medicine"
+    if (colBL.includes("family medicine")) colB = "Family Medicine";
     const today=num(r[2]),mtdBudget=num(r[3]),mtdActual=num(r[4]),mtdLY=num(r[5]),mtdVBR=num(r[6]),mtdVLR=num(r[7]),ytdBudget=num(r[8]),ytdActual=num(r[9]),ytdLY=num(r[10]);
     if (colB.includes("Total")) {
       const name = colB.replace(/\s*Total\s*/i,"").trim(); if (!name) continue;
@@ -1929,7 +1931,7 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
 
 function App() {
   // Load saved state from localStorage if available
-  const CACHE_VERSION = 4; // Increment to invalidate old caches
+  const CACHE_VERSION = 5; // Increment to invalidate old caches
   const savedState = (() => {
     try {
       const raw = localStorage.getItem("hh_dashboard_state");
@@ -2411,22 +2413,24 @@ function App() {
       // "Fully resigned" = zero revenue this year (all LY revenue is pure loss)
       // "Partial year" = has some revenue this year (worked before leaving)
       d.fullyResigned = ytdA === 0 && mtdA === 0;
-      // Pure resignation loss = LY revenue from doctors with zero current revenue
-      // For partial-year doctors, resignation loss = their LY revenue minus what they earned this year
-      d.ytdResignLoss = d.fullyResigned ? ytdL : Math.max(0, ytdL - ytdA);
-      d.mtdResignLoss = d.fullyResigned ? mtdL : Math.max(0, mtdL - mtdA);
+      // Resign Loss = LY revenue ONLY from fully-resigned doctors (zero current revenue)
+      // Volume Drop = gap from partial-year doctors (worked some months then left)
+      d.ytdResignLoss = d.fullyResigned ? ytdL : 0;
+      d.ytdVolumeDrop = !d.fullyResigned ? Math.max(0, ytdL - ytdA) : 0;
+      d.mtdResignLoss = d.fullyResigned ? mtdL : 0;
+      d.mtdVolumeDrop = !d.fullyResigned ? Math.max(0, mtdL - mtdA) : 0;
     });
     // Group by specialty
     const specMap = {};
     resigned.forEach(d => {
-      if (!specMap[d.specialty]) specMap[d.specialty] = { name: d.specialty, doctors: [], ytdLY: 0, ytdActual: 0, mtdLY: 0, mtdActual: 0, ytdResignLoss: 0, mtdResignLoss: 0, fullyResignedCount: 0 };
+      if (!specMap[d.specialty]) specMap[d.specialty] = { name: d.specialty, doctors: [], ytdLY: 0, ytdActual: 0, mtdLY: 0, mtdActual: 0, ytdResignLoss: 0, ytdVolumeDrop: 0, fullyResignedCount: 0 };
       specMap[d.specialty].doctors.push(d);
       specMap[d.specialty].ytdLY += d.ytdLY || 0;
       specMap[d.specialty].ytdActual += d.ytdActual || 0;
       specMap[d.specialty].mtdLY += d.mtdLY || 0;
       specMap[d.specialty].mtdActual += d.mtdActual || 0;
       specMap[d.specialty].ytdResignLoss += d.ytdResignLoss || 0;
-      specMap[d.specialty].mtdResignLoss += d.mtdResignLoss || 0;
+      specMap[d.specialty].ytdVolumeDrop += d.ytdVolumeDrop || 0;
       if (d.fullyResigned) specMap[d.specialty].fullyResignedCount++;
     });
     return Object.values(specMap).sort((a, b) => b.ytdResignLoss - a.ytdResignLoss);
@@ -3204,7 +3208,7 @@ function App() {
                   {resignedWithRevenue.map((spec) => {
                     const ytdGap = spec.ytdActual - spec.ytdLY;
                     const resignLoss = spec.ytdResignLoss;
-                    const volumeDrop = Math.max(0, -ytdGap - resignLoss);
+                    const volumeDrop = spec.ytdVolumeDrop;
                     return (
                     <React.Fragment key={spec.name}>
                       <tr style={{ background:"rgba(100,116,139,0.1)", borderBottom:"1px solid "+C.border, cursor:"pointer" }} onClick={() => setExpandedResigned(prev => prev === spec.name ? null : spec.name)}>
@@ -3241,7 +3245,7 @@ function App() {
                     const tYtdLY = resignedWithRevenue.reduce((a,s) => a + s.ytdLY, 0);
                     const tYtdGap = tYtdA - tYtdLY;
                     const tResignLoss = resignedWithRevenue.reduce((a,s) => a + s.ytdResignLoss, 0);
-                    const tVolDrop = Math.max(0, -tYtdGap - tResignLoss);
+                    const tVolDrop = resignedWithRevenue.reduce((a,s) => a + s.ytdVolumeDrop, 0);
                     return (
                     <tr style={{ background:"rgba(100,116,139,0.15)", borderTop:"2px solid "+C.border }}>
                       <td style={{ ...dtd, fontWeight:800, color:C.text }}>TOTAL IMPACT</td>
