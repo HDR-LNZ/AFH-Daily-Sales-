@@ -635,7 +635,6 @@ const DEFAULT_DOCTORS = [
   { name:"Dr. Ashita Rastogi", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:1198, ytdBudget:0, ytdLY:0, locations:"DG,DSU,Silicon,Warqa" },
   { name:"Ms. Rowena Dela Cruz", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:-250, ytdBudget:0, ytdLY:0, locations:"Arabian,Warqa" },
   { name:"Dr. Tagawa Alnaim", specialty:"Radiology", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:3656, ytdBudget:0, ytdLY:0, locations:"DSU,JVC,Tecom" },
-  { name:"Ms. Angelie Princesa", specialty:"Sonographer", today:0, mtdActual:0, mtdBudget:0, mtdLY:0, ytdActual:142, ytdBudget:0, ytdLY:113, locations:"DG,Karama,Nahda,Silicon,Warqa" },
   { name:"Dr. Mohamed Elhelbawy", specialty:"Urology", today:1475, mtdActual:6481, mtdBudget:12115, mtdLY:13775, ytdActual:78538, ytdBudget:180882, ytdLY:126019, locations:"DSU,Silicon,Tecom,Warqa" },
   { name:"Dr. Aleksandar Miladinovic", specialty:"Urology", today:0, mtdActual:0, mtdBudget:1784, mtdLY:2770, ytdActual:36832, ytdBudget:26633, ytdLY:53667, locations:"DSU,Intl City,Nahda,Silicon,Tecom,Warqa" },
   { name:"Dr. Karthikesh Omkaram", specialty:"Urology", today:3955, mtdActual:15120, mtdBudget:18198, mtdLY:11816, ytdActual:217448, ytdBudget:271714, ytdLY:219520, locations:"Arabian,DG,DSU,Fest Plaza,Intl City,Karama,Nahda,Qusais,Silicon,Tecom,Warqa" },
@@ -1931,7 +1930,7 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
 
 function App() {
   // Load saved state from localStorage if available
-  const CACHE_VERSION = 7; // Increment to invalidate old caches
+  const CACHE_VERSION = 8; // Increment to invalidate old caches
   const savedState = (() => {
     try {
       const raw = localStorage.getItem("hh_dashboard_state");
