@@ -2133,6 +2133,13 @@ function App() {
 
     lines.push("MTD revenue stands at AED " + fmt(totals.mtdActual) + ", averaging AED " + fmt(avgPerDay) + " per day across " + (dsrTotals.daysElapsed || 1) + " operating days.");
 
+    // IP revenue — prominent position
+    if (ipTotals.mtdActual > 0) {
+      const ipVar = ipTotals.mtdVarLY;
+      const ipPct = totals.mtdActual ? ((ipTotals.mtdActual / totals.mtdActual) * 100).toFixed(1) : 0;
+      lines.push("Inpatient (IP): AED " + fmt(ipTotals.mtdActual) + " MTD (" + ipPct + "% of total revenue, " + ipTotals.volume + " cases, " + (ipVar >= 0 ? '+' : '') + (ipVar*100).toFixed(1) + "% vs LY).");
+    }
+
     const underCount = specialties.filter(s => s.ytdVarLY < 0).length;
     if (underCount > 0) {
       const worst = [...specialties].filter(s => s.ytdVarLY < 0 && s.ytdLY > 0).sort((a,b) => a.ytdVarLY - b.ytdVarLY).slice(0,3).map(s => s.name);
@@ -2142,10 +2149,7 @@ function App() {
     const topLoc = [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD)[0];
     if (topLoc) lines.push("Top performing location: " + (CLINIC_COORDS[topLoc.location]?.label || topLoc.location) + " with AED " + fmt(topLoc.totalRevenueMTD) + " MTD revenue.");
 
-    if (ipTotals.mtdActual > 0) {
-      const ipVar = ipTotals.mtdVarLY;
-      lines.push("Inpatient revenue: AED " + fmt(ipTotals.mtdActual) + " MTD (" + (ipVar >= 0 ? '+' : '') + (ipVar*100).toFixed(1) + "% vs LY) with " + ipTotals.volume + " cases.");
-    }
+    // IP line moved to top of summary (inserted after MTD line)
 
     // Revenue loss from resigned doctors
     const resignedDocs = doctors.filter(d => !getDoctorProfileUrl(d.name) && d.ytdLY > 0);
