@@ -2131,7 +2131,8 @@ function App() {
     if (totals.ytdVarLY < 0) lines.push("YTD revenue of AED " + fmtK(totals.ytdActual) + " is " + ytdVarLY + "% below last year (AED " + fmtK(totals.ytdLY) + "), indicating a need for focused recovery strategies.");
     else lines.push("YTD revenue of AED " + fmtK(totals.ytdActual) + " is +" + ytdVarLY + "% above last year.");
 
-    lines.push("MTD revenue stands at AED " + fmt(totals.mtdActual) + ", averaging AED " + fmt(avgPerDay) + " per day across " + (dsrTotals.daysElapsed || 1) + " operating days.");
+    const mtdVarLYPct = totals.mtdLY ? ((totals.mtdActual - totals.mtdLY) / totals.mtdLY * 100).toFixed(1) : 0;
+    lines.push("MTD revenue stands at AED " + fmt(totals.mtdActual) + " (" + (mtdVarLYPct >= 0 ? "+" : "") + mtdVarLYPct + "% vs LY), averaging AED " + fmt(avgPerDay) + " per day across " + (dsrTotals.daysElapsed || 1) + " operating days.");
 
     // IP revenue — prominent position
     if (ipTotals.mtdActual > 0) {
