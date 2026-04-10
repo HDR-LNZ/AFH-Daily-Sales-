@@ -3185,24 +3185,35 @@ function App() {
             </div>
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
-                <thead><tr style={{ background:"#1e293b" }}>
-                  <th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>MTD Actual</th><th style={{ ...dth, textAlign:"right" }}>MTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th><th style={{ ...dth, textAlign:"right" }}>Cases</th><th style={{ ...dth, textAlign:"right" }}>Cases LY</th><th style={{ ...dth, textAlign:"right" }}>YTD Actual</th><th style={{ ...dth, textAlign:"right" }}>YTD LY</th><th style={{ ...dth, textAlign:"right" }}>YTD vs LY</th><th style={{ ...dth, textAlign:"right" }}>Vol LY</th>
-                </tr></thead>
+                <thead>
+                  <tr style={{ background:"#1e293b" }}>
+                    <th style={thS} rowSpan={2}>Specialty</th>
+                    <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={5}>Month-to-Date (MTD)</th>
+                    <th style={{ width:8, background:"#1e293b", borderBottom:"none" }} rowSpan={2}></th>
+                    <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={5}>Year-to-Date (YTD)</th>
+                  </tr>
+                  <tr style={{ background:"#1e293b" }}>
+                    <th style={thSub}>Revenue</th><th style={thSub}>LY</th><th style={thSub}>vs LY</th><th style={thSub}>Cases</th><th style={thSub}>Cases LY</th>
+                    <th style={thSub}>Revenue</th><th style={thSub}>LY</th><th style={thSub}>vs LY</th><th style={thSub}>Cases</th><th style={thSub}>Cases LY</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {[...ipSpecialties].sort((a,b) => b.mtdActual - a.mtdActual).map((s,i) => {
                     const vsLY = s.mtdLY ? (s.mtdActual - s.mtdLY) / s.mtdLY : 0;
-                    const ytdVsLY = s.ytdLY ? (s.ytdActual - s.ytdLY) / s.ytdLY : 0;
+                    const ytdVsLY = (s.ytdLY||0) ? ((s.ytdActual||0) - s.ytdLY) / s.ytdLY : 0;
                     return (
                       <tr key={s.name} style={{ background: i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                         <td onClick={() => setSelectedSpecialty(s.name)} style={{ ...dtd, fontWeight:600, cursor:"pointer", color:C.primary }}>{s.name}</td>
                         <td style={dtn}>{fmt(s.mtdActual)}</td>
                         <td style={{ ...dtn, color:C.textMuted }}>{fmt(s.mtdLY)}</td>
                         <td style={{ ...dtn, color:varColor(vsLY), fontWeight:600 }}>{pct(vsLY)}</td>
-                        <td style={dtn}>{s.mtdVolume}</td>
+                        <td style={dtn}>{s.mtdVolume || 0}</td>
                         <td style={{ ...dtn, color:C.textMuted }}>{s.mtdVolLY || 0}</td>
+                        <td style={{ width:8, borderLeft:"2px solid "+C.border }}></td>
                         <td style={dtn}>{fmt(s.ytdActual || 0)}</td>
                         <td style={{ ...dtn, color:C.textMuted }}>{fmt(s.ytdLY || 0)}</td>
                         <td style={{ ...dtn, color:varColor(ytdVsLY), fontWeight:600 }}>{pct(ytdVsLY)}</td>
+                        <td style={dtn}>{s.ytdVolume || 0}</td>
                         <td style={{ ...dtn, color:C.textMuted }}>{s.ytdVolLY || 0}</td>
                       </tr>
                     );
@@ -3213,10 +3224,12 @@ function App() {
                     <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(ipTotals.mtdLY)}</td>
                     <td style={{ ...dtn, fontWeight:800, color:varColor(ipTotals.mtdVarLY) }}>{pct(ipTotals.mtdVarLY)}</td>
                     <td style={{ ...dtn, fontWeight:800, color:C.primaryLight }}>{ipTotals.volume}</td>
-                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{ipSpecialties.reduce((a,s) => a + (s.mtdVolLY||0), 0)}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{ipTotals.volumeLY}</td>
+                    <td style={{ width:8, borderLeft:"2px solid "+C.border }}></td>
                     <td style={{ ...dtn, fontWeight:800, color:C.primaryLight }}>{fmt(ipTotals.ytdActual)}</td>
                     <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{fmt(ipTotals.ytdLY)}</td>
                     <td style={{ ...dtn, fontWeight:800, color:varColor(ipTotals.ytdVarLY) }}>{pct(ipTotals.ytdVarLY)}</td>
+                    <td style={{ ...dtn, fontWeight:800, color:C.primaryLight }}>{ipSpecialties.reduce((a,s) => a + (s.ytdVolume||0), 0)}</td>
                     <td style={{ ...dtn, fontWeight:700, color:C.textMuted }}>{ipSpecialties.reduce((a,s) => a + (s.ytdVolLY||0), 0)}</td>
                   </tr>
                 </tbody>
