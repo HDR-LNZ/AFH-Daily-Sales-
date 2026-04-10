@@ -432,7 +432,8 @@ function parseExcelFile(data) {
   const specialties = [], doctors = [];
   for (let i = headerIdx + 2; i < rows.length; i++) {
     const r = rows[i]; if (!r) continue;
-    const colA = r[0], colB = r[1];
+    const colA = r[0];
+    let colB = r[1];
     if (!colB || typeof colB !== "string" || colB.toLowerCase().includes("grand total")) continue;
     const colBL = colB.toLowerCase();
     if (colBL.includes("lutetia") || colBL.includes("not required") || colBL.includes("radiology") || colBL.includes("sonographer") || colBL.includes("laser technician")) continue;
