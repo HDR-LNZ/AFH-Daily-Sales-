@@ -2009,23 +2009,7 @@ function App() {
     const sumX2 = data.reduce((a, _, i) => a + i * i, 0);
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
-    // Volume trendline
-    const volPts = data.filter(d => (d.volume||0) > 0);
-    let volSlope = 0, volIntercept = 0;
-    if (volPts.length >= 2) {
-      const vn = volPts.length;
-      const vsX = volPts.reduce((a,_,i) => a+i, 0);
-      const vsY = volPts.reduce((a,d) => a+(d.volume||0), 0);
-      const vsXY = volPts.reduce((a,d,i) => a+i*(d.volume||0), 0);
-      const vsX2 = volPts.reduce((a,_,i) => a+i*i, 0);
-      volSlope = (vn*vsXY - vsX*vsY) / (vn*vsX2 - vsX*vsX);
-      volIntercept = (vsY - volSlope*vsX) / vn;
-    }
-    let vi = 0;
-    return data.map((d, i) => {
-      const volTrend = (d.volume||0) > 0 ? Math.round(volIntercept + volSlope * vi++) : 0;
-      return { ...d, trend: Math.round(intercept + slope * i), volTrend };
-    });
+    return data.map((d, i) => ({ ...d, trend: Math.round(intercept + slope * i) }));
   }, [scaledDailyRevenue]);
 
   const specTotals = useMemo(() => {
@@ -2562,7 +2546,7 @@ function App() {
               <Bar yAxisId="vol" dataKey="vol" fill="rgba(245,158,11,0.35)" radius={[3,3,0,0]} maxBarSize={20} name="OP Visits" label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y + 14} textAnchor="middle" fontSize={8} fontWeight={700} fill="#fbbf24">{value}</text> : null} />
               <Area yAxisId="rev" type="natural" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue (AED)" dot={{ r:4, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:6, fill:C.primary, stroke:"#fff", strokeWidth:2 }} label={({ x, y, value }) => value > 0 ? <text x={x} y={y - 12} textAnchor="middle" fontSize={9} fontWeight={700} fill={C.primaryLight}>{fmtK(value)}</text> : null} />
               <Line yAxisId="rev" type="linear" dataKey="trend" stroke={C.textMuted} strokeWidth={1.5} strokeDasharray="6 4" dot={false} name="Rev Trend" />
-              <Line yAxisId="vol" type="linear" dataKey="volTrend" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="6 4" dot={false} name="Vol Trend" />
+              {(() => { const vols = dailyWithTrend.map(d => d.volume||0).filter(v => v > 0); const volAvg = vols.length ? Math.round(vols.reduce((a,v) => a+v, 0) / vols.length) : 0; return volAvg > 0 ? <ReferenceLine yAxisId="vol" y={volAvg} stroke="#f59e0b" strokeDasharray="6 4" strokeWidth={1.5} label={{ value:"Avg: " + volAvg, position:"insideBottomRight", fontSize:9, fill:"#f59e0b", fontWeight:600 }} /> : null; })()}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
