@@ -1742,7 +1742,7 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
 
 function App() {
   // Load saved state from localStorage if available
-  const CACHE_VERSION = 9; // Increment to invalidate old caches
+  const CACHE_VERSION = 10; // Increment to invalidate old caches
   const savedState = (() => {
     try {
       const raw = localStorage.getItem("hh_dashboard_state");
@@ -2530,7 +2530,7 @@ function App() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={420}>
-            <AreaChart data={dailyWithTrend.map(d => ({ ...d, vol: d.volume || 0 }))} margin={{ top:20, right:55, left:5, bottom:5 }}>
+            <AreaChart data={(() => { const dd = dailyWithTrend.map(d => ({ ...d, vol: d.volume || 0 })); console.log("Chart data sample:", dd.length > 0 ? {day:dd[0].day, total:dd[0].total, vol:dd[0].vol, volume:dd[0].volume} : "empty"); return dd; })()} margin={{ top:20, right:55, left:5, bottom:5 }}>
               <defs>
                 <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={C.primary} stopOpacity={0.35} />
