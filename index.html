@@ -61,7 +61,7 @@ const { useState, useCallback, useMemo, useRef } = React;
 const {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Cell, PieChart, Pie, RadialBarChart, RadialBar,
-  LineChart, Line, AreaChart, Area, ReferenceLine,
+  LineChart, Line, AreaChart, Area, ReferenceLine, ComposedChart,
 } = Recharts;
 
 // ─── Utility Helpers ─────────────────────────────────────────────────────────
@@ -2530,7 +2530,7 @@ function App() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={420}>
-            <AreaChart data={(() => { const dd = dailyWithTrend.map(d => ({ ...d, vol: d.volume || 0 })); console.log("Chart data sample:", dd.length > 0 ? {day:dd[0].day, total:dd[0].total, vol:dd[0].vol, volume:dd[0].volume} : "empty"); return dd; })()} margin={{ top:20, right:55, left:5, bottom:5 }}>
+            <ComposedChart data={dailyWithTrend.map(d => ({ ...d, vol: d.volume || 0 }))} margin={{ top:20, right:55, left:5, bottom:5 }}>
               <defs>
                 <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={C.primary} stopOpacity={0.35} />
@@ -2539,14 +2539,14 @@ function App() {
               </defs>
               <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize:10, fill:C.textSecondary }} axisLine={{ stroke:C.border }} tickLine={false} />
-              <YAxis yAxisId="rev" tick={{ fontSize:10, fill:C.primary }} tickFormatter={fmtK} axisLine={false} tickLine={false} label={{ value:"Revenue", angle:-90, position:"insideLeft", fontSize:10, fill:C.primary, dx:-10 }} />
-              <YAxis yAxisId="vol" orientation="right" tick={{ fontSize:10, fill:"#f59e0b" }} axisLine={false} tickLine={false} domain={['dataMin - 100', 'dataMax + 200']} label={{ value:"Visits", angle:90, position:"insideRight", fontSize:10, fill:"#f59e0b", dx:10 }} />
+              <YAxis yAxisId="rev" tick={{ fontSize:10, fill:C.primary }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="vol" orientation="right" tick={{ fontSize:10, fill:"#f59e0b" }} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip />} cursor={{ stroke:C.primary, strokeDasharray:"4 4" }} />
               {dailyAvg > 0 && <ReferenceLine yAxisId="rev" y={dailyAvg} stroke={C.textMuted} strokeDasharray="6 4" strokeWidth={1} label={{ value:"Avg: " + fmtK(dailyAvg), position:"insideTopRight", fontSize:10, fill:C.textMuted, fontWeight:600 }} />}
               <Area yAxisId="rev" type="natural" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue (AED)" dot={{ r:4, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:6, fill:C.primary, stroke:"#fff", strokeWidth:2 }} label={({ x, y, value }) => value > 0 ? <text x={x} y={y - 12} textAnchor="middle" fontSize={9} fontWeight={700} fill={C.primaryLight}>{fmtK(value)}</text> : null} />
               <Line yAxisId="rev" type="linear" dataKey="trend" stroke={C.textMuted} strokeWidth={1.5} strokeDasharray="6 4" dot={false} name="Rev Trend" />
-              <Line yAxisId="vol" type="natural" dataKey="vol" stroke="#f59e0b" strokeWidth={2.5} name="OP Visits" dot={{ r:4, fill:"#f59e0b", stroke:"#1e2230", strokeWidth:2 }} activeDot={{ r:6, fill:"#f59e0b", stroke:"#fff", strokeWidth:2 }} />
-            </AreaChart>
+              <Bar yAxisId="vol" dataKey="vol" fill="rgba(245,158,11,0.4)" radius={[3,3,0,0]} maxBarSize={12} name="OP Visits" />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
 
