@@ -2220,6 +2220,19 @@ function App() {
     const projectedMonth = Math.round(totals.mtdActual / (dsrTotals.daysElapsed || 1) * 30);
     lines.push("At current pace, April is projected to reach AED " + fmtK(projectedMonth) + " (" + (projectedMonth > bestMonth.revenue ? "above" : "below") + " " + bestMonth.month + "'s AED " + fmtK(bestMonth.revenue) + ").");
 
+    // FRM Strategic Context (from Mar 2026 Financial Review Meeting)
+    lines.push("\u2014 Strategic Context (FRM Mar\u201926) \u2014");
+    // Volume vs revenue insight
+    lines.push("Repositioning strategy: volume declined 33% YoY due to low-tier network exits (NAS/Neuron from 33% to 23%), but revenue only declined 4% with avg price per patient up 29%. CPE trending up: AED 801 (+24% YoY).");
+    // Tariff upside
+    lines.push("Tariff upside: Nextcare 5% increase effective April 2026 (15% of revenue). Combined with Mednet (+10%), Self-Pay (+15%), Axa (+5%), covering ~60% of revenue base.");
+    // Daycare/IP context
+    if (ipTotals.mtdActual > 0) {
+      lines.push("IP/Daycare: avg revenue per IP case (AED " + fmt(ipTotals.volume ? Math.round(ipTotals.mtdActual/ipTotals.volume) : 0) + ") is ~25x avg OP visit. FY26 CPE AED 7,300 (+11% YoY). Full-time in-house surgeons expanding capacity.");
+    }
+    // Cost optimization
+    lines.push("Cost optimization target: AED 12.4M savings (expense rationalization 3.3M, group charges 6.0M, manpower 1.0M, doctor reduction 2.0M from Jul\u201926).");
+
     return lines;
   }, [totals, dsrTotals, specialties, locations, ipTotals, doctors]);
 
