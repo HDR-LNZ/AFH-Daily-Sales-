@@ -2217,28 +2217,43 @@ function App() {
 
     // Outlier Detection
     const outliers = [];
-    // 1. Daily revenue outliers (days >1.5x or <0.6x the average)
-    if (scaledDailyRevenue.length >= 5) {
-      const dAvg = scaledDailyRevenue.reduce((a,d) => a + d.total, 0) / scaledDailyRevenue.length;
-      scaledDailyRevenue.forEach(d => {
-        if (d.total > dAvg * 1.5) outliers.push("High revenue day: " + (d.fullLabel||d.label) + " at AED " + fmtK(d.total) + " (" + Math.round(d.total/dAvg*100) + "% of avg)");
-        if (d.total > 0 && d.total < dAvg * 0.6) outliers.push("Low revenue day: " + (d.fullLabel||d.label) + " at AED " + fmtK(d.total) + " (" + Math.round(d.total/dAvg*100) + "% of avg)");
+
+    // TODAY'S OUTLIERS
+    if (doctors.length > 0 && totals.todayRev > 0) {
+      // Today's avg revenue per doctor (for doctors who worked today)
+      const docsWithToday = doctors.filter(d => (d.today||0) > 0);
+      if (docsWithToday.length > 0) {
+        const todayAvg = docsWithToday.reduce((a,d) => a + d.today, 0) / docsWithToday.length;
+        // Doctors with today's revenue >3x the daily doctor average
+        const todayStars = docsWithToday.filter(d => d.today > todayAvg * 3).sort((a,b) => b.today - a.today).slice(0,3);
+        todayStars.forEach(d => outliers.push("Today\u2019s top earner: " + d.name + " (" + d.specialty + ") AED " + fmt(d.today) + " (" + Math.round(d.today/todayAvg) + "x avg doctor)"));
+      }
+      // Clinics with unusually high/low today vs their daily avg
+      const clinicsWithData = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalToday > 0 && l.totalRevenueMTD > 0 && (dsrTotals.daysElapsed||0) > 1);
+      clinicsWithData.forEach(l => {
+        const clinicDailyAvg = l.totalRevenueMTD / (dsrTotals.daysElapsed || 1);
+        if (l.totalToday > clinicDailyAvg * 1.6) outliers.push("Clinic high day: " + (CLINIC_COORDS[l.location]?.label||l.location) + " today AED " + fmtK(l.totalToday) + " (" + Math.round(l.totalToday/clinicDailyAvg*100) + "% of daily avg)");
+        if (l.totalToday < clinicDailyAvg * 0.4 && l.totalToday > 0) outliers.push("Clinic low day: " + (CLINIC_COORDS[l.location]?.label||l.location) + " today AED " + fmtK(l.totalToday) + " (" + Math.round(l.totalToday/clinicDailyAvg*100) + "% of daily avg)");
       });
     }
-    // 2. Doctor outliers (MTD >3x their LY, or MTD dropped >70% vs LY with LY >30K)
-    if (doctors.length > 0) {
-      const bigGainers = doctors.filter(d => d.mtdLY > 5000 && d.mtdActual > d.mtdLY * 3).sort((a,b) => b.mtdActual - a.mtdActual).slice(0,3);
-      const bigDecliners = doctors.filter(d => d.mtdLY > 30000 && d.mtdActual < d.mtdLY * 0.3 && getDoctorProfileUrl(d.name)).sort((a,b) => a.mtdVarLY - b.mtdVarLY).slice(0,3);
-      bigGainers.forEach(d => outliers.push("Outperformer: " + d.name + " (" + d.specialty + ") MTD AED " + fmt(d.mtdActual) + " vs LY " + fmt(d.mtdLY) + " (" + pct(d.mtdVarLY) + ")"));
-      bigDecliners.forEach(d => outliers.push("Significant decline: " + d.name + " (" + d.specialty + ") MTD AED " + fmt(d.mtdActual) + " vs LY " + fmt(d.mtdLY) + " (" + pct(d.mtdVarLY) + ")"));
+
+    // DAILY TREND OUTLIERS (unusual days in the month)
+    if (scaledDailyRevenue.length >= 5) {
+      const dAvg = scaledDailyRevenue.reduce((a,d) => a + d.total, 0) / scaledDailyRevenue.length;
+      const highDays = scaledDailyRevenue.filter(d => d.total > dAvg * 1.4).sort((a,b) => b.total - a.total).slice(0,2);
+      const lowDays = scaledDailyRevenue.filter(d => d.total > 0 && d.total < dAvg * 0.65).sort((a,b) => a.total - b.total).slice(0,2);
+      highDays.forEach(d => outliers.push("Peak day: " + (d.fullLabel||d.label) + " AED " + fmtK(d.total) + " (" + Math.round(d.total/dAvg*100) + "% of avg)"));
+      lowDays.forEach(d => outliers.push("Trough day: " + (d.fullLabel||d.label) + " AED " + fmtK(d.total) + " (" + Math.round(d.total/dAvg*100) + "% of avg)"));
     }
-    // 3. Clinic outliers (MTD >30% above or below LY)
-    locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.mtdLY > 0).forEach(l => {
-      const v = (l.totalRevenueMTD - l.mtdLY) / l.mtdLY;
-      if (v > 0.3) outliers.push("Clinic surge: " + (CLINIC_COORDS[l.location]?.label||l.location) + " MTD " + pct(v) + " above LY (AED " + fmtK(l.totalRevenueMTD) + ")");
-      if (v < -0.3) outliers.push("Clinic concern: " + (CLINIC_COORDS[l.location]?.label||l.location) + " MTD " + pct(v) + " below LY (AED " + fmtK(l.totalRevenueMTD) + ")");
-    });
-    // 4. Specialty outliers (MTD variance >50% or <-40% vs LY with meaningful LY)
+
+    // MTD OUTLIERS
+    if (doctors.length > 0) {
+      const bigGainers = doctors.filter(d => d.mtdLY > 5000 && d.mtdActual > d.mtdLY * 3).sort((a,b) => b.mtdActual - a.mtdActual).slice(0,2);
+      const bigDecliners = doctors.filter(d => d.mtdLY > 30000 && d.mtdActual < d.mtdLY * 0.3 && getDoctorProfileUrl(d.name)).sort((a,b) => a.mtdVarLY - b.mtdVarLY).slice(0,2);
+      bigGainers.forEach(d => outliers.push("MTD outperformer: " + d.name + " (" + d.specialty + ") AED " + fmt(d.mtdActual) + " vs LY " + fmt(d.mtdLY) + " (" + pct(d.mtdVarLY) + ")"));
+      bigDecliners.forEach(d => outliers.push("MTD decline: " + d.name + " (" + d.specialty + ") AED " + fmt(d.mtdActual) + " vs LY " + fmt(d.mtdLY) + " (" + pct(d.mtdVarLY) + ")"));
+    }
+    // Specialty MTD outliers
     specialties.filter(s => s.mtdLY > 20000).forEach(s => {
       if (s.mtdVarLY > 0.5) outliers.push("Specialty surge: " + s.name + " MTD " + pct(s.mtdVarLY) + " above LY");
       if (s.mtdVarLY < -0.4) outliers.push("Specialty concern: " + s.name + " MTD " + pct(s.mtdVarLY) + " below LY");
