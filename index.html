@@ -906,6 +906,36 @@ function PieTooltip({ active, payload }) {
   );
 }
 
+function PctVarianceTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+  const fmtPct = (v) => (v > 0 ? "+" : "") + v.toFixed(1) + "%";
+  return (
+    <div style={{ background:"#1e293b", borderRadius:10, padding:"14px 18px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548", borderLeft:"3px solid " + C.accent }}>
+      <div style={{ fontWeight:700, fontSize:13, color:"#e2e8f0", marginBottom:8, borderBottom:"1px solid #2f3548", paddingBottom:6 }}>{label}</div>
+      <div style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
+        <div style={{ width:10, height:10, borderRadius:3, background:C.accent }} />
+        <span style={{ fontSize:12, color:"#94a3b8", flex:1 }}>Revenue vs LY</span>
+        <span style={{ fontSize:13, fontWeight:600, color: d.hasRevLY ? varColor(d.revenueVar) : C.textMuted, fontVariantNumeric:"tabular-nums" }}>
+          {d.hasRevLY ? fmtPct(d.revenueVar) : "\u2014"}
+        </span>
+      </div>
+      <div style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
+        <div style={{ width:10, height:10, borderRadius:3, background:C.warning }} />
+        <span style={{ fontSize:12, color:"#94a3b8", flex:1 }}>OP Volume vs LY</span>
+        <span style={{ fontSize:13, fontWeight:600, color: d.hasVolLY ? varColor(d.volumeVar) : C.textMuted, fontVariantNumeric:"tabular-nums" }}>
+          {d.hasVolLY ? fmtPct(d.volumeVar) : "\u2014"}
+        </span>
+      </div>
+      <div style={{ marginTop:8, paddingTop:6, borderTop:"1px solid #2f3548", fontSize:11, color:C.textMuted, lineHeight:1.5 }}>
+        Revenue: AED {fmt(d.revenueMTD)} vs {fmt(d.revenueLY)} LY<br/>
+        Volume: {fmt(d.volumeMTD)} vs {fmt(d.volumeLY)} LY
+      </div>
+    </div>
+  );
+}
+
 // ─── Budget Gauge ────────────────────────────────────────────────────────────
 
 function BudgetGauge({ label, actual, comparison, size = 120 }) {
@@ -2076,6 +2106,25 @@ function App() {
         "2025": l.ytdLY || 0,
       })), [locations]);
 
+  const clinicVarianceChartData = useMemo(() =>
+    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && ((l.mtdLY || 0) > 0 || (l.opVolMTDLY || 0) > 0))
+      .map(l => {
+        const hasRevLY = (l.mtdLY || 0) > 0;
+        const hasVolLY = (l.opVolMTDLY || 0) > 0;
+        const revenueVar = hasRevLY ? Number((((l.totalRevenueMTD || 0) - l.mtdLY) / l.mtdLY * 100).toFixed(1)) : 0;
+        const volumeVar = hasVolLY ? Number((((l.opVolMTD || 0) - l.opVolMTDLY) / l.opVolMTDLY * 100).toFixed(1)) : 0;
+        return {
+          name: CLINIC_COORDS[l.location]?.label || l.location,
+          code: l.location,
+          revenueVar, volumeVar, hasRevLY, hasVolLY,
+          revenueMTD: l.totalRevenueMTD || 0,
+          revenueLY: l.mtdLY || 0,
+          volumeMTD: l.opVolMTD || 0,
+          volumeLY: l.opVolMTDLY || 0,
+        };
+      })
+      .sort((a, b) => b.revenueVar - a.revenueVar), [locations]);
+
   // Filter out minor specialties (< AED 10K MTD and < AED 50K YTD) from charts
   const chartSpecialties = useMemo(() => sorted.filter(s => s.mtdActual >= 10000 || s.ytdActual >= 50000), [sorted]);
   const barChartData = useMemo(() => chartSpecialties.slice(0,10).map(s => ({ name: s.name.length > 14 ? s.name.slice(0,13)+"\u2026" : s.name, "Last Year": s.mtdLY, "This Year": s.mtdActual })), [chartSpecialties]);
@@ -2805,6 +2854,57 @@ function App() {
                 label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 4} fontSize={10} fontWeight={600} fill={C.text}>{fmtK(value)}</text> : null} />
               <Bar dataKey="2025" fill="url(#ytd2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 YTD"
                 label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 12} fontSize={10} fontWeight={600} fill={C.textMuted}>{fmtK(value)}</text> : null} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* CLINIC % MOVE VS LY (Revenue & Volume) */}
+        <div style={{ ...card, padding:28, marginTop:20 }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid " + C.success, display:"flex", alignItems:"center", gap:10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.success} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            <div>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Clinic % Move vs Last Year — MTD</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Revenue and OP Volume percentage change vs LY per clinic — sorted by revenue variance</p>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={Math.max(460, clinicVarianceChartData.length * 52)}>
+            <BarChart data={clinicVarianceChartData} layout="vertical" margin={{ top:5, right:60, left:10, bottom:5 }} barGap={3} barCategoryGap="22%">
+              <defs>
+                <linearGradient id="revVarGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.9} />
+                </linearGradient>
+                <linearGradient id="volVarGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.9} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={(v) => v + "%"} axisLine={false} tickLine={false} domain={["dataMin - 10", "dataMax + 10"]} />
+              <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
+                const item = clinicVarianceChartData.find(d => d.name === payload.value);
+                const url = item && CLINIC_COORDS[item.code]?.url;
+                return url
+                  ? <a href={url} target="_blank" rel="noopener"><text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.primaryLight} style={{cursor:"pointer"}}>{payload.value}</text></a>
+                  : <text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.textSecondary}>{payload.value}</text>;
+              }} />
+              <Tooltip content={<PctVarianceTooltip />} cursor={{ fill:"rgba(148,163,184,0.06)" }} />
+              <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
+              <ReferenceLine x={0} stroke={C.textMuted} strokeWidth={1.5} />
+              <Bar dataKey="revenueVar" fill="url(#revVarGrad)" radius={[4,4,4,4]} maxBarSize={14} name="Revenue % vs LY"
+                label={({ x, y, width, height, value, index }) => {
+                  const d = clinicVarianceChartData[index];
+                  if (!d?.hasRevLY) return null;
+                  const txt = (value > 0 ? "+" : "") + value.toFixed(1) + "%";
+                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={700} fill={varColor(value)}>{txt}</text>;
+                }} />
+              <Bar dataKey="volumeVar" fill="url(#volVarGrad)" radius={[4,4,4,4]} maxBarSize={14} name="OP Volume % vs LY"
+                label={({ x, y, width, height, value, index }) => {
+                  const d = clinicVarianceChartData[index];
+                  if (!d?.hasVolLY) return null;
+                  const txt = (value > 0 ? "+" : "") + value.toFixed(1) + "%";
+                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={700} fill={varColor(value)}>{txt}</text>;
+                }} />
             </BarChart>
           </ResponsiveContainer>
         </div>
