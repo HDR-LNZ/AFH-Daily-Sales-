@@ -1573,7 +1573,7 @@ function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
 
 // ─── Dashboard Chat ─────────────────────────────────────────────────────────
 
-function DashboardChat({ totals, dsrTotals, specialties, locations, ipTotals, doctors, reportDate, isMobile }) {
+function DashboardChat({ totals, dsrTotals, specialties, locations, ipTotals, doctors, reportDate, isMobile, commentary }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([{ role:"assistant", content:"Hi! I can help you analyze the dashboard data. Ask me anything \u2014 for example:\n\n\u2022 What\u2019s driving the YTD decline?\n\u2022 Which clinics are underperforming?\n\u2022 How does DSU compare to other clinics?\n\u2022 What specialties need attention?\n\nTip: tap the + button to attach screenshots or charts for a complete analysis." }]);
   const [input, setInput] = useState("");
@@ -1613,9 +1613,16 @@ function DashboardChat({ totals, dsrTotals, specialties, locations, ipTotals, do
     const resignedDocs = doctors.filter(d => !getDoctorProfileUrl(d.name) && d.ytdLY > 0);
     const cbdDocs = doctors.filter(d => isCBD(d.name));
 
+    const summaryBlock = (commentary && commentary.length > 0)
+      ? `EXECUTIVE SUMMARY (this is the same narrative the user sees at the top of the dashboard — it includes FRM strategic context, outliers, projections, and key insights. Treat this as authoritative context):
+${commentary.map(l => "- " + l).join("\n")}
+
+`
+      : "";
+
     return `You are analyzing an Al-Futtaim HealthHub revenue dashboard. Report date: ${reportDate}. All values in AED.
 
-KEY METRICS:
+${summaryBlock}KEY METRICS:
 - Today's Revenue: ${fmt(totals.todayRev)}
 - MTD Revenue: ${fmt(totals.mtdActual)} (vs LY: ${fmt(totals.mtdLY)}, ${pct(totals.mtdVarLY)} change)
 - YTD Revenue: ${fmt(totals.ytdActual)} (vs LY: ${fmt(totals.ytdLY)}, ${pct(totals.ytdVarLY)} change)
@@ -3676,7 +3683,7 @@ function App() {
         return <ClinicDrillDown clinic={enrichedClinic} onClose={() => setSelectedClinic(null)} />;
       })()}
       {specialtyDrillData && <SpecialtyDrillDown data={specialtyDrillData} doctorLocations={doctorLocations} onClose={() => setSelectedSpecialty(null)} />}
-      <DashboardChat totals={totals} dsrTotals={dsrTotals} specialties={specialties} locations={locations} ipTotals={ipTotals} doctors={doctors} reportDate={reportDate} isMobile={isMobile} />
+      <DashboardChat totals={totals} dsrTotals={dsrTotals} specialties={specialties} locations={locations} ipTotals={ipTotals} doctors={doctors} reportDate={reportDate} isMobile={isMobile} commentary={commentary} />
     </div>
   );
 }
