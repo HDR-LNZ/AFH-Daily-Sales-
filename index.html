@@ -389,11 +389,23 @@ function isCBD(name) {
   return slug && CBD_DOCTORS.has(slug);
 }
 
+// Allied health professionals (Physiotherapists, Sonographers, Lab/EEG/Laser techs,
+// Nurses, etc.) typically don't have public profile pages on healthhubalfuttaim.com.
+// Heuristic: title prefix is Mr./Ms./Mrs. (not Dr./Prof.) → support staff, so no
+// website URL doesn't mean resigned. Per request: "doctors I cannot find are most
+// probably resigned; allied health professionals don't need to be on the website."
+function isAlliedNonDoctor(name) {
+  const norm = (name || '').toLowerCase().replace(/\./g,'').trim();
+  return norm.startsWith('mr ') || norm.startsWith('ms ') || norm.startsWith('mrs ');
+}
+
 function DoctorName({ name }) {
   const url = getDoctorProfileUrl(name);
   const cbd = isCBD(name);
+  const allied = !url && isAlliedNonDoctor(name);
   const cbdLabel = cbd ? <span style={{ fontSize:9, color:"#f59e0b", fontWeight:600, marginLeft:4 }}>CBD</span> : null;
   if (url) return <span><a href={url} target="_blank" rel="noopener noreferrer" style={{ color:C.primaryLight, textDecoration:"none", fontWeight:600 }} onMouseEnter={(e) => e.target.style.textDecoration="underline"} onMouseLeave={(e) => e.target.style.textDecoration="none"}>{name}</a>{cbdLabel}</span>;
+  if (allied) return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span>{cbdLabel}</span>;
   return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span> <span style={{ fontSize:9, color:"#ef4444", fontWeight:600, opacity:0.8 }}>Resigned</span>{cbdLabel}</span>;
 }
 
@@ -1647,7 +1659,7 @@ function DashboardChat({ totals, dsrTotals, specialties, locations, ipTotals, do
     const topClinics = [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD).slice(0,5);
     const underperforming = specialties.filter(s => s.ytdVarLY < 0).sort((a,b) => a.ytdVarLY - b.ytdVarLY);
     const topDocs = [...doctors].sort((a,b) => b.mtdActual - a.mtdActual).slice(0,10);
-    const resignedDocs = doctors.filter(d => !getDoctorProfileUrl(d.name) && d.ytdLY > 0);
+    const resignedDocs = doctors.filter(d => !getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && d.ytdLY > 0);
     const cbdDocs = doctors.filter(d => isCBD(d.name));
 
     const summaryBlock = (commentary && commentary.length > 0)
@@ -2378,7 +2390,7 @@ function App() {
     // IP line moved to top of summary (inserted after MTD line)
 
     // Revenue loss from resigned doctors
-    const resignedDocs = doctors.filter(d => !getDoctorProfileUrl(d.name) && d.ytdLY > 0);
+    const resignedDocs = doctors.filter(d => !getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && d.ytdLY > 0);
     if (resignedDocs.length > 0) {
       const resignedYtdLY = resignedDocs.reduce((a, d) => a + (d.ytdLY || 0), 0);
       const resignedMtdLY = resignedDocs.reduce((a, d) => a + (d.mtdLY || 0), 0);
@@ -2484,10 +2496,10 @@ function App() {
   }, [totals, dsrTotals, specialties, locations, ipTotals, doctors]);
 
   // Filter active doctors (exclude resigned)
-  const isActive = (d) => !!getDoctorProfileUrl(d.name);
+  const isActive = (d) => !!getDoctorProfileUrl(d.name) || isAlliedNonDoctor(d.name);
   const activeDoctors = useMemo(() => doctors.filter(isActive), [doctors]);
   const resignedWithRevenue = useMemo(() => {
-    const resigned = doctors.filter(d => !getDoctorProfileUrl(d.name) && (d.ytdLY || 0) > 0);
+    const resigned = doctors.filter(d => !getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && (d.ytdLY || 0) > 0);
     // Classify each doctor
     resigned.forEach(d => {
       const ytdA = d.ytdActual || 0;
