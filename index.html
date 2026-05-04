@@ -1136,7 +1136,7 @@ function getDocLocation(name, excelLocs) {
 
 // ─── Sidebar Component ─────────────────────────────────────────────────────
 
-function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarOpen, setSidebarOpen, isMobile, loadHistoricalMonth, loadCurrentMonth, historicalMonth, dsrTotals }) {
+function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarOpen, setSidebarOpen, isMobile, loadHistoricalMonth, loadCurrentMonth, historicalMonth, dsrTotals, userMonthlyHistory, archiveCurrentMonth, removeArchivedMonth }) {
   const hasData = dsrTotals && dsrTotals.mtdActual > 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navItems = [
@@ -1198,20 +1198,31 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
               <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Monthly History</div>
               {historicalMonth && (
                 <div onClick={() => { loadCurrentMonth(); setMobileMenuOpen(false); }} style={{ padding:"6px 10px", background:C.primary, borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
-                  <span style={{ fontSize:11, fontWeight:600, color:"#fff" }}>{"\u2190"} Back to Current (Apr)</span>
+                  <span style={{ fontSize:11, fontWeight:600, color:"#fff" }}>{"\u2190"} Back to Current</span>
                 </div>
               )}
-              {MONTHLY_HISTORY.map((m, i) => {
+              {!historicalMonth && archiveCurrentMonth && (
+                <div onClick={() => { archiveCurrentMonth(); setMobileMenuOpen(false); }}
+                  style={{ padding:"6px 10px", background:"rgba(16,185,129,0.12)", border:"1px dashed "+C.success, borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
+                  <span style={{ fontSize:11, fontWeight:600, color:C.success }}>+ Archive this month</span>
+                </div>
+              )}
+              {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY].map((m, i) => {
                 const varLY = m.lyRevenue ? ((m.revenue - m.lyRevenue) / m.lyRevenue * 100).toFixed(1) : 0;
                 const isPositive = m.revenue >= m.lyRevenue;
+                const isUserSaved = (userMonthlyHistory || []).some(x => x.monthKey === m.monthKey);
                 return (
-                  <div key={m.month} style={{ marginBottom:8, padding:"8px 10px", background:C.cardBg, borderRadius:8, border: historicalMonth === m.monthKey ? "2px solid "+C.primary : "1px solid "+C.border, cursor:"pointer" }}
+                  <div key={m.monthKey} style={{ marginBottom:8, padding:"8px 10px", background:C.cardBg, borderRadius:8, border: historicalMonth === m.monthKey ? "2px solid "+C.primary : "1px solid "+C.border, cursor:"pointer", position:"relative" }}
                     onClick={() => { loadHistoricalMonth(m.monthKey); setMobileMenuOpen(false); }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                      <span style={{ fontSize:11, fontWeight:700, color:C.text }}>{m.month}</span>
+                      <span style={{ fontSize:11, fontWeight:700, color:C.text }}>{m.month}{isUserSaved && <span style={{ fontSize:8, color:C.success, marginLeft:4 }}>{"\u25cf"}</span>}</span>
                       <span style={{ fontSize:9, fontWeight:600, color: isPositive ? "#10b981" : "#ef4444", background: isPositive ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", padding:"1px 6px", borderRadius:4 }}>{isPositive ? "+" : ""}{varLY}%</span>
                     </div>
                     <div style={{ fontSize:13, fontWeight:800, color:C.text }}>AED {(m.revenue / 1e6).toFixed(1)}M</div>
+                    {isUserSaved && removeArchivedMonth && (
+                      <button onClick={(e) => { e.stopPropagation(); removeArchivedMonth(m.monthKey); }}
+                        style={{ position:"absolute", top:4, right:4, background:"transparent", border:"none", color:C.textMuted, cursor:"pointer", fontSize:14, padding:"0 4px" }}>{"\u00d7"}</button>
+                    )}
                   </div>
                 );
               })}
@@ -1280,21 +1291,33 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
           <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Monthly History</div>
           {historicalMonth && (
             <div onClick={loadCurrentMonth} style={{ padding:"6px 10px", background:C.primary, borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
-              <span style={{ fontSize:11, fontWeight:600, color:"#fff" }}>{"\u2190"} Back to Current (Apr)</span>
+              <span style={{ fontSize:11, fontWeight:600, color:"#fff" }}>{"\u2190"} Back to Current</span>
             </div>
           )}
-          {MONTHLY_HISTORY.map((m, i) => {
+          {!historicalMonth && archiveCurrentMonth && (
+            <div onClick={archiveCurrentMonth} title="Snapshot the current month into Monthly History"
+              style={{ padding:"6px 10px", background:"rgba(16,185,129,0.12)", border:"1px dashed "+C.success, borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
+              <span style={{ fontSize:11, fontWeight:600, color:C.success }}>+ Archive this month</span>
+            </div>
+          )}
+          {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY].map((m, i) => {
             const varLY = m.lyRevenue ? ((m.revenue - m.lyRevenue) / m.lyRevenue * 100).toFixed(1) : 0;
             const isPositive = m.revenue >= m.lyRevenue;
+            const isUserSaved = (userMonthlyHistory || []).some(x => x.monthKey === m.monthKey);
             return (
-              <div key={m.month} style={{ marginBottom:10, padding:"8px 10px", background:C.cardBg, borderRadius:8, border: historicalMonth === m.monthKey ? "2px solid "+C.primary : "1px solid "+C.border, cursor:"pointer" }}
+              <div key={m.monthKey} style={{ marginBottom:10, padding:"8px 10px", background:C.cardBg, borderRadius:8, border: historicalMonth === m.monthKey ? "2px solid "+C.primary : "1px solid "+C.border, cursor:"pointer", position:"relative" }}
                 onClick={() => loadHistoricalMonth(m.monthKey)}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                  <span style={{ fontSize:11, fontWeight:700, color:C.text }}>{m.month}</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:C.text }}>{m.month}{isUserSaved && <span title="Archived locally" style={{ fontSize:8, color:C.success, marginLeft:4 }}>{"\u25cf"}</span>}</span>
                   <span style={{ fontSize:9, fontWeight:600, color: isPositive ? "#10b981" : "#ef4444", background: isPositive ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", padding:"1px 6px", borderRadius:4 }}>{isPositive ? "+" : ""}{varLY}%</span>
                 </div>
                 <div style={{ fontSize:13, fontWeight:800, color:C.text }}>AED {(m.revenue / 1e6).toFixed(1)}M</div>
                 <div style={{ fontSize:9, color:C.textMuted, marginTop:3, lineHeight:1.4 }}>{m.summary}</div>
+                {isUserSaved && removeArchivedMonth && (
+                  <button onClick={(e) => { e.stopPropagation(); removeArchivedMonth(m.monthKey); }}
+                    title="Remove from history"
+                    style={{ position:"absolute", top:4, right:4, background:"transparent", border:"none", color:C.textMuted, cursor:"pointer", fontSize:14, padding:"0 4px" }}>{"\u00d7"}</button>
+                )}
               </div>
             );
           })}
@@ -1959,6 +1982,10 @@ function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [dataWarnings, setDataWarnings] = useState([]);
   const [historicalMonth, setHistoricalMonth] = useState(null);
+  const [userMonthlyHistory, setUserMonthlyHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("hh_user_monthly_history") || "[]"); }
+    catch (e) { return []; }
+  });
   const currentStateRef = useRef(null); // stores the "current month" state for Back to Current
 
   function verifyHistoricalData(hist) {
@@ -1986,7 +2013,9 @@ function App() {
     if (!historicalMonth) {
       currentStateRef.current = { dsrTotals, locations, reportDate, specialties, doctors, ipSpecialties, ipDoctors, dailyRevenue, doctorLocations };
     }
-    const hist = MONTHLY_HISTORY.find(m => m.monthKey === monthKey);
+    // Check user-archived months first (newest first), then hardcoded MONTHLY_HISTORY
+    const hist = userMonthlyHistory.find(m => m.monthKey === monthKey)
+      || MONTHLY_HISTORY.find(m => m.monthKey === monthKey);
     if (!hist) return;
     setHistoricalMonth(monthKey);
     const d = hist.dsr;
@@ -2080,6 +2109,93 @@ function App() {
     }
     setDataWarnings([]);
   }, []);
+
+  // Build a MONTHLY_HISTORY-shaped record from current state and persist it.
+  // Run when the user clicks "Archive this month" — captures whatever's loaded right now.
+  const archiveCurrentMonth = useCallback(() => {
+    if (historicalMonth) {
+      alert("Switch back to the current month before archiving.");
+      return;
+    }
+    if (!dsrTotals?.mtdActual) {
+      alert("No current-month data loaded. Upload a DSR first.");
+      return;
+    }
+    const rd = new Date(reportDate);
+    const valid = !isNaN(rd.getTime());
+    const yr = valid ? rd.getFullYear() : new Date().getFullYear();
+    const monthShort = valid ? rd.toLocaleDateString('en-US', { month: 'short' }) : 'Apr';
+    const monthDisplay = monthShort + " " + yr;
+    const monthKey = monthShort + "-" + yr;
+    if (!confirm("Archive " + monthDisplay + " to Monthly History? This stores a snapshot you can revisit from the sidebar.")) return;
+
+    const topClinic = locations
+      .filter(l => !["Staff DFC","Staff DIP","Stationed"].includes(l.location))
+      .reduce((best, l) => l.totalRevenueMTD > (best?.totalRevenueMTD || 0) ? l : best, null);
+
+    const opTotal = specialties.reduce((a,s) => a + (s.mtdActual || 0), 0);
+    const opLYTotal = specialties.reduce((a,s) => a + (s.mtdLY || 0), 0);
+    const ipMtdActual = (ipSpecialties || []).reduce((a,s) => a + (s.mtdActual || 0), 0);
+    const ipMtdLY = (ipSpecialties || []).reduce((a,s) => a + (s.mtdLY || 0), 0);
+    const ipVolume = (ipSpecialties || []).reduce((a,s) => a + (s.mtdVolume || 0), 0);
+    const ipVolLY = (ipSpecialties || []).reduce((a,s) => a + (s.mtdVolLY || 0), 0);
+    const varLY = dsrTotals.mtdLY ? ((dsrTotals.mtdActual - dsrTotals.mtdLY) / dsrTotals.mtdLY * 100).toFixed(1) : "0.0";
+
+    const entry = {
+      month: monthDisplay,
+      monthKey: monthKey,
+      revenue: dsrTotals.mtdActual,
+      lyRevenue: dsrTotals.mtdLY || 0,
+      budget: dsrTotals.mtdBudget || 0,
+      opRevenue: opTotal,
+      opLY: opLYTotal,
+      ipRevenue: ipMtdActual,
+      ipLY: ipMtdLY,
+      ipCases: ipVolume,
+      days: dsrTotals.daysElapsed || 30,
+      topClinic: topClinic ? topClinic.location : "",
+      topClinicRev: topClinic ? topClinic.totalRevenueMTD : 0,
+      dsr: {
+        todayRev: dsrTotals.todayRev || 0,
+        mtdActual: dsrTotals.mtdActual, mtdLY: dsrTotals.mtdLY || 0,
+        ytdActual: dsrTotals.ytdActual, ytdLY: dsrTotals.ytdLY,
+        ytdBudget: dsrTotals.ytdBudget,
+        opMtdVolume: dsrTotals.opMtdVolume || 0,
+        daysElapsed: dsrTotals.daysElapsed || 30,
+      },
+      clinics: locations.map(l => ({
+        loc: l.location,
+        mtd: l.totalRevenueMTD || 0, mtdLY: l.mtdLY || 0,
+        ytd: l.totalRevenueYTD || 0, ytdLY: l.ytdLY || 0,
+        vol: l.opVolMTD || 0, volLY: l.opVolMTDLY || 0,
+      })),
+      daily: dailyRevenue.map(d => ({ day: d.day, total: d.total, volume: d.volume, label: d.label, fullLabel: d.fullLabel })),
+      specialties: specialties.map(s => ({
+        name: s.name, today: s.today || 0,
+        mtdActual: s.mtdActual, mtdBudget: s.mtdBudget, mtdLY: s.mtdLY || 0,
+        ytdActual: s.ytdActual, ytdBudget: s.ytdBudget, ytdLY: s.ytdLY || 0,
+      })),
+      ip: { mtdActual: ipMtdActual, mtdLY: ipMtdLY, mtdBudget: 0, volume: ipVolume, volumeLY: ipVolLY, ytdActual: 0, ytdLY: 0 },
+      ipSpecs: (ipSpecialties || []).map(s => ({
+        name: s.name, mtdActual: s.mtdActual, mtdLY: s.mtdLY || 0, mtdBudget: s.mtdBudget || 0,
+        mtdVolume: s.mtdVolume || 0, mtdVolLY: s.mtdVolLY || 0,
+      })),
+      summary: "Revenue AED " + (dsrTotals.mtdActual / 1e6).toFixed(1) + "M (" + (varLY > 0 ? "+" : "") + varLY + "% vs LY)" + (topClinic ? ". " + topClinic.location + " led with AED " + (topClinic.totalRevenueMTD / 1e6).toFixed(1) + "M." : "."),
+    };
+
+    const next = [...userMonthlyHistory.filter(m => m.monthKey !== monthKey), entry]
+      .sort((a, b) => new Date(b.month) - new Date(a.month));
+    setUserMonthlyHistory(next);
+    try { localStorage.setItem("hh_user_monthly_history", JSON.stringify(next)); } catch(e) { console.warn("Failed to persist monthly history:", e); }
+  }, [historicalMonth, dsrTotals, reportDate, locations, specialties, ipSpecialties, dailyRevenue, userMonthlyHistory]);
+
+  const removeArchivedMonth = useCallback((monthKey) => {
+    if (!confirm("Remove " + monthKey + " from Monthly History?")) return;
+    const next = userMonthlyHistory.filter(m => m.monthKey !== monthKey);
+    setUserMonthlyHistory(next);
+    try { localStorage.setItem("hh_user_monthly_history", JSON.stringify(next)); } catch(e) {}
+    if (historicalMonth === monthKey) loadCurrentMonth();
+  }, [userMonthlyHistory, historicalMonth, loadCurrentMonth]);
 
   React.useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
@@ -2551,7 +2667,7 @@ function App() {
 
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.pageBg }}>
-      <Sidebar activeSection={activeSection} onNavigate={scrollToSection} reportDate={reportDate} onFileLoaded={handleFileLoaded} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} loadHistoricalMonth={loadHistoricalMonth} loadCurrentMonth={loadCurrentMonth} historicalMonth={historicalMonth} dsrTotals={dsrTotals} />
+      <Sidebar activeSection={activeSection} onNavigate={scrollToSection} reportDate={reportDate} onFileLoaded={handleFileLoaded} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} loadHistoricalMonth={loadHistoricalMonth} loadCurrentMonth={loadCurrentMonth} historicalMonth={historicalMonth} dsrTotals={dsrTotals} userMonthlyHistory={userMonthlyHistory} archiveCurrentMonth={archiveCurrentMonth} removeArchivedMonth={removeArchivedMonth} />
 
       <main style={{ flex:1, marginLeft: isMobile ? 0 : (sidebarOpen ? 220 : 64), transition:"margin-left 0.3s", padding: isMobile ? "68px 12px 16px" : "24px 32px", maxWidth:1800, overflowX:"hidden" }}>
 
