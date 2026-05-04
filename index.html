@@ -745,10 +745,19 @@ function parseExcelFile(data) {
       dailyRevenue.push({ day, total: Math.round(total), volume: Math.round(volume) });
     }
     const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    // Derive month/year from the parsed reportDate (e.g. "May 3, 2026") so day-of-week
+    // labels match the actual report period — not a hardcoded April.
+    const rdParsed = new Date(reportDate);
+    const valid = !isNaN(rdParsed.getTime());
+    const reportYear = valid ? rdParsed.getFullYear() : 2026;
+    const reportMonth = valid ? rdParsed.getMonth() : 3; // 0-indexed; default April
+    const monthShort = valid
+      ? rdParsed.toLocaleDateString('en-US', { month: 'short' })
+      : 'Apr';
     dailyRevenue = dailyRevenue.map((d, i) => {
-      const date = new Date(2026, 3, d.day); // April = month 3
+      const date = new Date(reportYear, reportMonth, d.day);
       const dow = dayNames[date.getDay()];
-      return { ...d, label: dow + ' ' + d.day, fullLabel: dow + ', Apr ' + d.day };
+      return { ...d, label: dow + ' ' + d.day, fullLabel: dow + ', ' + monthShort + ' ' + d.day };
     });
   }
 
