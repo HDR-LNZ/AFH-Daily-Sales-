@@ -1207,7 +1207,9 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
                   <span style={{ fontSize:11, fontWeight:600, color:C.success }}>+ Archive this month</span>
                 </div>
               )}
-              {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY].map((m, i) => {
+              {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
+                .sort((a, b) => new Date(a.month) - new Date(b.month))
+                .map((m, i) => {
                 const varLY = m.lyRevenue ? ((m.revenue - m.lyRevenue) / m.lyRevenue * 100).toFixed(1) : 0;
                 const isPositive = m.revenue >= m.lyRevenue;
                 const isUserSaved = (userMonthlyHistory || []).some(x => x.monthKey === m.monthKey);
@@ -1300,7 +1302,9 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
               <span style={{ fontSize:11, fontWeight:600, color:C.success }}>+ Archive this month</span>
             </div>
           )}
-          {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY].map((m, i) => {
+          {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
+            .sort((a, b) => new Date(a.month) - new Date(b.month))
+            .map((m, i) => {
             const varLY = m.lyRevenue ? ((m.revenue - m.lyRevenue) / m.lyRevenue * 100).toFixed(1) : 0;
             const isPositive = m.revenue >= m.lyRevenue;
             const isUserSaved = (userMonthlyHistory || []).some(x => x.monthKey === m.monthKey);
