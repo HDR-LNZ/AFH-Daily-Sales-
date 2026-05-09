@@ -2604,9 +2604,23 @@ function App() {
     }
 
     // Monthly context
-    const bestMonth = MONTHLY_HISTORY.reduce((best, m) => m.revenue > best.revenue ? m : best, MONTHLY_HISTORY[0]);
-    const projectedMonth = Math.round(totals.mtdActual / (dsrTotals.daysElapsed || 1) * 30);
-    lines.push("At current pace, April is projected to reach AED " + fmtK(projectedMonth) + " (" + (projectedMonth > bestMonth.revenue ? "above" : "below") + " " + bestMonth.month + "'s AED " + fmtK(bestMonth.revenue) + ").");
+    // Project current month to full-month total, then compare against the same month
+    // last year (estimated by scaling mtdLY at the same daily pace).
+    const rdate = new Date(reportDate);
+    const validRD = !isNaN(rdate.getTime());
+    const monthLabel = validRD ? rdate.toLocaleDateString('en-US', { month: 'long' }) : 'this month';
+    const lyYearLabel = validRD ? (rdate.getFullYear() - 1) : '';
+    const daysInMonth = validRD ? new Date(rdate.getFullYear(), rdate.getMonth() + 1, 0).getDate() : 30;
+    const daysElapsed = dsrTotals.daysElapsed || 1;
+    const projectedMonth = Math.round(totals.mtdActual / daysElapsed * daysInMonth);
+    const lyFullEst = Math.round((dsrTotals.mtdLY || 0) / daysElapsed * daysInMonth);
+    if (lyFullEst > 0) {
+      const varPct = ((projectedMonth - lyFullEst) / lyFullEst * 100).toFixed(1);
+      const direction = projectedMonth >= lyFullEst ? "above" : "below";
+      lines.push("At current pace, " + monthLabel + " is projected to reach AED " + fmtK(projectedMonth) + " — " + (varPct > 0 ? "+" : "") + varPct + "% " + direction + " " + monthLabel + " " + lyYearLabel + "'s estimated AED " + fmtK(lyFullEst) + ".");
+    } else {
+      lines.push("At current pace, " + monthLabel + " is projected to reach AED " + fmtK(projectedMonth) + " (no LY same-period data available for comparison).");
+    }
 
     // FRM Strategic Context (from Mar 2026 Financial Review Meeting)
     lines.push("\u2014 Strategic Context (FRM Mar\u201926) \u2014");
