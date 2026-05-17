@@ -2563,9 +2563,11 @@ function App() {
     const southPct = totalClinicMTD ? ((southMTD / totalClinicMTD) * 100).toFixed(1) : 0;
     lines.push("Dubai South clinics (Tecom, JVC, Discovery Gardens, Festival Plaza) contribute " + southPct + "% of total clinic MTD revenue (AED " + fmt(southMTD) + " of AED " + fmt(totalClinicMTD) + ").");
 
-    // OP Volume commentary
-    const totalVolMTD = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolMTD || 0), 0);
-    const totalVolLY = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolMTDLY || 0), 0);
+    // OP Volume commentary — use DSR official total (matches the OP VISITS MTD KPI
+    // card and the Daily Trend chart). Per-clinic sum here would drop Staff DIP /
+    // Stationed (which the map excludes) and create a confusing discrepancy.
+    const totalVolMTD = dsrTotals.opMtdVolume || locations.reduce((a,l) => a + (l.opVolMTD || 0), 0);
+    const totalVolLY = locations.reduce((a,l) => a + (l.opVolMTDLY || 0), 0);
     const days = dsrTotals.daysElapsed || 1;
     const avgVolPerDay = Math.round(totalVolMTD / days);
     const avgVolPerDayLY = Math.round(totalVolLY / days);
