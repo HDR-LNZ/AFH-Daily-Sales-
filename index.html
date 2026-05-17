@@ -2006,6 +2006,25 @@ function App() {
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
   const [expandedResigned, setExpandedResigned] = useState(null);
   const [doctorLocations, setDoctorLocations] = useState(savedState?.doctorLocations || DEFAULT_DOCTOR_LOCATIONS);
+  // doctorFirstSeen: { slug → { month, name, isBaseline } } — tracks the first month
+  // each doctor (Dr./Prof. titled, with revenue) appears in any uploaded DSR. The
+  // executive summary lists doctors with isBaseline=false as "new" arrivals.
+  const [doctorFirstSeen, setDoctorFirstSeen] = useState(() => {
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem("hh_doctor_first_seen") || "null"); } catch (e) {}
+    if (stored && Object.keys(stored).length > 0) return stored;
+    // First run: seed baseline from any saved doctors so they aren't all flagged "new"
+    const seed = {};
+    const baselineMonth = savedState?.reportDate || "baseline";
+    for (const d of (savedState?.doctors || [])) {
+      if (isAlliedNonDoctor(d.name)) continue;
+      if (!d.mtdActual && !d.ytdActual) continue;
+      const slug = getDoctorSlug(d.name);
+      if (slug && !seed[slug]) seed[slug] = { month: baselineMonth, name: d.name, isBaseline: true };
+    }
+    try { localStorage.setItem("hh_doctor_first_seen", JSON.stringify(seed)); } catch(e) {}
+    return seed;
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState("overview");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -2257,6 +2276,33 @@ function App() {
         if (webLoc) d.websiteLocation = webLoc;
       });
       setDoctors(docs);
+
+      // Track first-seen month per doctor. Anyone Dr./Prof. titled with revenue who
+      // hasn't been seen before in any prior upload gets added with isBaseline=false
+      // → appears in the "New Doctors" section of the executive summary.
+      const rdate = new Date(rd);
+      const validRD = !isNaN(rdate.getTime());
+      const currentMonth = validRD ? rdate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : rd;
+      setDoctorFirstSeen(prev => {
+        const wasEmpty = Object.keys(prev).length === 0;
+        const next = { ...prev };
+        for (const d of docs) {
+          if (isAlliedNonDoctor(d.name)) continue;
+          if (!(d.mtdActual || d.ytdActual)) continue;
+          const slug = getDoctorSlug(d.name);
+          if (!slug) continue;
+          if (!(slug in next)) {
+            next[slug] = { month: currentMonth, name: d.name, isBaseline: wasEmpty };
+          } else if (validRD) {
+            const existingDate = new Date(next[slug].month);
+            if (!isNaN(existingDate.getTime()) && rdate < existingDate) {
+              next[slug] = { ...next[slug], month: currentMonth };
+            }
+          }
+        }
+        try { localStorage.setItem("hh_doctor_first_seen", JSON.stringify(next)); } catch(e) {}
+        return next;
+      });
     }
     if (locs?.length) setLocations(locs);
     if (dst) setDsrTotals(dst);
@@ -2668,8 +2714,26 @@ function App() {
     // Cost optimization
     lines.push("Cost optimization target: AED 12.4M savings (expense rationalization 3.3M, group charges 6.0M, manpower 1.0M, doctor reduction 2.0M from Jul\u201926).");
 
+    // New doctors observed since tracking began. Only Dr./Prof. titled (CBD + FT),
+    // not allied health. Each entry is tagged with the first month they appeared
+    // in revenue data. isBaseline doctors (those present when tracking started)
+    // are filtered out so this only highlights genuine new arrivals.
+    const newDoctorEntries = Object.values(doctorFirstSeen).filter(info => !info.isBaseline);
+    if (newDoctorEntries.length > 0) {
+      newDoctorEntries.sort((a, b) => {
+        const da = new Date(a.month).getTime() || 0;
+        const db = new Date(b.month).getTime() || 0;
+        if (da !== db) return db - da; // newest month first
+        return (a.name || "").localeCompare(b.name || "");
+      });
+      const show = newDoctorEntries.slice(0, 15).map(e => e.name + " (" + e.month + ")");
+      const more = newDoctorEntries.length > 15 ? " \u2026+" + (newDoctorEntries.length - 15) + " more" : "";
+      lines.push("\u2014 New Doctors \u2014");
+      lines.push(newDoctorEntries.length + " new doctor" + (newDoctorEntries.length === 1 ? "" : "s") + " observed in revenue since tracking began: " + show.join(", ") + more + ".");
+    }
+
     return lines;
-  }, [totals, dsrTotals, specialties, locations, ipTotals, doctors]);
+  }, [totals, dsrTotals, specialties, locations, ipTotals, doctors, doctorFirstSeen]);
 
   // Filter active doctors (exclude resigned)
   const isActive = (d) => !!getDoctorProfileUrl(d.name) || isAlliedNonDoctor(d.name);
