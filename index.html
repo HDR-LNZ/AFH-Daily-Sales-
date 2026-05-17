@@ -2843,6 +2843,17 @@ function App() {
             </div>
           </div>
           <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #f59e0b, #fbbf24)" }} />
+            <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>OP Visits MTD</div>
+            <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
+              <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>{fmt(dsrTotals.opMtdVolume)}</div>
+              <div style={{ fontSize:12, color:C.textMuted }}>vs LY: {fmt(dsrTotals.opMtdLYVolume)}</div>
+            </div>
+            <div style={{ marginTop:6 }}>
+              <span style={{ fontSize:11, fontWeight:600, color:varColor(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), background:varBg(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), padding:"2px 8px", borderRadius:6 }}>{pct(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0)} vs LY</span>
+            </div>
+          </div>
+          <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #ec4899, #f472b6)" }} />
             <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Avg Revenue per IP Case (MTD)</div>
             <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
@@ -2852,17 +2863,6 @@ function App() {
             <div style={{ display:"flex", gap:8, marginTop:6 }}>
               {(() => { const curr = ipTotals.volume ? ipTotals.mtdActual / ipTotals.volume : 0; const ly = ipTotals.volumeLY ? ipTotals.mtdLY / ipTotals.volumeLY : 0; const v = ly ? (curr - ly) / ly : 0; return <span style={{ fontSize:11, fontWeight:600, color:varColor(v), background:varBg(v), padding:"2px 8px", borderRadius:6 }}>{pct(v)} vs LY</span>; })()}
               <span style={{ fontSize:11, color:C.textMuted }}>{ipTotals.volume} cases (LY: {ipTotals.volumeLY || 0})</span>
-            </div>
-          </div>
-          <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #f59e0b, #fbbf24)" }} />
-            <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>OP Visits MTD</div>
-            <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
-              <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>{fmt(dsrTotals.opMtdVolume)}</div>
-              <div style={{ fontSize:12, color:C.textMuted }}>vs LY: {fmt(dsrTotals.opMtdLYVolume)}</div>
-            </div>
-            <div style={{ marginTop:6 }}>
-              <span style={{ fontSize:11, fontWeight:600, color:varColor(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), background:varBg(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), padding:"2px 8px", borderRadius:6 }}>{pct(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0)} vs LY</span>
             </div>
           </div>
           {(() => {
