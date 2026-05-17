@@ -86,24 +86,38 @@ const pct = (n) => {
 const varColor = (n) => (n == null || isNaN(n)) ? "#64748b" : n >= 0 ? "#10b981" : "#ef4444";
 const varBg = (n) => (n == null || isNaN(n)) ? "transparent" : n >= 0 ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)";
 
-// Actual full-month LY totals (company-wide revenue, AED). Used by the executive
-// summary's "projected month vs LY same month" comparison. Falls back to a scaled
-// mtdLY estimate when a month is missing. To fill the Apr-Nov 2025 gap, upload the
-// corresponding monthly DSR(s) or extend this object directly.
+// Actual full-month company-wide Gross Revenue (AED). Used by the executive summary's
+// "projected month vs LY same month" comparison. Source: finance team's "Revenue
+// FY24-26.xlsx" (Ali, May 2026) — Gross Revenue is used because it matches the
+// scope of the DSR's MTD/YTD totals (within ~1%), while Net would diverge.
+// FY24 included for potential 2-year LY-of-LY context.
 const LY_MONTHLY_TOTALS = {
-  "Jan-2025": 14897705, // from MONTHLY_HISTORY (Jan 2026 lyRevenue)
-  "Feb-2025": 14651467, // from MONTHLY_HISTORY (Feb 2026 lyRevenue)
-  "Mar-2025": 12995430, // from MONTHLY_HISTORY (Mar 2026 lyRevenue)
-  "Dec-2025": 12725657, // from Dec 31, 2025 DSR
-  // "Apr-2025": ??? ,
-  // "May-2025": ??? ,
-  // "Jun-2025": ??? ,
-  // "Jul-2025": ??? ,
-  // "Aug-2025": ??? ,
-  // "Sep-2025": ??? ,
-  // "Oct-2025": ??? ,
-  // "Nov-2025": ??? ,
-  // Full 2025: 176125504 (informational; sum of months once filled)
+  // FY 2025 — Gross Revenue
+  "Jan-2025": 14903935,
+  "Feb-2025": 14792861,
+  "Mar-2025": 13612316,
+  "Apr-2025": 15463266,
+  "May-2025": 17305446,
+  "Jun-2025": 14894176,
+  "Jul-2025": 14949470,
+  "Aug-2025": 14114888,
+  "Sep-2025": 14135877,
+  "Oct-2025": 15243664,
+  "Nov-2025": 14961035,
+  "Dec-2025": 12871682,
+  // FY 2024 — Gross Revenue
+  "Jan-2024": 14200470,
+  "Feb-2024": 13996874,
+  "Mar-2024": 13790535,
+  "Apr-2024": 11934389,
+  "May-2024": 15400435,
+  "Jun-2024": 13766566,
+  "Jul-2024": 12705201,
+  "Aug-2024": 13321505,
+  "Sep-2024": 14617520,
+  "Oct-2024": 15574334,
+  "Nov-2024": 14997662,
+  "Dec-2024": 12507557,
 };
 
 const MONTHLY_HISTORY = [
