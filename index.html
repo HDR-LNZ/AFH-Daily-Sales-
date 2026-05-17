@@ -479,6 +479,9 @@ const DEFAULT_DSR_TOTALS = {
 };
 
 const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed"]);
+// Specialties hidden from the Specialty Breakdown table — support / admin categories
+// that aren't revenue-generating clinical specialties. Case-insensitive match.
+const EXCLUDED_TABLE_SPECIALTIES = new Set(["anesthesia", "nursing care", "eeg technician", "eeg tech", "registered nurse"]);
 
 const DEFAULT_DOCTOR_LOCATIONS = {};
 
@@ -3462,7 +3465,7 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((s,i) => (
+                {sorted.filter(s => !EXCLUDED_TABLE_SPECIALTIES.has((s.name || '').toLowerCase().trim())).map((s,i) => (
                   <tr key={s.name} style={{ background: s.ytdVarLY<0 ? "rgba(239,68,68,0.06)" : i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                     <td style={{ ...tdS, fontWeight:600, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(s.name)}>{s.name}</td>
                     <td style={tdN}>{fmt(s.today)}</td>
