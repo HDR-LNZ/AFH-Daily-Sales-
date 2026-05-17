@@ -573,13 +573,15 @@ function parseExcelFile(data) {
     dsrTotals.opMtdRevenue = opMtdRev;
     dsrTotals.opMtdPPC = 0; // computed in App using (DSR total - IP) / OP volume
     dsrTotals.opMtdLYRevenue = opMtdLYRev;
-    // Estimate LY volume from YTD ratio
-    const ytdVol = rawNum(7, 13); // R8 C14 = YTD volume
-    const ytdVolLY = rawNum(7, 14); // R8 C15 = YTD volume LY
-    const volRatio = ytdVol && ytdVolLY ? ytdVolLY / ytdVol : 1;
-    const opMtdLYVol = Math.round(opMtdVol * volRatio);
+    // MTD LY OP volume — read directly from DSR R76 C18 (Total Volume row, OP LY column).
+    // Previously this was estimated by scaling current MTD by the YTD ratio, which is
+    // unnecessary since the DSR already has the same-period prior-year value.
+    const opMtdLYVol = rawNum(75, 17); // R76 C18 (0-indexed row 75, col 17)
     dsrTotals.opMtdLYVolume = opMtdLYVol;
     dsrTotals.opMtdLYPPC = opMtdLYVol ? Math.round(opMtdLYRev / opMtdLYVol) : 0;
+    // MTD IP volume and LY (R76 C15 and C20) — for the IP Cases KPI card
+    dsrTotals.ipMtdVolume = rawNum(75, 14);   // R76 C15
+    dsrTotals.ipMtdLYVolume = rawNum(75, 19); // R76 C20
   }
   let locations = null;
   const locSheetName = wb.SheetNames.find((n) => n.toLowerCase().includes("location"));
@@ -2827,7 +2829,7 @@ function App() {
         </div>
 
         {/* PPC STRIP */}
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginTop:16 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(5, 1fr)", gap: isMobile ? 10 : 12, marginTop:16 }}>
           <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #8b5cf6, #a855f7)" }} />
             <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Avg Revenue per OP Visit (MTD)</div>
@@ -2863,6 +2865,28 @@ function App() {
               <span style={{ fontSize:11, fontWeight:600, color:varColor(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), background:varBg(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0), padding:"2px 8px", borderRadius:6 }}>{pct(dsrTotals.opMtdLYVolume ? (dsrTotals.opMtdVolume - dsrTotals.opMtdLYVolume) / dsrTotals.opMtdLYVolume : 0)} vs LY</span>
             </div>
           </div>
+          {(() => {
+            // IP cases vs LY — uses DSR R76 (preferred, matches Total Volume row) and
+            // falls back to ipTotals aggregated from IP Analysis if DSR cell is empty.
+            const ipNow = dsrTotals.ipMtdVolume || ipTotals.volume || 0;
+            const ipLY = dsrTotals.ipMtdLYVolume || ipTotals.volumeLY || 0;
+            const ipVar = ipLY ? (ipNow - ipLY) / ipLY : 0;
+            return (
+              <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #ec4899, #f472b6)" }} />
+                <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>IP Cases MTD</div>
+                <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
+                  <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>{fmt(ipNow)}</div>
+                  <div style={{ fontSize:12, color:C.textMuted }}>vs LY: {ipLY ? fmt(ipLY) : "—"}</div>
+                </div>
+                <div style={{ marginTop:6 }}>
+                  {ipLY > 0
+                    ? <span style={{ fontSize:11, fontWeight:600, color:varColor(ipVar), background:varBg(ipVar), padding:"2px 8px", borderRadius:6 }}>{pct(ipVar)} vs LY</span>
+                    : <span style={{ fontSize:11, color:C.textMuted }}>no LY data</span>}
+                </div>
+              </div>
+            );
+          })()}
           {(() => {
             const cbdDocs = doctors.filter(d => isCBD(d.name));
             const cbdMtd = cbdDocs.reduce((a,d) => a + (d.mtdActual||0), 0);
