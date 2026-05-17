@@ -3452,13 +3452,13 @@ function App() {
               <thead>
                 <tr style={{ background:"#1e293b" }}>
                   <th style={thS} rowSpan={2}>Specialty</th><th style={thS} rowSpan={2}>Today</th>
-                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={5}>Month-to-Date (MTD)</th>
+                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={3}>Month-to-Date (MTD)</th>
                   <th style={{ width:8, background:"#1e293b", borderBottom:"none" }} rowSpan={2}></th>
-                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={5}>Year-to-Date (YTD)</th>
+                  <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={3}>Year-to-Date (YTD)</th>
                 </tr>
                 <tr style={{ background:"#1e293b" }}>
-                  {["Actual","LY","Budget","vs LY","vs Bgt"].map(h=><th key={"m"+h} style={thSub}>{h}</th>)}
-                  {["Actual","LY","Budget","vs LY","vs Bgt"].map(h=><th key={"y"+h} style={thSub}>{h}</th>)}
+                  {["Actual","LY","vs LY"].map(h=><th key={"m"+h} style={thSub}>{h}</th>)}
+                  {["Actual","LY","vs LY"].map(h=><th key={"y"+h} style={thSub}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -3466,25 +3466,21 @@ function App() {
                   <tr key={s.name} style={{ background: s.ytdVarLY<0 ? "rgba(239,68,68,0.06)" : i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                     <td style={{ ...tdS, fontWeight:600, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(s.name)}>{s.name}</td>
                     <td style={tdN}>{fmt(s.today)}</td>
-                    <td style={tdN}>{fmt(s.mtdActual)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.mtdLY)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.mtdBudget)}</td>
+                    <td style={tdN}>{fmt(s.mtdActual)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.mtdLY)}</td>
                     <td style={{ ...tdN, color:varColor(s.mtdVarLY), fontWeight:600 }}>{pct(s.mtdVarLY)}</td>
-                    <td style={{ ...tdN, color:varColor(s.mtdVarBudget), fontWeight:600 }}>{pct(s.mtdVarBudget)}</td>
                     <td style={{ width:8, borderLeft:"2px solid "+C.border }}></td>
-                    <td style={{ ...tdN, fontWeight:600 }}>{fmt(s.ytdActual)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.ytdLY)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.ytdBudget)}</td>
+                    <td style={{ ...tdN, fontWeight:600 }}>{fmt(s.ytdActual)}</td><td style={{ ...tdN, color:C.textMuted }}>{fmt(s.ytdLY)}</td>
                     <td style={{ ...tdN, color:varColor(s.ytdVarLY), fontWeight:600 }}>{pct(s.ytdVarLY)}</td>
-                    <td style={{ ...tdN, color:varColor(s.ytdVarBudget), fontWeight:600 }}>{pct(s.ytdVarBudget)}</td>
                   </tr>
                 ))}
                 <tr style={{ background:"rgba(59,130,246,0.08)", borderTop:"2px solid "+C.primary }}>
                   <td style={{ ...tdS, fontWeight:800, color:C.primaryLight }}>GRAND TOTAL</td>
                   <td style={{ ...tdN, fontWeight:800, color:C.primaryLight }}>{fmt(totals.todayRev)}</td>
-                  <td style={{ ...tdN, fontWeight:800, color:C.primaryLight }}>{fmt(totals.mtdActual)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.mtdLY)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.mtdBudget)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:C.primaryLight }}>{fmt(totals.mtdActual)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.mtdLY)}</td>
                   <td style={{ ...tdN, fontWeight:800, color:varColor(totals.mtdVarLY) }}>{pct(totals.mtdVarLY)}</td>
-                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.mtdVarBudget) }}>{pct(totals.mtdVarBudget)}</td>
                   <td style={{ width:8, borderLeft:"2px solid "+C.border }}></td>
-                  <td style={{ ...tdN, fontWeight:800, color:C.primaryLight }}>{fmt(totals.ytdActual)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.ytdLY)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.ytdBudget)}</td>
+                  <td style={{ ...tdN, fontWeight:800, color:C.primaryLight }}>{fmt(totals.ytdActual)}</td><td style={{ ...tdN, fontWeight:700, color:C.textMuted }}>{fmt(totals.ytdLY)}</td>
                   <td style={{ ...tdN, fontWeight:800, color:varColor(totals.ytdVarLY) }}>{pct(totals.ytdVarLY)}</td>
-                  <td style={{ ...tdN, fontWeight:800, color:varColor(totals.ytdVarBudget) }}>{pct(totals.ytdVarBudget)}</td>
                 </tr>
               </tbody>
             </table>
