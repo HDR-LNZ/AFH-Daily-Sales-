@@ -86,6 +86,26 @@ const pct = (n) => {
 const varColor = (n) => (n == null || isNaN(n)) ? "#64748b" : n >= 0 ? "#10b981" : "#ef4444";
 const varBg = (n) => (n == null || isNaN(n)) ? "transparent" : n >= 0 ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)";
 
+// Actual full-month LY totals (company-wide revenue, AED). Used by the executive
+// summary's "projected month vs LY same month" comparison. Falls back to a scaled
+// mtdLY estimate when a month is missing. To fill the Apr-Nov 2025 gap, upload the
+// corresponding monthly DSR(s) or extend this object directly.
+const LY_MONTHLY_TOTALS = {
+  "Jan-2025": 14897705, // from MONTHLY_HISTORY (Jan 2026 lyRevenue)
+  "Feb-2025": 14651467, // from MONTHLY_HISTORY (Feb 2026 lyRevenue)
+  "Mar-2025": 12995430, // from MONTHLY_HISTORY (Mar 2026 lyRevenue)
+  "Dec-2025": 12725657, // from Dec 31, 2025 DSR
+  // "Apr-2025": ??? ,
+  // "May-2025": ??? ,
+  // "Jun-2025": ??? ,
+  // "Jul-2025": ??? ,
+  // "Aug-2025": ??? ,
+  // "Sep-2025": ??? ,
+  // "Oct-2025": ??? ,
+  // "Nov-2025": ??? ,
+  // Full 2025: 176125504 (informational; sum of months once filled)
+};
+
 const MONTHLY_HISTORY = [
   { month:"Jan 2026", monthKey:"Jan", revenue:14862925, lyRevenue:14897705, budget:19506623, opRevenue:9260402, opLY:8971293, ipRevenue:927233, ipLY:926701, ipCases:126, days:31,
     topClinic:"DSU", topClinicRev:4031995,
@@ -2605,19 +2625,25 @@ function App() {
 
     // Monthly context
     // Project current month to full-month total, then compare against the same month
-    // last year (estimated by scaling mtdLY at the same daily pace).
+    // last year. Prefer the actual full-month total from LY_MONTHLY_TOTALS when
+    // available; otherwise scale mtdLY at the current daily pace as an estimate.
     const rdate = new Date(reportDate);
     const validRD = !isNaN(rdate.getTime());
     const monthLabel = validRD ? rdate.toLocaleDateString('en-US', { month: 'long' }) : 'this month';
-    const lyYearLabel = validRD ? (rdate.getFullYear() - 1) : '';
+    const monthShort = validRD ? rdate.toLocaleDateString('en-US', { month: 'short' }) : 'Apr';
+    const lyYear = validRD ? (rdate.getFullYear() - 1) : 0;
+    const lyKey = monthShort + "-" + lyYear;
     const daysInMonth = validRD ? new Date(rdate.getFullYear(), rdate.getMonth() + 1, 0).getDate() : 30;
     const daysElapsed = dsrTotals.daysElapsed || 1;
     const projectedMonth = Math.round(totals.mtdActual / daysElapsed * daysInMonth);
+    const lyActual = LY_MONTHLY_TOTALS[lyKey] || 0;
     const lyFullEst = Math.round((dsrTotals.mtdLY || 0) / daysElapsed * daysInMonth);
-    if (lyFullEst > 0) {
-      const varPct = ((projectedMonth - lyFullEst) / lyFullEst * 100).toFixed(1);
-      const direction = projectedMonth >= lyFullEst ? "above" : "below";
-      lines.push("At current pace, " + monthLabel + " is projected to reach AED " + fmtK(projectedMonth) + " — " + (varPct > 0 ? "+" : "") + varPct + "% " + direction + " " + monthLabel + " " + lyYearLabel + "'s estimated AED " + fmtK(lyFullEst) + ".");
+    const lyBaseline = lyActual || lyFullEst;
+    const lyKind = lyActual ? "actual" : "estimated";
+    if (lyBaseline > 0) {
+      const varPct = ((projectedMonth - lyBaseline) / lyBaseline * 100).toFixed(1);
+      const direction = projectedMonth >= lyBaseline ? "above" : "below";
+      lines.push("At current pace, " + monthLabel + " is projected to reach AED " + fmtK(projectedMonth) + " — " + (varPct > 0 ? "+" : "") + varPct + "% " + direction + " " + monthLabel + " " + lyYear + "'s " + lyKind + " AED " + fmtK(lyBaseline) + ".");
     } else {
       lines.push("At current pace, " + monthLabel + " is projected to reach AED " + fmtK(projectedMonth) + " (no LY same-period data available for comparison).");
     }
