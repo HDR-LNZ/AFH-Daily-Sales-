@@ -120,6 +120,13 @@ const LY_MONTHLY_TOTALS = {
   "Dec-2024": 12507557,
 };
 
+// Doctors observed in revenue Jan-Apr 2026 (from monthly DSRs provided by Ali, May 2026).
+// Used to seed the doctor-first-seen tracker so the "New Doctors" section in the
+// executive summary surfaces only genuine arrivals (not the full Jan roster).
+// Doctors first seen in Jan 2026 are treated as baseline (already established when
+// tracking became observable); Feb / Mar / Apr 2026 arrivals are flagged as new.
+const HISTORICAL_DOCTOR_FIRST_SEEN = {"dr-abdalla-alhajeri":"Feb 2026","dr-abdul-manaf":"Jan 2026","dr-abdul-raoof-thacharakkal":"Jan 2026","dr-abhay-aryan":"Feb 2026","dr-abhay-pande":"Jan 2026","dr-abhay-vyankatrao-inamdar":"Jan 2026","dr-abithraj-kallikadavil":"Jan 2026","dr-aby-john":"Jan 2026","dr-ahmed-almousa":"Jan 2026","dr-alanoud-shatat":"Jan 2026","dr-aleksandar-miladinovic":"Jan 2026","dr-ali-akbar-thirkannur-pilathottathil":"Jan 2026","dr-ali-aleddey":"Jan 2026","dr-ali-raza":"Jan 2026","dr-ali-shorbagi":"Jan 2026","dr-alvin-clavert-casono":"Jan 2026","dr-aneesh-kunnath-parambath":"Jan 2026","dr-ankit-mudgal":"Jan 2026","dr-anurag-kumar":"Jan 2026","dr-archana-babanagare":"Jan 2026","dr-ashita-rastogi":"Jan 2026","dr-ashraf-demiry":"Jan 2026","dr-bashar-alhasan":"Jan 2026","dr-benish-khanzda":"Jan 2026","dr-bhaskar-rao-murari":"Jan 2026","dr-cecil-kunnappilly":"Jan 2026","dr-chaula-sangani":"Jan 2026","dr-chuchendra-shadakshari":"Jan 2026","dr-dani-abboud":"Jan 2026","dr-danny-shawaf":"Apr 2026","dr-deepthi-balakrishnan":"Jan 2026","dr-deepthi-reddy":"Jan 2026","dr-dimple-tiwari":"Jan 2026","dr-divya-mangal":"Jan 2026","dr-ebtessam-hassanin":"Jan 2026","dr-elaheh-allahyari":"Jan 2026","dr-eman-el-toukhi":"Jan 2026","dr-farah-al-mulla":"Jan 2026","dr-fareeha-younis":"Jan 2026","dr-fatima-qurratulain":"Jan 2026","dr-fernaz-behlim":"Jan 2026","dr-firas-david":"Jan 2026","dr-gada-abdelhamid":"Jan 2026","dr-george-cherian":"Jan 2026","dr-george-simon":"Jan 2026","dr-george-thachil":"Jan 2026","dr-ghada-shate":"Jan 2026","dr-ghoufran-mohideen":"Jan 2026","dr-girisankar-gangadharan":"Jan 2026","dr-haitham-sawalmeh":"Jan 2026","dr-hans-mohammed-hanif":"Jan 2026","dr-hasan-odeh":"Jan 2026","dr-hassan-al-rifai":"Jan 2026","dr-hilda-atallah":"Mar 2026","dr-hind-alaa-majeed-abodaka":"Jan 2026","dr-husna-karikuzhi":"Jan 2026","dr-hussain-syed-mohammad-sarwar":"Jan 2026","dr-ibraheem-basher":"Jan 2026","dr-ibrahim-riza":"Mar 2026","dr-ihsan-kommouna":"Jan 2026","dr-inderpal-deshwal":"Jan 2026","dr-isteer-nashed-makhaly-wahba":"Jan 2026","dr-jabraan-shaikh":"Jan 2026","dr-jacob-george":"Jan 2026","dr-jamil-aljamali":"Jan 2026","dr-jay-edwarde-hontanosas":"Jan 2026","dr-jimmy-john":"Jan 2026","dr-jitendra-khachariya":"Jan 2026","dr-jubin-abraham-raju":"Jan 2026","dr-karthikesh-omkaram":"Jan 2026","dr-khaldun-alshaheen":"Jan 2026","dr-krishna-amith-kumar":"Jan 2026","dr-lana-hassan":"Jan 2026","dr-lateefa-alnuaimi":"Jan 2026","dr-layla-askar-alsalama":"Jan 2026","dr-libey-joy":"Jan 2026","dr-lubna-malek":"Jan 2026","dr-madiha-rashid":"Jan 2026","dr-maemun-alkhosin":"Jan 2026","dr-malak-wehbe":"Jan 2026","dr-manaf-kandakji":"Jan 2026","dr-manish-mulchandani":"Jan 2026","dr-mariam-javaid":"Feb 2026","dr-marianne-estaris":"Apr 2026","dr-marjan-movassaghi":"Jan 2026","dr-mhd-amer-dardari":"Jan 2026","dr-mohamed-elhelbawy":"Jan 2026","dr-mohammed-abul-hassan-boopathy":"Jan 2026","dr-mohammed-al-jumaily":"Feb 2026","dr-mohammed-alsabbah":"Jan 2026","dr-mohammed-taha":"Jan 2026","dr-mohan-kudur":"Jan 2026","dr-mohsin-e-azam":"Jan 2026","dr-mosaddeq-al-yousif":"Jan 2026","dr-mouhsen-hosein":"Jan 2026","dr-moutusi-audhya":"Jan 2026","dr-muhammed-shafi-shamsu":"Jan 2026","dr-musarat-ali":"Jan 2026","dr-nada-altabara":"Jan 2026","dr-nagendra-prasad-anipindi":"Jan 2026","dr-naseem-palakkuzhiyil":"Jan 2026","dr-nazar-khowaja":"Jan 2026","dr-nesmal-musaliar":"Jan 2026","dr-nevra-batur":"Jan 2026","dr-nidhi-maggon":"Jan 2026","dr-nirmal-sumitha-jerald":"Jan 2026","dr-nisha-narayanankutty":"Jan 2026","dr-nivedita-m-c":"Jan 2026","dr-ojusvini-amit-kumar":"Jan 2026","dr-ola-alsheikh":"Jan 2026","dr-omar-eissa-abdelshafy-habo":"Jan 2026","dr-omar-farooq-abdul-kadir":"Jan 2026","dr-ponnusamy-tamilvendan":"Jan 2026","dr-prashant-agarkar":"Jan 2026","dr-prashanth-prabhu":"Jan 2026","dr-preeti-sahu":"Jan 2026","dr-priti-mishra":"Jan 2026","dr-pyari-jahan":"Jan 2026","dr-rahul-verma":"Jan 2026","dr-rajan-sachdeva":"Jan 2026","dr-rakesh-maggon":"Jan 2026","dr-rami-ismail":"Jan 2026","dr-ramika-mittal":"Jan 2026","dr-rasha-alani":"Jan 2026","dr-rasha-alsaoud-resha":"Jan 2026","dr-razan-taef":"Jan 2026","dr-rebecca-najem":"Jan 2026","dr-rehab-abdelrazig":"Jan 2026","dr-rekha-pandita":"Jan 2026","dr-renju-dominic":"Jan 2026","dr-riham-abdelaal":"Jan 2026","dr-rimzim-gupta":"Jan 2026","dr-rinku-alex":"Jan 2026","dr-sachin-lohra":"Jan 2026","dr-safaa-alawi":"Jan 2026","dr-sai-soujanya":"Jan 2026","dr-sameh-elgouhari":"Jan 2026","dr-sandeep-kumar":"Jan 2026","dr-saritha-shetty":"Jan 2026","dr-seyed-mohammad-kasaei":"Jan 2026","dr-shailesh-kumar":"Jan 2026","dr-shaima-alnaqbi":"Jan 2026","dr-shajahan-abdulkhader":"Jan 2026","dr-shaji-kuzhiyil":"Jan 2026","dr-shashikanth-jadhav":"Jan 2026","dr-shila-waghmare":"Jan 2026","dr-shilpa-suryawanshi":"Jan 2026","dr-shweta-jaiswal":"Jan 2026","dr-simikiruthiga-senthilkumar":"Feb 2026","dr-simna-rajan":"Jan 2026","dr-siva-malikireddy":"Jan 2026","dr-sobana-bilhanan":"Jan 2026","dr-somshekhar-mallappa":"Jan 2026","dr-sourabh-soni":"Jan 2026","dr-srinivasan-ravindranath":"Jan 2026","dr-sudheer-kutty":"Jan 2026","dr-sujatha-chella-rajesh":"Jan 2026","dr-sundas-maaz":"Jan 2026","dr-sunitha-mary-mathew":"Jan 2026","dr-surya-senapathy":"Jan 2026","dr-swagata-mallick":"Jan 2026","dr-tagawa-alnaim":"Jan 2026","dr-tripti-nitin-pathare":"Feb 2026","dr-tusharkumar-deepak-sinhal":"Jan 2026","dr-uma-bilgi":"Jan 2026","dr-varsha-arun":"Jan 2026","dr-venkateswara-gorthi":"Jan 2026","dr-viji-george":"Jan 2026","dr-vineetha-oommen-kottakkattu":"Jan 2026","dr-vinu-rajashekar":"Jan 2026","dr-yasameen-alamer":"Jan 2026","dr-yasir-malik":"Jan 2026","dr-zahra-fazal":"Jan 2026","dr-zainab-ali-asghar":"Jan 2026"};
+
 const MONTHLY_HISTORY = [
   { month:"Jan 2026", monthKey:"Jan", revenue:14862925, lyRevenue:14897705, budget:19506623, opRevenue:9260402, opLY:8971293, ipRevenue:927233, ipLY:926701, ipCases:126, days:31,
     topClinic:"DSU", topClinicRev:4031995,
@@ -2027,21 +2034,28 @@ function App() {
   // doctorFirstSeen: { slug → { month, name, isBaseline } } — tracks the first month
   // each doctor (Dr./Prof. titled, with revenue) appears in any uploaded DSR. The
   // executive summary lists doctors with isBaseline=false as "new" arrivals.
+  // Seeded from HISTORICAL_DOCTOR_FIRST_SEEN (real Jan-Apr 2026 DSRs); user's stored
+  // tracker is merged on top for any extra doctors picked up from later uploads.
   const [doctorFirstSeen, setDoctorFirstSeen] = useState(() => {
-    let stored = null;
-    try { stored = JSON.parse(localStorage.getItem("hh_doctor_first_seen") || "null"); } catch (e) {}
-    if (stored && Object.keys(stored).length > 0) return stored;
-    // First run: seed baseline from any saved doctors so they aren't all flagged "new"
-    const seed = {};
-    const baselineMonth = savedState?.reportDate || "baseline";
-    for (const d of (savedState?.doctors || [])) {
-      if (isAlliedNonDoctor(d.name)) continue;
-      if (!d.mtdActual && !d.ytdActual) continue;
-      const slug = getDoctorSlug(d.name);
-      if (slug && !seed[slug]) seed[slug] = { month: baselineMonth, name: d.name, isBaseline: true };
+    let stored = {};
+    try { stored = JSON.parse(localStorage.getItem("hh_doctor_first_seen") || "{}"); } catch (e) {}
+    const merged = {};
+    const prettifySlug = (s) => s.replace(/^prof-dr-/, 'Prof. Dr. ').replace(/^dr-/, 'Dr. ').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    // Historical baseline is authoritative — overrides any stored month for known slugs
+    for (const slug in HISTORICAL_DOCTOR_FIRST_SEEN) {
+      const month = HISTORICAL_DOCTOR_FIRST_SEEN[slug];
+      merged[slug] = {
+        month,
+        name: stored[slug]?.name || prettifySlug(slug),
+        isBaseline: month === "Jan 2026",
+      };
     }
-    try { localStorage.setItem("hh_doctor_first_seen", JSON.stringify(seed)); } catch(e) {}
-    return seed;
+    // Preserve any user-tracked doctors not in the baseline (added in May 2026+ uploads)
+    for (const slug in stored) {
+      if (!(slug in merged)) merged[slug] = stored[slug];
+    }
+    try { localStorage.setItem("hh_doctor_first_seen", JSON.stringify(merged)); } catch(e) {}
+    return merged;
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState("overview");
@@ -2302,19 +2316,26 @@ function App() {
       const validRD = !isNaN(rdate.getTime());
       const currentMonth = validRD ? rdate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : rd;
       setDoctorFirstSeen(prev => {
-        const wasEmpty = Object.keys(prev).length === 0;
         const next = { ...prev };
         for (const d of docs) {
           if (isAlliedNonDoctor(d.name)) continue;
           if (!(d.mtdActual || d.ytdActual)) continue;
           const slug = getDoctorSlug(d.name);
           if (!slug) continue;
-          if (!(slug in next)) {
-            next[slug] = { month: currentMonth, name: d.name, isBaseline: wasEmpty };
+          if (slug in HISTORICAL_DOCTOR_FIRST_SEEN) {
+            // Known doctor — use the authoritative historical month, just refresh name
+            const m = HISTORICAL_DOCTOR_FIRST_SEEN[slug];
+            next[slug] = { month: m, name: d.name, isBaseline: m === "Jan 2026" };
+          } else if (!(slug in next)) {
+            // Genuinely new doctor — wasn't in any prior DSR observed
+            next[slug] = { month: currentMonth, name: d.name, isBaseline: false };
           } else if (validRD) {
+            // Already tracked — keep earliest first-seen month, refresh name
             const existingDate = new Date(next[slug].month);
             if (!isNaN(existingDate.getTime()) && rdate < existingDate) {
-              next[slug] = { ...next[slug], month: currentMonth };
+              next[slug] = { ...next[slug], month: currentMonth, name: d.name };
+            } else {
+              next[slug] = { ...next[slug], name: d.name };
             }
           }
         }
@@ -2738,7 +2759,7 @@ function App() {
       const show = newDoctorEntries.slice(0, 15).map(e => e.name + " (" + e.month + ")");
       const more = newDoctorEntries.length > 15 ? " \u2026+" + (newDoctorEntries.length - 15) + " more" : "";
       lines.push("\u2014 New Doctors \u2014");
-      lines.push(newDoctorEntries.length + " new doctor" + (newDoctorEntries.length === 1 ? "" : "s") + " observed in revenue since tracking began: " + show.join(", ") + more + ".");
+      lines.push(newDoctorEntries.length + " new doctor" + (newDoctorEntries.length === 1 ? "" : "s") + " observed in revenue since January 2026: " + show.join(", ") + more + ".");
     }
 
     return lines;
