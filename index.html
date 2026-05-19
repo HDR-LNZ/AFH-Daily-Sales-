@@ -2430,12 +2430,59 @@ function App() {
     return { todayRev:tr, mtdActual:mA, mtdBudget:mB, mtdLY:mL, mtdVarBudget:mB?(mA-mB)/mB:0, mtdVarLY:mL?(mA-mL)/mL:0, ytdActual:yA, ytdBudget:yB, ytdLY:yL, ytdVarBudget:yB?(yA-yB)/yB:0, ytdVarLY:yL?(yA-yL)/yL:0 };
   }, [specialties]);
 
-  const sorted = useMemo(() => [...specialties].sort((a,b) => (b.ytdActual||0)-(a.ytdActual||0)), [specialties]);
+  // Merge OP specialties + IP/Daycare specialties by name (case-insensitive). The
+  // Specialty Breakdown table, charts, and pie/composition views all derive from this
+  // so each specialty row represents the FULL revenue (OP doctor + IP/daycare cases).
+  // Spelling fix: OP sheet uses "Opthalmology", IP sheet uses "Ophthalmology" — both
+  // collapse to the canonical "Ophthalmology" key for joining.
+  const mergedSpecialties = useMemo(() => {
+    // OP sheet uses "Opthalmology" (missing 'h'); IP sheet uses "Ophthalmology".
+    // Aliases collapse the two spellings to one key so they merge into the same row.
+    const SPEC_KEY_ALIASES = { "opthalmology": "ophthalmology" };
+    const SPEC_NAME_CANONICAL = { "ophthalmology": "Ophthalmology" };
+    const keyOf = (n) => {
+      const raw = (n || "").toLowerCase().trim();
+      return SPEC_KEY_ALIASES[raw] || raw;
+    };
+    const map = {};
+    const accumulate = (s, source) => {
+      const key = keyOf(s.name);
+      if (!key) return;
+      if (!map[key]) {
+        map[key] = {
+          name: SPEC_NAME_CANONICAL[key] || s.name,
+          today: 0, mtdActual: 0, mtdBudget: 0, mtdLY: 0,
+          ytdActual: 0, ytdBudget: 0, ytdLY: 0,
+          opMtd: 0, ipMtd: 0, // sub-totals for tooltip / drill-down clarity
+        };
+      }
+      map[key].today += s.today || 0;
+      map[key].mtdActual += s.mtdActual || 0;
+      map[key].mtdBudget += s.mtdBudget || 0;
+      map[key].mtdLY += s.mtdLY || 0;
+      map[key].ytdActual += s.ytdActual || 0;
+      map[key].ytdBudget += s.ytdBudget || 0;
+      map[key].ytdLY += s.ytdLY || 0;
+      if (source === "op") map[key].opMtd += s.mtdActual || 0;
+      else map[key].ipMtd += s.mtdActual || 0;
+    };
+    for (const s of specialties) accumulate(s, "op");
+    for (const s of ipSpecialties) accumulate(s, "ip");
+    return Object.values(map).map(s => ({
+      ...s,
+      mtdVarLY: s.mtdLY ? (s.mtdActual - s.mtdLY) / s.mtdLY : 0,
+      mtdVarBudget: s.mtdBudget ? (s.mtdActual - s.mtdBudget) / s.mtdBudget : 0,
+      ytdVarLY: s.ytdLY ? (s.ytdActual - s.ytdLY) / s.ytdLY : 0,
+      ytdVarBudget: s.ytdBudget ? (s.ytdActual - s.ytdBudget) / s.ytdBudget : 0,
+    }));
+  }, [specialties, ipSpecialties]);
+
+  const sorted = useMemo(() => [...mergedSpecialties].sort((a,b) => (b.ytdActual||0)-(a.ytdActual||0)), [mergedSpecialties]);
 
   const insights = useMemo(() => {
-    const above = specialties.filter(s => s.mtdVarLY >= 0).length;
-    return { above, below: specialties.length - above, growingYoY: specialties.filter(s => s.ytdVarLY > 0).length, total: specialties.length };
-  }, [specialties]);
+    const above = mergedSpecialties.filter(s => s.mtdVarLY >= 0).length;
+    return { above, below: mergedSpecialties.length - above, growingYoY: mergedSpecialties.filter(s => s.ytdVarLY > 0).length, total: mergedSpecialties.length };
+  }, [mergedSpecialties]);
 
   const clinicChartData = useMemo(() =>
     [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD).map(l => ({
@@ -2564,40 +2611,38 @@ function App() {
 
   const specialtyDrillData = useMemo(() => {
     if (!selectedSpecialty) return null;
-    const spec = specialties.find(s => s.name === selectedSpecialty);
+    // Look up the merged specialty entry (OP + IP combined). Match against the
+    // canonical name and the original OP/IP spelling so "Ophthalmology" finds rows
+    // tagged "Opthalmology" too.
+    const targetKey = (selectedSpecialty || "").toLowerCase().trim();
+    const spec = mergedSpecialties.find(s => s.name === selectedSpecialty || s.name.toLowerCase().trim() === targetKey);
+    const opSpecMatch = (s) => s.specialty === selectedSpecialty || s.specialty.toLowerCase().trim() === targetKey;
+    const specDoctors = doctors.filter(opSpecMatch);
+    const ipSpecDoctors = ipDoctors.filter(opSpecMatch);
 
-    // Find doctors from OP doctors list
-    let specDoctors = doctors.filter(d => d.specialty === selectedSpecialty);
+    if (!spec && ipSpecDoctors.length === 0 && specDoctors.length === 0) return null;
 
-    // Also check IP doctors if no OP doctors found (or if this is an IP specialty)
-    const ipSpecDoctors = ipDoctors.filter(d => d.specialty === selectedSpecialty);
-
-    // If we have IP doctors but no OP spec data, create a synthetic spec
-    const ipSpec = ipSpecialties.find(s => s.name === selectedSpecialty);
-
-    if (!spec && ipSpec) {
-      // Pure IP specialty
-      return {
-        spec: { name: selectedSpecialty, today: 0, mtdActual: ipSpec.mtdActual, mtdLY: ipSpec.mtdLY, mtdBudget: ipSpec.mtdBudget, ytdActual: ipSpec.ytdActual || 0, ytdLY: ipSpec.ytdLY || 0, ytdBudget: ipSpec.ytdBudget || 0, mtdVarLY: ipSpec.mtdLY ? (ipSpec.mtdActual - ipSpec.mtdLY) / ipSpec.mtdLY : 0, ytdVarLY: ipSpec.ytdLY ? ((ipSpec.ytdActual||0) - (ipSpec.ytdLY||0)) / ipSpec.ytdLY : 0 },
-        doctors: ipSpecDoctors.map(d => ({ name: d.name, specialty: d.specialty, today: 0, mtdActual: d.mtdRevenue, mtdLY: 0, ytdActual: 0, ytdLY: 0, locations: d.locations || "" })),
-        isIP: true,
-      };
+    // Sum doctor revenue across OP + IP. If a doctor appears in both lists, add
+    // their IP revenue onto the OP entry rather than dropping it.
+    const byName = {};
+    for (const d of specDoctors) {
+      byName[d.name] = { ...d };
     }
-
-    if (!spec) return null;
-
-    // Combine OP and IP doctors
-    const allDoctors = [...specDoctors];
-    if (ipSpecDoctors.length > 0) {
-      ipSpecDoctors.forEach(ipd => {
-        if (!allDoctors.find(d => d.name === ipd.name)) {
-          allDoctors.push({ name: ipd.name, specialty: ipd.specialty, today: 0, mtdActual: ipd.mtdRevenue, mtdLY: 0, ytdActual: 0, ytdLY: 0, locations: ipd.locations || "" });
-        }
-      });
+    for (const ipd of ipSpecDoctors) {
+      if (byName[ipd.name]) {
+        byName[ipd.name].mtdActual = (byName[ipd.name].mtdActual || 0) + (ipd.mtdRevenue || 0);
+      } else {
+        byName[ipd.name] = {
+          name: ipd.name, specialty: ipd.specialty, today: 0,
+          mtdActual: ipd.mtdRevenue || 0, mtdLY: 0, ytdActual: 0, ytdLY: 0,
+          locations: ipd.locations || "",
+        };
+      }
     }
+    const allDoctors = Object.values(byName).sort((a, b) => (b.mtdActual||0) - (a.mtdActual||0));
 
-    return { spec, doctors: allDoctors.sort((a, b) => b.mtdActual - a.mtdActual) };
-  }, [selectedSpecialty, specialties, doctors, ipDoctors, ipSpecialties]);
+    return { spec: spec || null, doctors: allDoctors, isIP: !!spec && spec.opMtd === 0 && spec.ipMtd > 0 };
+  }, [selectedSpecialty, mergedSpecialties, doctors, ipDoctors, ipSpecialties]);
 
   const commentary = useMemo(() => {
     const lines = [];
@@ -3583,7 +3628,7 @@ function App() {
             </table>
           </div>
           <div style={{ padding:"8px 28px 12px", fontSize:11, color:C.textMuted, fontStyle:"italic" }}>
-            Specialty rows show OP Doctor Revenue. Grand Total includes all revenue streams (OP, Pharmacy, IP).
+            Specialty rows show combined OP Doctor + IP/Daycare revenue per specialty. Grand Total includes all revenue streams (OP, Pharmacy, IP).
           </div>
         </div>
 
