@@ -741,19 +741,47 @@ function parseExcelFile(data) {
       if (mtdActual === 0 && mtdLY === 0 && mtdVolume === 0) continue;
       ipSpecialties.push({ name: name.trim(), mtdActual, mtdLY, mtdBudget, mtdVolume, mtdVolLY });
     }
-    // Parse YTD (rows 18-31) — use same column layout as MTD
+    // Parse YTD section — locate it by finding the "Revenue YTD" header instead of
+    // hardcoding row offsets (some DSRs vary in spacing between MTD and YTD blocks).
     const ytdMap = {};
-    for (let i = 17; i < 35; i++) {
+    let ytdHeaderIdx = -1;
+    for (let i = 0; i < ipRows.length; i++) {
       const r = ipRows[i]; if (!r) continue;
-      const name = r[ipNameCol]; if (!name || typeof name !== "string") continue;
-      const nl = name.trim().toLowerCase();
-      if (nl === "total" || nl === "specialty" || nl.includes("revenue") || nl.includes("volume") || nl.includes("ppc")) continue;
-      ytdMap[name.trim()] = { ytdActual: num(r[ipRevCol]), ytdLY: num(r[ipRevLYCol]), ytdBudget: num(r[ipBgtCol]), ytdVolume: Math.round(num(r[ipVolCol]) || 0), ytdVolLY: Math.round(num(r[ipVolLYCol]) || 0) };
+      for (let c = 0; c < Math.min(r.length, 30); c++) {
+        const v = r[c];
+        if (typeof v === "string" && v.toLowerCase().includes("revenue ytd")) {
+          ytdHeaderIdx = i;
+          break;
+        }
+      }
+      if (ytdHeaderIdx >= 0) break;
     }
+    if (ytdHeaderIdx >= 0) {
+      // Data rows start ~2 rows after the YTD section header (header → sub-header → data)
+      for (let i = ytdHeaderIdx + 2; i < ipRows.length; i++) {
+        const r = ipRows[i]; if (!r) continue;
+        const name = r[ipNameCol]; if (!name || typeof name !== "string") continue;
+        const nl = name.trim().toLowerCase();
+        if (nl === "total") break; // end of YTD specialty list
+        if (nl === "specialty" || nl.includes("revenue") || nl.includes("volume") || nl.includes("ppc")) continue;
+        ytdMap[name.trim()] = {
+          ytdActual: num(r[ipRevCol]),
+          ytdLY: num(r[ipRevLYCol]),
+          ytdBudget: num(r[ipBgtCol]),
+          ytdVolume: Math.round(num(r[ipVolCol]) || 0),
+          ytdVolLY: Math.round(num(r[ipVolLYCol]) || 0),
+        };
+      }
+    }
+    // Merge YTD into ipSpecialties — case-insensitive name match so a "Urology" in the
+    // MTD section finds "urology" in the YTD lookup even if casing/whitespace differs.
+    const ytdMapCI = {};
+    for (const k of Object.keys(ytdMap)) ytdMapCI[k.toLowerCase().trim()] = ytdMap[k];
     ipSpecialties.forEach(s => {
-      const ytd = ytdMap[s.name];
+      const ytd = ytdMap[s.name] || ytdMapCI[(s.name || "").toLowerCase().trim()];
       if (ytd) Object.assign(s, ytd);
     });
+    console.log("IP Analysis YTD: header at row " + (ytdHeaderIdx + 1) + ", parsed " + Object.keys(ytdMap).length + " specialties with YTD data. Sample:", ipSpecialties[0]);
   }
 
   // Parse IP Dr Wise Daily
