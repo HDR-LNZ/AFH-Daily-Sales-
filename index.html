@@ -2633,14 +2633,16 @@ function App() {
   }, [dsrTotals, ipTotals]);
 
   const underperformingSpecs = useMemo(() => {
-    return specialties
+    // Use mergedSpecialties so OP+IP combined drives the "underperforming" tag —
+    // a specialty might look bad on OP-only but be flat once IP/daycare is added.
+    return mergedSpecialties
       .filter(s => s.ytdVarLY < 0)
       .sort((a, b) => a.ytdVarLY - b.ytdVarLY)
       .map(spec => ({
         ...spec,
-        doctors: doctors.filter(d => d.specialty === spec.name).sort((a, b) => (a.ytdVarLY || 0) - (b.ytdVarLY || 0))
+        doctors: doctors.filter(d => (d.specialty || "").toLowerCase().trim() === (spec.name || "").toLowerCase().trim()).sort((a, b) => (a.ytdVarLY || 0) - (b.ytdVarLY || 0))
       }));
-  }, [specialties, doctors]);
+  }, [mergedSpecialties, doctors]);
 
   const specialtyDrillData = useMemo(() => {
     if (!selectedSpecialty) return null;
@@ -2734,10 +2736,14 @@ function App() {
       lines.push("Revenue impact from " + resignedDocs.length + " resigned doctors: AED " + fmt(revLoss) + " YTD revenue gap (LY revenue: AED " + fmt(resignedYtdLY) + ").");
     }
 
-    // CBD doctors impact
+    // CBD doctors impact — include IP MTD for accurate revenue figure
     const cbdDocs = doctors.filter(d => isCBD(d.name));
     if (cbdDocs.length > 0) {
-      const cbdMtd = cbdDocs.reduce((a, d) => a + (d.mtdActual || 0), 0);
+      const cbdMtdOP = cbdDocs.reduce((a, d) => a + (d.mtdActual || 0), 0);
+      const ipMtdByName = {};
+      for (const ipd of ipDoctors) ipMtdByName[ipd.name] = (ipMtdByName[ipd.name] || 0) + (ipd.mtdRevenue || 0);
+      const cbdIpMtd = cbdDocs.reduce((a, d) => a + (ipMtdByName[d.name] || 0), 0);
+      const cbdMtd = cbdMtdOP + cbdIpMtd;
       const cbdMtdLY = cbdDocs.reduce((a, d) => a + (d.mtdLY || 0), 0);
       lines.push(cbdDocs.length + " CBD doctors generating AED " + fmt(cbdMtd) + " MTD (vs LY: AED " + fmt(cbdMtdLY) + "). Potential for increased utilization.");
     }
@@ -2801,8 +2807,9 @@ function App() {
       bigGainers.forEach(d => outliers.push("MTD outperformer: " + d.name + " (" + d.specialty + ") AED " + fmt(d.mtdActual) + " vs LY " + fmt(d.mtdLY) + " (" + pct(d.mtdVarLY) + ")"));
       bigDecliners.forEach(d => outliers.push("MTD decline: " + d.name + " (" + d.specialty + ") AED " + fmt(d.mtdActual) + " vs LY " + fmt(d.mtdLY) + " (" + pct(d.mtdVarLY) + ")"));
     }
-    // Specialty MTD outliers
-    specialties.filter(s => s.mtdLY > 20000).forEach(s => {
+    // Specialty MTD outliers — use mergedSpecialties so the variance reflects
+    // OP+IP combined revenue, not OP-only
+    mergedSpecialties.filter(s => s.mtdLY > 20000).forEach(s => {
       if (s.mtdVarLY > 0.5) outliers.push("Specialty surge: " + s.name + " MTD " + pct(s.mtdVarLY) + " above LY");
       if (s.mtdVarLY < -0.4) outliers.push("Specialty concern: " + s.name + " MTD " + pct(s.mtdVarLY) + " below LY");
     });
@@ -2900,8 +2907,46 @@ function App() {
     return Object.values(specMap).sort((a, b) => b.ytdResignLoss - a.ytdResignLoss);
   }, [doctors]);
 
-  const topPerformersYTD = useMemo(() => [...activeDoctors].sort((a,b)=>(b.ytdActual||0)-(a.ytdActual||0)).slice(0,10), [activeDoctors]);
-  const topPerformersMTD = useMemo(() => [...activeDoctors].sort((a,b)=>(b.mtdActual||0)-(a.mtdActual||0)).slice(0,10), [activeDoctors]);
+  // Doctors enriched with IP contribution: MTD adds direct IP MTD from ipDoctors;
+  // YTD adds the specialty's IP YTD distributed by IP MTD share. Ranking and
+  // CBD totals use these "combined" figures so a doctor whose value is largely
+  // from daycare doesn't get hidden by an OP-only sort.
+  const doctorsWithIP = useMemo(() => {
+    // Group ipDoctors by specialty and sum MTD (for proportional distribution)
+    const ipMtdBySpec = {};
+    const ipMtdByName = {};
+    for (const ipd of ipDoctors) {
+      const sKey = (ipd.specialty || "").toLowerCase().trim();
+      ipMtdBySpec[sKey] = (ipMtdBySpec[sKey] || 0) + (ipd.mtdRevenue || 0);
+      ipMtdByName[ipd.name] = (ipMtdByName[ipd.name] || 0) + (ipd.mtdRevenue || 0);
+    }
+    // Specialty IP YTD lookup
+    const ipYtdBySpec = {};
+    for (const ms of mergedSpecialties) {
+      const sKey = (ms.name || "").toLowerCase().trim();
+      ipYtdBySpec[sKey] = ms.ipYtd || 0;
+    }
+    return activeDoctors.map(d => {
+      const sKey = (d.specialty || "").toLowerCase().trim();
+      const ipMtd = ipMtdByName[d.name] || 0;
+      const specIpMtdTotal = ipMtdBySpec[sKey] || 0;
+      const share = specIpMtdTotal > 0 ? ipMtd / specIpMtdTotal : 0;
+      const ipYtdEst = Math.round(share * (ipYtdBySpec[sKey] || 0));
+      const combinedMtd = (d.mtdActual || 0) + ipMtd;
+      const combinedYtd = (d.ytdActual || 0) + ipYtdEst;
+      return {
+        ...d,
+        combinedMtd, combinedYtd,
+        _ipMtd: ipMtd, _ipYtdEst: ipYtdEst,
+        // ranking helpers
+        mtdActualCombined: combinedMtd,
+        ytdActualCombined: combinedYtd,
+      };
+    });
+  }, [activeDoctors, ipDoctors, mergedSpecialties]);
+
+  const topPerformersYTD = useMemo(() => [...doctorsWithIP].sort((a,b)=>(b.ytdActualCombined||0)-(a.ytdActualCombined||0)).slice(0,10), [doctorsWithIP]);
+  const topPerformersMTD = useMemo(() => [...doctorsWithIP].sort((a,b)=>(b.mtdActualCombined||0)-(a.mtdActualCombined||0)).slice(0,10), [doctorsWithIP]);
   const needsAttention = useMemo(() => activeDoctors.filter(d=>d.mtdLY>5000&&d.mtdVarLY<-0.2).sort((a,b)=>a.mtdVarLY-b.mtdVarLY).slice(0,15), [activeDoctors]);
   const EXCLUDED_BOTTOM_SPECS = new Set(["Physiotherapy","Dietician","Nursing Care"]);
   const bottomPerformers = useMemo(() => activeDoctors.filter(d=>d.ytdLY>50000 && !EXCLUDED_BOTTOM_SPECS.has(d.specialty)).sort((a,b)=>a.ytdVarLY-b.ytdVarLY).slice(0,10), [activeDoctors]);
@@ -3081,10 +3126,13 @@ function App() {
             );
           })()}
           {(() => {
-            const cbdDocs = doctors.filter(d => isCBD(d.name));
-            const cbdMtd = cbdDocs.reduce((a,d) => a + (d.mtdActual||0), 0);
+            // CBD totals use doctorsWithIP so figures include the IP / daycare share —
+            // some CBD doctors (e.g. Vascular, ENT, Urology) earn the majority of
+            // their revenue from inpatient cases.
+            const cbdDocs = doctorsWithIP.filter(d => isCBD(d.name));
+            const cbdMtd = cbdDocs.reduce((a,d) => a + (d.mtdActualCombined||0), 0);
             const cbdMtdLY = cbdDocs.reduce((a,d) => a + (d.mtdLY||0), 0);
-            const cbdYtd = cbdDocs.reduce((a,d) => a + (d.ytdActual||0), 0);
+            const cbdYtd = cbdDocs.reduce((a,d) => a + (d.ytdActualCombined||0), 0);
             const cbdVar = cbdMtdLY ? (cbdMtd - cbdMtdLY) / cbdMtdLY : 0;
             return (
               <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
@@ -3706,7 +3754,7 @@ function App() {
                     <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
                     <td style={dtn}>{fmt(d.today)}</td>
-                    <td style={{ ...dtn, fontWeight:700, color:"#60a5fa" }}>{fmt(d.mtdActual)}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:"#60a5fa" }}>{fmt(d.mtdActualCombined)}{d._ipMtd > 0 && <span title={"Includes IP MTD AED " + fmt(d._ipMtd)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>+IP</span>}</td>
                     <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
                     <td style={{ ...dtn, color:varColor(d.mtdVarLY), fontWeight:600 }}>{pct(d.mtdVarLY)}</td>
                   </tr>
@@ -3737,8 +3785,8 @@ function App() {
                     <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(245,158,11,0.15)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?C.warning:C.textMuted }}>{i+1}</span></td>
                     <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
-                    <td style={dtn}>{fmt(d.mtdActual)}</td>
-                    <td style={{ ...dtn, fontWeight:700, color:C.success }}>{fmt(d.ytdActual)}</td>
+                    <td style={dtn}>{fmt(d.mtdActualCombined)}</td>
+                    <td style={{ ...dtn, fontWeight:700, color:C.success }}>{fmt(d.ytdActualCombined)}{d._ipYtdEst > 0 && <span title={"Includes estimated IP YTD AED " + fmt(d._ipYtdEst)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
                     <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
                     <td style={{ ...dtn, color:varColor(d.ytdVarLY), fontWeight:600 }}>{pct(d.ytdVarLY)}</td>
                   </tr>
@@ -4116,7 +4164,7 @@ function App() {
         return <ClinicDrillDown clinic={enrichedClinic} onClose={() => setSelectedClinic(null)} />;
       })()}
       {specialtyDrillData && <SpecialtyDrillDown data={specialtyDrillData} doctorLocations={doctorLocations} onClose={() => setSelectedSpecialty(null)} />}
-      <DashboardChat totals={totals} dsrTotals={dsrTotals} specialties={specialties} locations={locations} ipTotals={ipTotals} doctors={doctors} reportDate={reportDate} isMobile={isMobile} commentary={commentary} />
+      <DashboardChat totals={totals} dsrTotals={dsrTotals} specialties={mergedSpecialties} locations={locations} ipTotals={ipTotals} doctors={doctors} reportDate={reportDate} isMobile={isMobile} commentary={commentary} />
     </div>
   );
 }
