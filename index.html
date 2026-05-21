@@ -1719,7 +1719,7 @@ function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
                     <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.mtdActual)}</td>
                     <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
                     <td style={{ ...dtn, color:varColor(dMtdVarLY), fontWeight:600 }}>{pct(dMtdVarLY)}</td>
-                    <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.ytdActual)}</td>
+                    <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.ytdActual)}{d._ipYtdEst > 0 && <span title={"Includes estimated IP YTD AED " + fmt(d._ipYtdEst) + " distributed from specialty total"} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
                     <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
                     <td style={{ ...dtn, color:varColor(dYtdVarLY), fontWeight:600 }}>{pct(dYtdVarLY)}</td>
                   </tr>
@@ -2481,7 +2481,7 @@ function App() {
           name: SPEC_NAME_CANONICAL[key] || s.name,
           today: 0, mtdActual: 0, mtdBudget: 0, mtdLY: 0,
           ytdActual: 0, ytdBudget: 0, ytdLY: 0,
-          opMtd: 0, ipMtd: 0, // sub-totals for tooltip / drill-down clarity
+          opMtd: 0, ipMtd: 0, opYtd: 0, ipYtd: 0, // OP/IP sub-totals for drill-down distribution
         };
       }
       map[key].today += s.today || 0;
@@ -2491,8 +2491,13 @@ function App() {
       map[key].ytdActual += s.ytdActual || 0;
       map[key].ytdBudget += s.ytdBudget || 0;
       map[key].ytdLY += s.ytdLY || 0;
-      if (source === "op") map[key].opMtd += s.mtdActual || 0;
-      else map[key].ipMtd += s.mtdActual || 0;
+      if (source === "op") {
+        map[key].opMtd += s.mtdActual || 0;
+        map[key].opYtd += s.ytdActual || 0;
+      } else {
+        map[key].ipMtd += s.mtdActual || 0;
+        map[key].ipYtd += s.ytdActual || 0;
+      }
     };
     for (const s of specialties) accumulate(s, "op");
     for (const s of ipSpecialties) accumulate(s, "ip");
@@ -2654,17 +2659,35 @@ function App() {
     // their IP revenue onto the OP entry rather than dropping it.
     const byName = {};
     for (const d of specDoctors) {
-      byName[d.name] = { ...d };
+      byName[d.name] = { ...d, _ipMtd: 0 };
     }
     for (const ipd of ipSpecDoctors) {
       if (byName[ipd.name]) {
         byName[ipd.name].mtdActual = (byName[ipd.name].mtdActual || 0) + (ipd.mtdRevenue || 0);
+        byName[ipd.name]._ipMtd = (byName[ipd.name]._ipMtd || 0) + (ipd.mtdRevenue || 0);
       } else {
         byName[ipd.name] = {
           name: ipd.name, specialty: ipd.specialty, today: 0,
           mtdActual: ipd.mtdRevenue || 0, mtdLY: 0, ytdActual: 0, ytdLY: 0,
           locations: ipd.locations || "",
+          _ipMtd: ipd.mtdRevenue || 0,
         };
+      }
+    }
+    // Distribute the specialty's IP YTD across doctors proportionally to each
+    // doctor's IP MTD share. IP Dr Wise Daily doesn't carry per-doctor YTD, so
+    // this is an estimate — accurate when the doctor's IP mix is stable through
+    // the year, approximate otherwise. Marked with a small "~" badge in the UI.
+    const specIpYtd = spec?.ipYtd || 0;
+    const totalDocIpMtd = Object.values(byName).reduce((a, d) => a + (d._ipMtd || 0), 0);
+    if (specIpYtd > 0 && totalDocIpMtd > 0) {
+      for (const name in byName) {
+        const d = byName[name];
+        if (d._ipMtd > 0) {
+          const share = d._ipMtd / totalDocIpMtd;
+          d._ipYtdEst = Math.round(share * specIpYtd);
+          d.ytdActual = (d.ytdActual || 0) + d._ipYtdEst;
+        }
       }
     }
     const allDoctors = Object.values(byName).sort((a, b) => (b.mtdActual||0) - (a.mtdActual||0));
