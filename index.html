@@ -2367,20 +2367,21 @@ function App() {
           if (!(d.mtdActual || d.ytdActual)) continue;
           const slug = getDoctorSlug(d.name);
           if (!slug) continue;
+          const spec = (d.specialty || "").trim();
           if (slug in HISTORICAL_DOCTOR_FIRST_SEEN) {
-            // Known doctor — use the authoritative historical month, just refresh name
+            // Known doctor — use the authoritative historical month, just refresh name + specialty
             const m = HISTORICAL_DOCTOR_FIRST_SEEN[slug];
-            next[slug] = { month: m, name: d.name, isBaseline: m === "Jan 2026" };
+            next[slug] = { month: m, name: d.name, specialty: spec, isBaseline: m === "Jan 2026" };
           } else if (!(slug in next)) {
             // Genuinely new doctor — wasn't in any prior DSR observed
-            next[slug] = { month: currentMonth, name: d.name, isBaseline: false };
+            next[slug] = { month: currentMonth, name: d.name, specialty: spec, isBaseline: false };
           } else if (validRD) {
-            // Already tracked — keep earliest first-seen month, refresh name
+            // Already tracked — keep earliest first-seen month, refresh name + specialty
             const existingDate = new Date(next[slug].month);
             if (!isNaN(existingDate.getTime()) && rdate < existingDate) {
-              next[slug] = { ...next[slug], month: currentMonth, name: d.name };
+              next[slug] = { ...next[slug], month: currentMonth, name: d.name, specialty: spec };
             } else {
-              next[slug] = { ...next[slug], name: d.name };
+              next[slug] = { ...next[slug], name: d.name, specialty: spec };
             }
           }
         }
@@ -2868,7 +2869,16 @@ function App() {
     // not allied health. Each entry is tagged with the first month they appeared
     // in revenue data. isBaseline doctors (those present when tracking started)
     // are filtered out so this only highlights genuine new arrivals.
-    const newDoctorEntries = Object.values(doctorFirstSeen).filter(info => !info.isBaseline);
+    // Build a lookup of current specialty by slug so we can fill in for older
+    // first-seen entries that were stored before we started capturing specialty.
+    const specBySlug = {};
+    for (const d of doctors) {
+      const s = getDoctorSlug(d.name);
+      if (s && !specBySlug[s] && d.specialty) specBySlug[s] = d.specialty.trim();
+    }
+    const newDoctorEntries = Object.entries(doctorFirstSeen)
+      .filter(([_, info]) => !info.isBaseline)
+      .map(([slug, info]) => ({ ...info, specialty: info.specialty || specBySlug[slug] || "" }));
     if (newDoctorEntries.length > 0) {
       newDoctorEntries.sort((a, b) => {
         const da = new Date(a.month).getTime() || 0;
@@ -2876,10 +2886,12 @@ function App() {
         if (da !== db) return db - da; // newest month first
         return (a.name || "").localeCompare(b.name || "");
       });
-      const show = newDoctorEntries.slice(0, 15).map(e => e.name + " (" + e.month + ")");
+      const show = newDoctorEntries.slice(0, 15).map(e =>
+        e.name + (e.specialty ? " \u2014 " + e.specialty : "") + " (" + e.month + ")"
+      );
       const more = newDoctorEntries.length > 15 ? " \u2026+" + (newDoctorEntries.length - 15) + " more" : "";
       lines.push("\u2014 New Doctors \u2014");
-      lines.push(newDoctorEntries.length + " new doctor" + (newDoctorEntries.length === 1 ? "" : "s") + " observed in revenue since January 2026: " + show.join(", ") + more + ".");
+      lines.push(newDoctorEntries.length + " new doctor" + (newDoctorEntries.length === 1 ? "" : "s") + " observed in revenue since January 2026: " + show.join("; ") + more + ".");
     }
 
     return lines;
