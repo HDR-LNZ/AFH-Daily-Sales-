@@ -1101,6 +1101,8 @@ function validateData(parsed) {
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const accentColor = payload[0]?.color || C.primary;
+  // Series whose values are counts (visits, cases, volume) get no "AED" prefix
+  const isCount = (name) => /visit|case|count|volume|patient/i.test(name || "");
   return (
     <div style={{ background:"#1e293b", borderRadius:10, padding:"14px 18px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548", borderLeft:"3px solid " + accentColor }}>
       <div style={{ fontWeight:700, fontSize:13, color:"#e2e8f0", marginBottom:8, borderBottom:"1px solid #2f3548", paddingBottom:6 }}>{label}</div>
@@ -1108,7 +1110,7 @@ function ChartTooltip({ active, payload, label }) {
         <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
           <div style={{ width:10, height:10, borderRadius:3, background:p.color }} />
           <span style={{ fontSize:12, color:"#94a3b8", flex:1 }}>{p.name}</span>
-          <span style={{ fontSize:13, fontWeight:600, color:"#e2e8f0", fontVariantNumeric:"tabular-nums" }}>AED {fmt(p.value)}</span>
+          <span style={{ fontSize:13, fontWeight:600, color:"#e2e8f0", fontVariantNumeric:"tabular-nums" }}>{isCount(p.name) ? fmt(p.value) : "AED " + fmt(p.value)}</span>
         </div>
       ))}
     </div>
