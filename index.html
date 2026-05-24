@@ -423,11 +423,24 @@ function getDoctorProfileUrl(name) {
   return null;
 }
 
-const CBD_DOCTORS = new Set(["dr-abdalla-alhajeri","dr-alanoud-shatat","dr-fernaz-behlim","dr-saritha-shetty","dr-hasan-odeh","dr-ihsan-kommouna","dr-ali-shorbagi","dr-shailesh-kumar","dr-haitham-sawalmeh","dr-mohammed-taha","dr-mouhsen-hosein","dr-shashikanth-jadhav","dr-mohammed-al-jumaily","dr-ebtessam-hassanin","dr-nada-al-tabbara","dr-ahmed-almousa","dr-hassan-al-rifai","dr-ashraf-demiry","dr-mohammed-alsabbah","dr-aleksandar-miladinovic","dr-manaf-kandakji","dr-mohamed-elhelbawy","dr-mosaddeq-al-yousif","dr-firas-david","dr-ibrahim-riza","dr-danny-shawaf","dr-abdulla-al-hajiri"]);
+const CBD_DOCTORS = new Set(["dr-abdalla-alhajeri","dr-alanoud-shatat","dr-fernaz-behlim","dr-saritha-shetty","dr-hasan-odeh","dr-ihsan-kommouna","dr-ali-shorbagi","dr-shailesh-kumar","dr-mohammed-taha","dr-mouhsen-hosein","dr-shashikanth-jadhav","dr-mohammed-al-jumaily","dr-ebtessam-hassanin","dr-nada-al-tabbara","dr-ahmed-almousa","dr-hassan-al-rifai","dr-ashraf-demiry","dr-mohammed-alsabbah","dr-aleksandar-miladinovic","dr-manaf-kandakji","dr-mohamed-elhelbawy","dr-mosaddeq-al-yousif","dr-firas-david","dr-ibrahim-riza","dr-danny-shawaf","dr-abdulla-al-hajiri"]);
+
+// Explicit resignations — overrides the website URL / allied-health checks so these
+// names are classified as resigned everywhere even if their profile page is still up
+// or their title is Mr./Ms./Mrs. List all slug variants the Excel might produce.
+const RESIGNED_DOCTORS = new Set([
+  "dr-haitham-sawalmeh",
+  "ms-ella-francisco", "ms-ella-laine-francisco",
+]);
 
 function isCBD(name) {
   const slug = getDoctorSlug(name);
   return slug && CBD_DOCTORS.has(slug);
+}
+
+function isResignedDoctor(name) {
+  const slug = getDoctorSlug(name);
+  return slug && RESIGNED_DOCTORS.has(slug);
 }
 
 // Allied health professionals (Physiotherapists, Sonographers, Lab/EEG/Laser techs,
@@ -441,6 +454,10 @@ function isAlliedNonDoctor(name) {
 }
 
 function DoctorName({ name }) {
+  // Explicit resignation overrides everything: no link, no CBD badge, plain text + Resigned tag
+  if (isResignedDoctor(name)) {
+    return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span> <span style={{ fontSize:9, color:"#ef4444", fontWeight:600, opacity:0.8 }}>Resigned</span></span>;
+  }
   const url = getDoctorProfileUrl(name);
   const cbd = isCBD(name);
   const allied = !url && isAlliedNonDoctor(name);
@@ -1773,7 +1790,7 @@ function DashboardChat({ totals, dsrTotals, specialties, locations, ipTotals, do
     const topClinics = [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD).slice(0,5);
     const underperforming = specialties.filter(s => s.ytdVarLY < 0).sort((a,b) => a.ytdVarLY - b.ytdVarLY);
     const topDocs = [...doctors].sort((a,b) => b.mtdActual - a.mtdActual).slice(0,10);
-    const resignedDocs = doctors.filter(d => !getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && d.ytdLY > 0);
+    const resignedDocs = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name))) && d.ytdLY > 0);
     const cbdDocs = doctors.filter(d => isCBD(d.name));
 
     const summaryBlock = (commentary && commentary.length > 0)
@@ -2727,7 +2744,7 @@ function App() {
     // IP line moved to top of summary (inserted after MTD line)
 
     // Revenue loss from resigned doctors
-    const resignedDocs = doctors.filter(d => !getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && d.ytdLY > 0);
+    const resignedDocs = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name))) && d.ytdLY > 0);
     if (resignedDocs.length > 0) {
       const resignedYtdLY = resignedDocs.reduce((a, d) => a + (d.ytdLY || 0), 0);
       const resignedMtdLY = resignedDocs.reduce((a, d) => a + (d.mtdLY || 0), 0);
@@ -2869,10 +2886,10 @@ function App() {
   }, [totals, dsrTotals, specialties, locations, ipTotals, doctors, doctorFirstSeen]);
 
   // Filter active doctors (exclude resigned)
-  const isActive = (d) => !!getDoctorProfileUrl(d.name) || isAlliedNonDoctor(d.name);
+  const isActive = (d) => !isResignedDoctor(d.name) && (!!getDoctorProfileUrl(d.name) || isAlliedNonDoctor(d.name));
   const activeDoctors = useMemo(() => doctors.filter(isActive), [doctors]);
   const resignedWithRevenue = useMemo(() => {
-    const resigned = doctors.filter(d => !getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && (d.ytdLY || 0) > 0);
+    const resigned = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name))) && (d.ytdLY || 0) > 0);
     // Classify each doctor
     resigned.forEach(d => {
       const ytdA = d.ytdActual || 0;
