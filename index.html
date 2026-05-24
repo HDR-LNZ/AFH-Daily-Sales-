@@ -891,6 +891,51 @@ function parseExcelFile(data) {
     else d.locations = DEFAULT_DOCTOR_LOCATIONS[d.name] || '';
   });
 
+  // Apply SPECIALTY_CORRECTIONS: reassign each affected doctor's specialty AND
+  // reapportion their revenue between the source and target specialty subtotals
+  // so the Specialty Breakdown table / charts reflect the correct grouping.
+  // The Excel labels e.g. Mohammed Al Jumaily under Neurology but he is a
+  // neurosurgeon — we move both the label and the AED here.
+  const _recomputeSpecVar = (s) => {
+    s.mtdVarBudget = s.mtdBudget ? (s.mtdActual - s.mtdBudget) / s.mtdBudget : 0;
+    s.mtdVarLY = s.mtdLY ? (s.mtdActual - s.mtdLY) / s.mtdLY : 0;
+    s.ytdVarBudget = s.ytdBudget ? (s.ytdActual - s.ytdBudget) / s.ytdBudget : 0;
+    s.ytdVarLY = s.ytdLY ? (s.ytdActual - s.ytdLY) / s.ytdLY : 0;
+  };
+  for (const d of doctors) {
+    const slug = getDoctorSlug(d.name);
+    const corrected = slug && SPECIALTY_CORRECTIONS[slug];
+    if (!corrected || (d.specialty || "").toLowerCase().trim() === corrected.toLowerCase().trim()) continue;
+    // Subtract from old specialty subtotal
+    const oldSpec = specialties.find(s => (s.name || "").toLowerCase().trim() === (d.specialty || "").toLowerCase().trim());
+    if (oldSpec) {
+      oldSpec.today = Math.max(0, (oldSpec.today || 0) - (d.today || 0));
+      oldSpec.mtdActual -= d.mtdActual || 0;
+      oldSpec.mtdLY -= d.mtdLY || 0;
+      oldSpec.mtdBudget -= d.mtdBudget || 0;
+      oldSpec.ytdActual -= d.ytdActual || 0;
+      oldSpec.ytdLY -= d.ytdLY || 0;
+      oldSpec.ytdBudget -= d.ytdBudget || 0;
+      _recomputeSpecVar(oldSpec);
+    }
+    // Add to (or create) the target specialty subtotal
+    let newSpec = specialties.find(s => (s.name || "").toLowerCase().trim() === corrected.toLowerCase().trim());
+    if (!newSpec) {
+      newSpec = { name: corrected, today: 0, mtdActual: 0, mtdBudget: 0, mtdLY: 0, ytdActual: 0, ytdBudget: 0, ytdLY: 0 };
+      specialties.push(newSpec);
+    }
+    newSpec.today = (newSpec.today || 0) + (d.today || 0);
+    newSpec.mtdActual += d.mtdActual || 0;
+    newSpec.mtdLY += d.mtdLY || 0;
+    newSpec.mtdBudget += d.mtdBudget || 0;
+    newSpec.ytdActual += d.ytdActual || 0;
+    newSpec.ytdLY += d.ytdLY || 0;
+    newSpec.ytdBudget += d.ytdBudget || 0;
+    _recomputeSpecVar(newSpec);
+    // Reassign the doctor's specialty label
+    d.specialty = corrected;
+  }
+
   return { specialties, doctors, reportDate, locations, dsrTotals, ipSpecialties, ipDoctors, dailyRevenue, doctorLocations };
 }
 
