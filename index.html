@@ -433,6 +433,22 @@ const RESIGNED_DOCTORS = new Set([
   "ms-ella-francisco", "ms-ella-laine-francisco",
 ]);
 
+// Manual specialty corrections — for cases where the Excel labels a doctor under
+// the wrong specialty (e.g. a neurosurgeon billed as Neurology). Applied at display
+// time wherever a doctor's specialty is shown standalone (new-doctors line, etc.).
+const SPECIALTY_CORRECTIONS = {
+  "dr-mohammed-al-jumaily": "Neuro Surgery",
+  "prof-dr-mohammed-al-jumaily": "Neuro Surgery",
+};
+
+// Doctors to suppress from the "New Doctors" line in the executive summary —
+// typically Radiology / support staff that the specialty parser already skips
+// but which were recorded in HISTORICAL_DOCTOR_FIRST_SEEN before that filter
+// existed. Per request: Dr. Abhay is Radiology and not relevant.
+const NEW_DOCTOR_EXCLUDED_SLUGS = new Set([
+  "dr-abhay-aryan", "dr-abhay-kumar-aryan",
+]);
+
 function isCBD(name) {
   const slug = getDoctorSlug(name);
   return slug && CBD_DOCTORS.has(slug);
@@ -2877,8 +2893,11 @@ function App() {
       if (s && !specBySlug[s] && d.specialty) specBySlug[s] = d.specialty.trim();
     }
     const newDoctorEntries = Object.entries(doctorFirstSeen)
-      .filter(([_, info]) => !info.isBaseline)
-      .map(([slug, info]) => ({ ...info, specialty: info.specialty || specBySlug[slug] || "" }));
+      .filter(([slug, info]) => !info.isBaseline && !NEW_DOCTOR_EXCLUDED_SLUGS.has(slug))
+      .map(([slug, info]) => ({
+        ...info,
+        specialty: SPECIALTY_CORRECTIONS[slug] || info.specialty || specBySlug[slug] || "",
+      }));
     if (newDoctorEntries.length > 0) {
       newDoctorEntries.sort((a, b) => {
         const da = new Date(a.month).getTime() || 0;
