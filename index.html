@@ -61,7 +61,7 @@ const { useState, useCallback, useMemo, useRef } = React;
 const {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Cell, PieChart, Pie, RadialBarChart, RadialBar,
-  LineChart, Line, AreaChart, Area, ReferenceLine, ComposedChart,
+  LineChart, Line, AreaChart, Area, ReferenceLine, ComposedChart, LabelList,
 } = Recharts;
 
 // ─── Utility Helpers ─────────────────────────────────────────────────────────
@@ -1622,6 +1622,84 @@ function DubaiMap({ locations, onClinicClick, isMobile }) {
 
 // ─── Clinic Drill-Down Modal ────────────────────────────────────────────────
 
+function DoctorMonthlyHistory({ doctor, monthlyLog, onClose }) {
+  const { useEffect, useMemo } = React;
+  useEffect(() => { const h = (e) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h); }, [onClose]);
+  if (!doctor) return null;
+  const slug = getDoctorSlug(doctor.name);
+  const log = slug ? monthlyLog[slug] : null;
+  const data = useMemo(() => {
+    if (!log?.months) return [];
+    return Object.entries(log.months)
+      .map(([month, v]) => ({
+        month,
+        opMtd: v.opMtd || 0,
+        ipMtd: v.ipMtd || 0,
+        total: (v.opMtd || 0) + (v.ipMtd || 0),
+        sortKey: new Date(month).getTime() || 0,
+      }))
+      .sort((a, b) => a.sortKey - b.sortKey);
+  }, [log]);
+  const total = data.reduce((a, d) => a + d.total, 0);
+  const opTotal = data.reduce((a, d) => a + d.opMtd, 0);
+  const ipTotal = data.reduce((a, d) => a + d.ipMtd, 0);
+  const modalMobile = window.innerWidth < 768;
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(10,15,25,0.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, backdropFilter:"blur(4px)" }} onClick={onClose}>
+      <div className="fade-in" style={{ background:C.pageBg, borderRadius: modalMobile ? 0 : 16, width: modalMobile ? "100%" : "90%", maxWidth: 760, maxHeight: modalMobile ? "100vh" : "85vh", overflow:"auto", border: modalMobile ? "none" : "1px solid "+C.border }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding:"20px 28px", background:"linear-gradient(135deg, #10b981, #34d399)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.85)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Monthly Breakdown</div>
+            <div style={{ fontSize:22, fontWeight:800, color:"#fff", marginTop:4 }}>{doctor.name}</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.85)", marginTop:2 }}>{doctor.specialty || log?.specialty || ""}</div>
+          </div>
+          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:8, padding:"8px 12px", color:"#fff", cursor:"pointer", fontSize:18, fontWeight:700 }}>{"×"}</button>
+        </div>
+        <div style={{ padding:"24px 28px" }}>
+          {data.length === 0 ? (
+            <div style={{ padding:"40px 20px", textAlign:"center", color:C.textMuted }}>
+              <div style={{ fontSize:14, marginBottom:8 }}>No monthly history yet for this doctor.</div>
+              <div style={{ fontSize:12 }}>Upload each month's DSR over time — every upload extends the log. Existing data points appear as soon as the first DSR is uploaded after this feature went live.</div>
+            </div>
+          ) : (
+            <React.Fragment>
+              <div style={{ display:"grid", gridTemplateColumns: modalMobile ? "1fr" : "repeat(3, 1fr)", gap:12, marginBottom:16 }}>
+                <div style={{ ...card, padding:14 }}>
+                  <div style={{ fontSize:10, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Tracked Total</div>
+                  <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>AED {fmt(total)}</div>
+                  <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>{data.length} month{data.length === 1 ? "" : "s"}</div>
+                </div>
+                <div style={{ ...card, padding:14 }}>
+                  <div style={{ fontSize:10, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>OP</div>
+                  <div style={{ fontSize:18, fontWeight:800, color:"#60a5fa", marginTop:4 }}>AED {fmt(opTotal)}</div>
+                </div>
+                <div style={{ ...card, padding:14 }}>
+                  <div style={{ fontSize:10, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>IP / Daycare</div>
+                  <div style={{ fontSize:18, fontWeight:800, color:"#ec4899", marginTop:4 }}>AED {fmt(ipTotal)}</div>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={modalMobile ? 240 : 280}>
+                <BarChart data={data} margin={{ top:24, right:8, left:0, bottom:5 }} barCategoryGap="22%">
+                  <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize:10, fill:C.textMuted }} axisLine={{ stroke:C.border }} tickLine={false} />
+                  <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.05)" }} />
+                  <Legend wrapperStyle={{ fontSize:11, color:C.textSecondary }} iconType="circle" iconSize={8} />
+                  <Bar dataKey="opMtd" stackId="m" fill="#3b82f6" maxBarSize={44} name="OP MTD (AED)" isAnimationActive={false} />
+                  <Bar dataKey="ipMtd" stackId="m" fill="#ec4899" radius={[4,4,0,0]} maxBarSize={44} name="IP MTD (AED)" isAnimationActive={false} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ fontSize:10, color:C.textMuted, marginTop:14, fontStyle:"italic" }}>
+                Each bar is the MTD value captured the last time a DSR for that month was uploaded. If multiple uploads landed for the same month, the most recent overwrote the earlier one.
+              </div>
+            </React.Fragment>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ClinicDrillDown({ clinic, onClose }) {
   const { useEffect } = React;
   const modalMobile = window.innerWidth < 768;
@@ -2181,6 +2259,14 @@ function App() {
     try { localStorage.setItem("hh_doctor_first_seen", JSON.stringify(merged)); } catch(e) {}
     return merged;
   });
+  // Per-doctor monthly MTD log. Grows on every upload — keyed by slug, then by
+  // "Mon YYYY" → { opMtd, ipMtd }. Powers the click-through on YTD cells in the
+  // Top Performers — YTD table.
+  const [doctorMonthlyLog, setDoctorMonthlyLog] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("hh_doctor_monthly_log") || "{}"); }
+    catch (e) { return {}; }
+  });
+  const [selectedDoctorHistory, setSelectedDoctorHistory] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState("overview");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -2476,6 +2562,36 @@ function App() {
     if (dlocs && Object.keys(dlocs).length) setDoctorLocations(dlocs);
     setReportDate(rd);
     setHistoricalMonth(null);
+
+    // Capture per-doctor MTD into the monthly log keyed by "Mon YYYY" so a later
+    // click on a YTD cell can render the month-by-month breakdown. Each upload
+    // overwrites the same month so end-of-month figures win out.
+    if (docs?.length) {
+      const rdate = new Date(rd);
+      const validRD = !isNaN(rdate.getTime());
+      const mLabel = validRD ? rdate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : rd;
+      const ipMtdByName = {};
+      for (const ipd of (ipDocs || [])) {
+        ipMtdByName[ipd.name] = (ipMtdByName[ipd.name] || 0) + (ipd.mtdRevenue || 0);
+      }
+      setDoctorMonthlyLog(prev => {
+        const next = { ...prev };
+        for (const d of docs) {
+          const opMtd = d.mtdActual || 0;
+          const ipMtd = ipMtdByName[d.name] || 0;
+          if (opMtd === 0 && ipMtd === 0) continue;
+          const slug = getDoctorSlug(d.name);
+          if (!slug) continue;
+          const existing = next[slug] || { name: d.name, specialty: d.specialty || "", months: {} };
+          existing.name = d.name;
+          if (d.specialty) existing.specialty = d.specialty;
+          existing.months = { ...existing.months, [mLabel]: { opMtd, ipMtd } };
+          next[slug] = existing;
+        }
+        try { localStorage.setItem("hh_doctor_monthly_log", JSON.stringify(next)); } catch(e) {}
+        return next;
+      });
+    }
     const warnings = validateData({ specialties: specs, doctors: docs, dsrTotals: dst, locations: locs, dailyRevenue: dr });
     setDataWarnings(warnings);
     if (warnings.length > 0) {
@@ -3916,7 +4032,7 @@ function App() {
                     <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
                     <td style={dtn}>{fmt(d.mtdActualCombined)}</td>
-                    <td style={{ ...dtn, fontWeight:700, color:C.success }}>{fmt(d.ytdActualCombined)}{d._ipYtdEst > 0 && <span title={"Includes estimated IP YTD AED " + fmt(d._ipYtdEst)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
+                    <td title="Click to see monthly breakdown" onClick={() => setSelectedDoctorHistory(d)} style={{ ...dtn, fontWeight:700, color:C.success, cursor:"pointer", textDecoration:"underline", textDecorationColor:"rgba(16,185,129,0.3)", textUnderlineOffset:3 }}>{fmt(d.ytdActualCombined)}{d._ipYtdEst > 0 && <span title={"Includes estimated IP YTD AED " + fmt(d._ipYtdEst)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
                     <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLYCombined)}{d._ipYtdLYEst > 0 && <span title={"Includes estimated IP YTD LY AED " + fmt(d._ipYtdLYEst)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
                     <td style={{ ...dtn, color:varColor(d.ytdVarLYCombined), fontWeight:600 }}>{pct(d.ytdVarLYCombined)}</td>
                   </tr>
@@ -4294,6 +4410,7 @@ function App() {
         return <ClinicDrillDown clinic={enrichedClinic} onClose={() => setSelectedClinic(null)} />;
       })()}
       {specialtyDrillData && <SpecialtyDrillDown data={specialtyDrillData} doctorLocations={doctorLocations} onClose={() => setSelectedSpecialty(null)} />}
+      {selectedDoctorHistory && <DoctorMonthlyHistory doctor={selectedDoctorHistory} monthlyLog={doctorMonthlyLog} onClose={() => setSelectedDoctorHistory(null)} />}
       <DashboardChat totals={totals} dsrTotals={dsrTotals} specialties={mergedSpecialties} locations={locations} ipTotals={ipTotals} doctors={doctors} reportDate={reportDate} isMobile={isMobile} commentary={commentary} />
     </div>
   );
