@@ -2578,7 +2578,8 @@ function App() {
           name: SPEC_NAME_CANONICAL[key] || s.name,
           today: 0, mtdActual: 0, mtdBudget: 0, mtdLY: 0,
           ytdActual: 0, ytdBudget: 0, ytdLY: 0,
-          opMtd: 0, ipMtd: 0, opYtd: 0, ipYtd: 0, // OP/IP sub-totals for drill-down distribution
+          opMtd: 0, ipMtd: 0, opYtd: 0, ipYtd: 0,
+          opMtdLY: 0, ipMtdLY: 0, opYtdLY: 0, ipYtdLY: 0, // OP/IP LY breakout — used to apportion per-doctor IP LY estimates
         };
       }
       map[key].today += s.today || 0;
@@ -2591,9 +2592,13 @@ function App() {
       if (source === "op") {
         map[key].opMtd += s.mtdActual || 0;
         map[key].opYtd += s.ytdActual || 0;
+        map[key].opMtdLY += s.mtdLY || 0;
+        map[key].opYtdLY += s.ytdLY || 0;
       } else {
         map[key].ipMtd += s.mtdActual || 0;
         map[key].ipYtd += s.ytdActual || 0;
+        map[key].ipMtdLY += s.mtdLY || 0;
+        map[key].ipYtdLY += s.ytdLY || 0;
       }
     };
     for (const s of specialties) accumulate(s, "op");
@@ -3030,11 +3035,16 @@ function App() {
       ipMtdBySpec[sKey] = (ipMtdBySpec[sKey] || 0) + (ipd.mtdRevenue || 0);
       ipMtdByName[ipd.name] = (ipMtdByName[ipd.name] || 0) + (ipd.mtdRevenue || 0);
     }
-    // Specialty IP YTD lookup
-    const ipYtdBySpec = {};
+    // Specialty IP MTD/YTD and their LY counterparts — needed so per-doctor LY
+    // can also include an estimated IP LY share. Without this, MTD/YTD columns
+    // show OP+IP but the LY column shows OP-only → variance % is misleading
+    // (a doctor whose revenue is largely daycare looks ~flat when they're not).
+    const ipYtdBySpec = {}, ipMtdLYBySpec = {}, ipYtdLYBySpec = {};
     for (const ms of mergedSpecialties) {
       const sKey = (ms.name || "").toLowerCase().trim();
       ipYtdBySpec[sKey] = ms.ipYtd || 0;
+      ipMtdLYBySpec[sKey] = ms.ipMtdLY || 0;
+      ipYtdLYBySpec[sKey] = ms.ipYtdLY || 0;
     }
     return activeDoctors.map(d => {
       const sKey = (d.specialty || "").toLowerCase().trim();
@@ -3042,24 +3052,34 @@ function App() {
       const specIpMtdTotal = ipMtdBySpec[sKey] || 0;
       const share = specIpMtdTotal > 0 ? ipMtd / specIpMtdTotal : 0;
       const ipYtdEst = Math.round(share * (ipYtdBySpec[sKey] || 0));
+      const ipMtdLYEst = Math.round(share * (ipMtdLYBySpec[sKey] || 0));
+      const ipYtdLYEst = Math.round(share * (ipYtdLYBySpec[sKey] || 0));
       const combinedMtd = (d.mtdActual || 0) + ipMtd;
       const combinedYtd = (d.ytdActual || 0) + ipYtdEst;
+      const combinedMtdLY = (d.mtdLY || 0) + ipMtdLYEst;
+      const combinedYtdLY = (d.ytdLY || 0) + ipYtdLYEst;
       return {
         ...d,
-        combinedMtd, combinedYtd,
-        _ipMtd: ipMtd, _ipYtdEst: ipYtdEst,
-        // ranking helpers
+        combinedMtd, combinedYtd, combinedMtdLY, combinedYtdLY,
+        _ipMtd: ipMtd, _ipYtdEst: ipYtdEst, _ipMtdLYEst: ipMtdLYEst, _ipYtdLYEst: ipYtdLYEst,
+        // ranking + display helpers (combined OP+IP basis)
         mtdActualCombined: combinedMtd,
         ytdActualCombined: combinedYtd,
+        mtdLYCombined: combinedMtdLY,
+        ytdLYCombined: combinedYtdLY,
+        mtdVarLYCombined: combinedMtdLY ? (combinedMtd - combinedMtdLY) / combinedMtdLY : 0,
+        ytdVarLYCombined: combinedYtdLY ? (combinedYtd - combinedYtdLY) / combinedYtdLY : 0,
       };
     });
   }, [activeDoctors, ipDoctors, mergedSpecialties]);
 
   const topPerformersYTD = useMemo(() => [...doctorsWithIP].sort((a,b)=>(b.ytdActualCombined||0)-(a.ytdActualCombined||0)).slice(0,10), [doctorsWithIP]);
   const topPerformersMTD = useMemo(() => [...doctorsWithIP].sort((a,b)=>(b.mtdActualCombined||0)-(a.mtdActualCombined||0)).slice(0,10), [doctorsWithIP]);
-  const needsAttention = useMemo(() => activeDoctors.filter(d=>d.mtdLY>5000&&d.mtdVarLY<-0.2).sort((a,b)=>a.mtdVarLY-b.mtdVarLY).slice(0,15), [activeDoctors]);
+  // Needs Attention / Bottom Performers use the combined LY basis so daycare-heavy
+  // doctors aren't falsely flagged (or falsely cleared) based on OP-only data.
+  const needsAttention = useMemo(() => doctorsWithIP.filter(d=>(d.mtdLYCombined||0)>5000 && (d.mtdVarLYCombined||0)<-0.2).sort((a,b)=>(a.mtdVarLYCombined||0)-(b.mtdVarLYCombined||0)).slice(0,15), [doctorsWithIP]);
   const EXCLUDED_BOTTOM_SPECS = new Set(["Physiotherapy","Dietician","Nursing Care"]);
-  const bottomPerformers = useMemo(() => activeDoctors.filter(d=>d.ytdLY>50000 && !EXCLUDED_BOTTOM_SPECS.has(d.specialty)).sort((a,b)=>a.ytdVarLY-b.ytdVarLY).slice(0,10), [activeDoctors]);
+  const bottomPerformers = useMemo(() => doctorsWithIP.filter(d=>(d.ytdLYCombined||0)>50000 && !EXCLUDED_BOTTOM_SPECS.has(d.specialty)).sort((a,b)=>(a.ytdVarLYCombined||0)-(b.ytdVarLYCombined||0)).slice(0,10), [doctorsWithIP]);
 
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.pageBg }}>
@@ -3865,8 +3885,8 @@ function App() {
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
                     <td style={dtn}>{fmt(d.today)}</td>
                     <td style={{ ...dtn, fontWeight:700, color:"#60a5fa" }}>{fmt(d.mtdActualCombined)}{d._ipMtd > 0 && <span title={"Includes IP MTD AED " + fmt(d._ipMtd)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>+IP</span>}</td>
-                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
-                    <td style={{ ...dtn, color:varColor(d.mtdVarLY), fontWeight:600 }}>{pct(d.mtdVarLY)}</td>
+                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLYCombined)}{d._ipMtdLYEst > 0 && <span title={"Includes estimated IP MTD LY AED " + fmt(d._ipMtdLYEst)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
+                    <td style={{ ...dtn, color:varColor(d.mtdVarLYCombined), fontWeight:600 }}>{pct(d.mtdVarLYCombined)}</td>
                   </tr>
                 ))}
                 {!topPerformersMTD.length && <tr><td colSpan={8} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload data to populate</td></tr>}
@@ -3897,8 +3917,8 @@ function App() {
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
                     <td style={dtn}>{fmt(d.mtdActualCombined)}</td>
                     <td style={{ ...dtn, fontWeight:700, color:C.success }}>{fmt(d.ytdActualCombined)}{d._ipYtdEst > 0 && <span title={"Includes estimated IP YTD AED " + fmt(d._ipYtdEst)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
-                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
-                    <td style={{ ...dtn, color:varColor(d.ytdVarLY), fontWeight:600 }}>{pct(d.ytdVarLY)}</td>
+                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLYCombined)}{d._ipYtdLYEst > 0 && <span title={"Includes estimated IP YTD LY AED " + fmt(d._ipYtdLYEst)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
+                    <td style={{ ...dtn, color:varColor(d.ytdVarLYCombined), fontWeight:600 }}>{pct(d.ytdVarLYCombined)}</td>
                   </tr>
                 ))}
                 {!topPerformersYTD.length && <tr><td colSpan={8} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload data to populate</td></tr>}
@@ -3926,10 +3946,10 @@ function App() {
                   <tr key={d.name+i} style={{ background:i%2===0? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
                     <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
                     <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
-                    <td style={dtn}>{fmt(d.today)}</td><td style={dtn}>{fmt(d.mtdActual)}</td>
-                    <td style={dtn}><span style={{ color:"#fff", background:varColor(d.mtdVarLY), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.mtdVarLY)}</span></td>
-                    <td style={{ ...dtn, fontWeight:700 }}>{fmt(d.ytdActual)}</td>
-                    <td style={{ ...dtn, color:varColor(d.ytdVarLY), fontWeight:600 }}>{pct(d.ytdVarLY)}</td>
+                    <td style={dtn}>{fmt(d.today)}</td><td style={dtn}>{fmt(d.mtdActualCombined)}</td>
+                    <td style={dtn}><span style={{ color:"#fff", background:varColor(d.mtdVarLYCombined), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.mtdVarLYCombined)}</span></td>
+                    <td style={{ ...dtn, fontWeight:700 }}>{fmt(d.ytdActualCombined)}</td>
+                    <td style={{ ...dtn, color:varColor(d.ytdVarLYCombined), fontWeight:600 }}>{pct(d.ytdVarLYCombined)}</td>
                   </tr>
                 ))}
                 {!needsAttention.length && <tr><td colSpan={8} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>All doctors within LY tolerance</td></tr>}
@@ -3956,8 +3976,8 @@ function App() {
                   <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:"rgba(239,68,68,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:C.danger }}>{i+1}</span></td>
                   <td style={{ ...dtd }}><DoctorName name={d.name} /></td><td style={{ ...dtd, color:C.primary, cursor:"pointer" }} onClick={() => setSelectedSpecialty(d.specialty)}>{d.specialty}</td>
                   <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={d.locations || ''}>{getDocLocation(d.name, d.locations)}</td>
-                  <td style={dtn}>{fmt(d.ytdActual)}</td><td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
-                  <td style={dtn}><span style={{ color:"#fff", background:varColor(d.ytdVarLY), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.ytdVarLY)}</span></td>
+                  <td style={dtn}>{fmt(d.ytdActualCombined)}</td><td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLYCombined)}{d._ipYtdLYEst > 0 && <span title={"Includes estimated IP YTD LY AED " + fmt(d._ipYtdLYEst)} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
+                  <td style={dtn}><span style={{ color:"#fff", background:varColor(d.ytdVarLYCombined), padding:"2px 10px", borderRadius:6, fontWeight:700, fontSize:11 }}>{pct(d.ytdVarLYCombined)}</span></td>
                 </tr>
               ))}
               {!bottomPerformers.length && <tr><td colSpan={7} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload data to populate</td></tr>}
