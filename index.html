@@ -1658,8 +1658,10 @@ function DoctorMonthlyHistory({ doctor, monthlyLog, onClose }) {
         <div style={{ padding:"24px 28px" }}>
           {data.length === 0 ? (
             <div style={{ padding:"40px 20px", textAlign:"center", color:C.textMuted }}>
-              <div style={{ fontSize:14, marginBottom:8 }}>No monthly history yet for this doctor.</div>
-              <div style={{ fontSize:12 }}>Upload each month's DSR over time — every upload extends the log. Existing data points appear as soon as the first DSR is uploaded after this feature went live.</div>
+              <div style={{ fontSize:14, marginBottom:8, color:C.text, fontWeight:600 }}>No monthly history yet for this doctor.</div>
+              <div style={{ fontSize:12, lineHeight:1.6, maxWidth:480, margin:"0 auto" }}>
+                The log starts populating on the first DSR upload after this feature went live. To back-fill prior months, re-upload each DSR in turn — e.g. <strong style={{ color:C.text }}>Jan 2026</strong>, <strong style={{ color:C.text }}>Feb 2026</strong>, <strong style={{ color:C.text }}>Mar 2026</strong>, <strong style={{ color:C.text }}>Apr 2026</strong>, <strong style={{ color:C.text }}>May 2026</strong>. Each upload appends a bar; re-uploading the same month just overwrites.
+              </div>
             </div>
           ) : (
             <React.Fragment>
