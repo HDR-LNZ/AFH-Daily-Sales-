@@ -433,6 +433,15 @@ const RESIGNED_DOCTORS = new Set([
   "ms-ella-francisco", "ms-ella-laine-francisco",
 ]);
 
+// Active-doctor overrides — for newly joined doctors who don't have a website
+// profile page yet. Without this they'd default to "resigned" because
+// getDoctorProfileUrl returns null. Doctors in this set are treated as active
+// (no link, no "Resigned" tag) until their site page goes live and they can be
+// promoted into WEBSITE_DOCTORS.
+const ACTIVE_OVERRIDES = new Set([
+  "dr-lubana-younes", "dr-lubna-younes",
+]);
+
 // Manual specialty corrections — for cases where the Excel labels a doctor under
 // the wrong specialty (e.g. a neurosurgeon billed as Neurology). Applied at display
 // time wherever a doctor's specialty is shown standalone (new-doctors line, etc.).
@@ -459,6 +468,11 @@ function isResignedDoctor(name) {
   return slug && RESIGNED_DOCTORS.has(slug);
 }
 
+function isActiveOverride(name) {
+  const slug = getDoctorSlug(name);
+  return slug && ACTIVE_OVERRIDES.has(slug);
+}
+
 // Allied health professionals (Physiotherapists, Sonographers, Lab/EEG/Laser techs,
 // Nurses, etc.) typically don't have public profile pages on healthhubalfuttaim.com.
 // Heuristic: title prefix is Mr./Ms./Mrs. (not Dr./Prof.) → support staff, so no
@@ -477,9 +491,11 @@ function DoctorName({ name }) {
   const url = getDoctorProfileUrl(name);
   const cbd = isCBD(name);
   const allied = !url && isAlliedNonDoctor(name);
+  // Newly joined doctor without a website profile yet — keep active classification
+  const activeOverride = !url && !allied && isActiveOverride(name);
   const cbdLabel = cbd ? <span style={{ fontSize:9, color:"#f59e0b", fontWeight:600, marginLeft:4 }}>CBD</span> : null;
   if (url) return <span><a href={url} target="_blank" rel="noopener noreferrer" style={{ color:C.primaryLight, textDecoration:"none", fontWeight:600 }} onMouseEnter={(e) => e.target.style.textDecoration="underline"} onMouseLeave={(e) => e.target.style.textDecoration="none"}>{name}</a>{cbdLabel}</span>;
-  if (allied) return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span>{cbdLabel}</span>;
+  if (allied || activeOverride) return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span>{cbdLabel}</span>;
   return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span> <span style={{ fontSize:9, color:"#ef4444", fontWeight:600, opacity:0.8 }}>Resigned</span>{cbdLabel}</span>;
 }
 
@@ -1853,7 +1869,7 @@ function DashboardChat({ totals, dsrTotals, specialties, locations, ipTotals, do
     const topClinics = [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD).slice(0,5);
     const underperforming = specialties.filter(s => s.ytdVarLY < 0).sort((a,b) => a.ytdVarLY - b.ytdVarLY);
     const topDocs = [...doctors].sort((a,b) => b.mtdActual - a.mtdActual).slice(0,10);
-    const resignedDocs = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name))) && d.ytdLY > 0);
+    const resignedDocs = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && !isActiveOverride(d.name))) && d.ytdLY > 0);
     const cbdDocs = doctors.filter(d => isCBD(d.name));
 
     const summaryBlock = (commentary && commentary.length > 0)
@@ -2808,7 +2824,7 @@ function App() {
     // IP line moved to top of summary (inserted after MTD line)
 
     // Revenue loss from resigned doctors
-    const resignedDocs = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name))) && d.ytdLY > 0);
+    const resignedDocs = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && !isActiveOverride(d.name))) && d.ytdLY > 0);
     if (resignedDocs.length > 0) {
       const resignedYtdLY = resignedDocs.reduce((a, d) => a + (d.ytdLY || 0), 0);
       const resignedMtdLY = resignedDocs.reduce((a, d) => a + (d.mtdLY || 0), 0);
@@ -2964,10 +2980,10 @@ function App() {
   }, [totals, dsrTotals, specialties, locations, ipTotals, doctors, doctorFirstSeen]);
 
   // Filter active doctors (exclude resigned)
-  const isActive = (d) => !isResignedDoctor(d.name) && (!!getDoctorProfileUrl(d.name) || isAlliedNonDoctor(d.name));
+  const isActive = (d) => !isResignedDoctor(d.name) && (!!getDoctorProfileUrl(d.name) || isAlliedNonDoctor(d.name) || isActiveOverride(d.name));
   const activeDoctors = useMemo(() => doctors.filter(isActive), [doctors]);
   const resignedWithRevenue = useMemo(() => {
-    const resigned = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name))) && (d.ytdLY || 0) > 0);
+    const resigned = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && !isActiveOverride(d.name))) && (d.ytdLY || 0) > 0);
     // Classify each doctor
     resigned.forEach(d => {
       const ytdA = d.ytdActual || 0;
