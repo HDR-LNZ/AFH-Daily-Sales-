@@ -2812,26 +2812,25 @@ function App() {
       lines.push("Inpatient (IP): AED " + fmt(ipTotals.mtdActual) + " MTD (" + ipPct + "% of total revenue, " + ipTotals.volume + " cases, " + (ipVar >= 0 ? '+' : '') + (ipVar*100).toFixed(1) + "% vs LY).");
     }
 
-    const underCount = specialties.filter(s => s.ytdVarLY < 0).length;
-    if (underCount > 0) {
-      const worst = [...specialties].filter(s => s.ytdVarLY < 0 && s.ytdLY > 0).sort((a,b) => a.ytdVarLY - b.ytdVarLY).slice(0,3).map(s => s.name);
-      lines.push(underCount + " of " + specialties.length + " specialties are underperforming vs last year at YTD level. Key areas of concern: " + worst.join(', ') + ".");
+    // Exclude technician / support specialties from the "areas of concern" call-out —
+    // they're typically tiny line items and not service-line decisions
+    const NON_CLINICAL_SPECS = /technician|nursing|laser|sonographer|registered nurse|anesthesia/i;
+    const clinicalUnder = specialties.filter(s => s.ytdVarLY < 0 && !NON_CLINICAL_SPECS.test(s.name || ""));
+    if (clinicalUnder.length > 0) {
+      const worst = [...clinicalUnder].filter(s => s.ytdLY > 0).sort((a,b) => a.ytdVarLY - b.ytdVarLY).slice(0,3).map(s => s.name);
+      lines.push(clinicalUnder.length + " of " + specialties.length + " specialties are underperforming vs last year at YTD level. Key areas of concern: " + worst.join(', ') + ".");
     }
 
-    const topLoc = [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD)[0];
+    const rankedClinics = [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueMTD > 0).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD);
+    const topLoc = rankedClinics[0];
     if (topLoc) lines.push("Top performing location: " + (CLINIC_COORDS[topLoc.location]?.label || topLoc.location) + " with AED " + fmt(topLoc.totalRevenueMTD) + " MTD revenue.");
+    if (rankedClinics.length >= 4) {
+      const bottom3 = rankedClinics.slice(-3).reverse(); // worst first
+      const txt = bottom3.map(l => (CLINIC_COORDS[l.location]?.label || l.location) + " (AED " + fmt(l.totalRevenueMTD) + ")").join(", ");
+      lines.push("Bottom 3 clinics — MTD: " + txt + ".");
+    }
 
     // IP line moved to top of summary (inserted after MTD line)
-
-    // Revenue loss from resigned doctors
-    const resignedDocs = doctors.filter(d => (isResignedDoctor(d.name) || (!getDoctorProfileUrl(d.name) && !isAlliedNonDoctor(d.name) && !isActiveOverride(d.name))) && d.ytdLY > 0);
-    if (resignedDocs.length > 0) {
-      const resignedYtdLY = resignedDocs.reduce((a, d) => a + (d.ytdLY || 0), 0);
-      const resignedMtdLY = resignedDocs.reduce((a, d) => a + (d.mtdLY || 0), 0);
-      const resignedYtdActual = resignedDocs.reduce((a, d) => a + (d.ytdActual || 0), 0);
-      const revLoss = resignedYtdLY - resignedYtdActual;
-      lines.push("Revenue impact from " + resignedDocs.length + " resigned doctors: AED " + fmt(revLoss) + " YTD revenue gap (LY revenue: AED " + fmt(resignedYtdLY) + ").");
-    }
 
     // CBD doctors impact — include IP MTD for accurate revenue figure
     const cbdDocs = doctors.filter(d => isCBD(d.name));
@@ -3966,8 +3965,8 @@ function App() {
           </table>
         </div>
 
-        {/* RESIGNED DOCTORS IMPACT */}
-        {resignedWithRevenue.length > 0 && (
+        {/* RESIGNED DOCTORS IMPACT — section removed per user request */}
+        {false && resignedWithRevenue.length > 0 && (
           <div style={{ ...card, marginTop:20, overflow:"hidden" }}>
             <div style={{ padding:"16px 24px", background:"linear-gradient(135deg, #64748b, #94a3b8)", display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ width:32, height:32, borderRadius:8, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
