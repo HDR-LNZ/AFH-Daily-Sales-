@@ -693,12 +693,22 @@ function parseExcelFile(data) {
       todayRev: numK(9, 7),
       mtdActual: dsrMtdActual,
       mtdBudget: Math.round(specMtdBudget * scaleFactor),
-      // If specialty LY is zero (missing from file), estimate MTD LY from DSR YTD LY minus prior months
+      // If specialty LY is zero (missing from file — Jun 2026+ format), derive MTD LY
+      // from DSR R11 C21 (cumulative YTD LY) minus prior LY months in LY_MONTHLY_TOTALS.
+      // E.g. for a Jun 2026 report, MTD LY = YTD LY - sum(Jan..May 2025).
       mtdLY: specMtdLY > 0 ? Math.round(specMtdLY * scaleFactor) : (() => {
         const dsrYtdLY = numK(10, 20);
-        // Mar YTD LY from MONTHLY_HISTORY (last entry)
-        const marYtdLY = MONTHLY_HISTORY.length >= 3 ? MONTHLY_HISTORY[2].dsr.ytdLY : 0;
-        return marYtdLY > 0 ? Math.max(0, dsrYtdLY - marYtdLY) : 0;
+        if (dsrYtdLY <= 0) return 0;
+        const rdate = new Date(reportDate);
+        if (isNaN(rdate.getTime())) return 0;
+        const monthIdx = rdate.getMonth(); // 0=Jan
+        const lyYear = rdate.getFullYear() - 1;
+        const monthAbbrs = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        let priorSum = 0;
+        for (let m = 0; m < monthIdx; m++) {
+          priorSum += LY_MONTHLY_TOTALS[monthAbbrs[m] + "-" + lyYear] || 0;
+        }
+        return Math.max(0, dsrYtdLY - priorSum);
       })(),
       ytdActual: numK(10, 19),
       ytdLY: numK(10, 20),
@@ -2800,8 +2810,13 @@ function App() {
   const sorted = useMemo(() => [...mergedSpecialties].sort((a,b) => (b.ytdActual||0)-(a.ytdActual||0)), [mergedSpecialties]);
 
   const insights = useMemo(() => {
-    const above = mergedSpecialties.filter(s => s.mtdVarLY >= 0).length;
-    return { above, below: mergedSpecialties.length - above, growingYoY: mergedSpecialties.filter(s => s.ytdVarLY > 0).length, total: mergedSpecialties.length };
+    // Restrict counts to specialties that actually have an LY value — otherwise the
+    // count is dominated by post-Jun-2026 rows where LY is 0 (every specialty with
+    // any MTD looks "above LY" because anything > 0 ≥ 0).
+    const mtdWithLY = mergedSpecialties.filter(s => s.mtdLY > 0);
+    const ytdWithLY = mergedSpecialties.filter(s => s.ytdLY > 0);
+    const above = mtdWithLY.filter(s => s.mtdVarLY >= 0).length;
+    return { above, below: mtdWithLY.length - above, growingYoY: ytdWithLY.filter(s => s.ytdVarLY > 0).length, total: mtdWithLY.length };
   }, [mergedSpecialties]);
 
   const clinicChartData = useMemo(() =>
@@ -2896,7 +2911,11 @@ function App() {
   // Filter out minor specialties (< AED 10K MTD and < AED 50K YTD) from charts
   const chartSpecialties = useMemo(() => sorted.filter(s => s.mtdActual >= 10000 || s.ytdActual >= 50000), [sorted]);
   const barChartData = useMemo(() => chartSpecialties.map(s => ({ name: s.name.length > 14 ? s.name.slice(0,13)+"\u2026" : s.name, "Last Year": s.mtdLY, "This Year": s.mtdActual })), [chartSpecialties]);
-  const varianceData = useMemo(() => chartSpecialties.filter(s => s.mtdActual > 0 || s.mtdLY > 0).map(s => ({ name: s.name.length > 12 ? s.name.slice(0,11)+"\u2026" : s.name, variance: s.mtdActual - s.mtdLY, fill: s.mtdVarLY >= 0 ? C.success : C.danger })), [chartSpecialties]);
+  // Only plot variance bars for specialties that actually have an LY value to compare
+  // against. The new Jun 2026+ Excel format dropped per-specialty LY columns, so without
+  // this filter the chart would render every specialty's current MTD as if it were
+  // variance (LY treated as zero) and misleadingly all green.
+  const varianceData = useMemo(() => chartSpecialties.filter(s => s.mtdLY > 0).map(s => ({ name: s.name.length > 12 ? s.name.slice(0,11)+"\u2026" : s.name, variance: s.mtdActual - s.mtdLY, fill: s.mtdVarLY >= 0 ? C.success : C.danger })), [chartSpecialties]);
   const pieData = useMemo(() => { const filtered = sorted.filter(s => s.ytdActual >= 50000); const tot = filtered.reduce((a,s) => a+s.ytdActual, 0); return filtered.map((s,i) => ({ name:s.name, value:s.ytdActual, pctShare: tot ? s.ytdActual/tot : 0, fill: PALETTE[i%PALETTE.length] })); }, [sorted]);
 
   const ipTotals = useMemo(() => {
