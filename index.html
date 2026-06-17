@@ -575,16 +575,31 @@ function parseExcelFile(data) {
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
   let headerIdx = 4;
   for (let i = 0; i < 10; i++) { const r = rows[i] || []; if (r.join(" ").toLowerCase().match(/specialty|doctor/)) { headerIdx = i; break; } }
+  // The team changed the Specialty Wise Summary layout in mid-Jun 2026:
+  //   - prepended a "Location" column at C2
+  //   - dropped MTD LY and YTD LY columns entirely
+  // Detect by looking for "Location" in the header row, then map columns accordingly.
+  // Old layout: C1=Doctor, C2=Spec, C3=Today, C4=MTDBgt, C5=MTDAct, C6=MTDLY, C7=MTDvBgt%, C8=MTDvLY%, C9=YTDBgt, C10=YTDAct, C11=YTDLY
+  // New layout: C2=Loc, C3=Doctor, C4=Spec, C5=LocDoctor, C6=Today, C7=MTDBgt, C8=MTDAct, C9=MTDvarAmt, C10=MTDvar%, C11=YTDBgt, C12=YTDAct, C13=YTDvarAmt, C14=YTDvar%
+  const headerRow = rows[headerIdx] || [];
+  const isNewFormat = headerRow.some(c => typeof c === "string" && /^\s*location\s*$/i.test(c));
+  const cols = isNewFormat
+    ? { doc: 2, spec: 3, today: 5, mtdB: 6, mtdA: 7, mtdLY: -1, mtdVBR: -1, mtdVLR: -1, ytdB: 10, ytdA: 11, ytdLY: -1 }
+    : { doc: 0, spec: 1, today: 2, mtdB: 3, mtdA: 4, mtdLY: 5, mtdVBR: 6, mtdVLR: 7, ytdB: 8, ytdA: 9, ytdLY: 10 };
+  // Old layout has a column-titles row + a sub-headers row before data → offset +2.
+  // New layout's matched "header" row IS the column names → offset +1.
+  const dataStart = isNewFormat ? headerIdx + 1 : headerIdx + 2;
   const num = (v) => (typeof v === "number" ? v : parseFloat(v) || 0);
+  const numAt = (r, i) => i >= 0 ? num(r[i]) : 0;
   const specialties = [], doctors = [];
-  for (let i = headerIdx + 2; i < rows.length; i++) {
+  for (let i = dataStart; i < rows.length; i++) {
     const r = rows[i]; if (!r) continue;
-    const colA = r[0];
-    let colB = r[1];
+    const colA = r[cols.doc];
+    let colB = r[cols.spec];
     if (!colB || typeof colB !== "string" || colB.toLowerCase().includes("grand total")) continue;
     const colBL = colB.toLowerCase();
     if (colBL.includes("lutetia") || colBL.includes("not required") || colBL.includes("radiology") || colBL.includes("sonographer") || colBL.includes("laser technician")) continue;
-    const today=num(r[2]),mtdBudget=num(r[3]),mtdActual=num(r[4]),mtdLY=num(r[5]),mtdVBR=num(r[6]),mtdVLR=num(r[7]),ytdBudget=num(r[8]),ytdActual=num(r[9]),ytdLY=num(r[10]);
+    const today=numAt(r,cols.today),mtdBudget=numAt(r,cols.mtdB),mtdActual=numAt(r,cols.mtdA),mtdLY=numAt(r,cols.mtdLY),mtdVBR=numAt(r,cols.mtdVBR),mtdVLR=numAt(r,cols.mtdVLR),ytdBudget=numAt(r,cols.ytdB),ytdActual=numAt(r,cols.ytdA),ytdLY=numAt(r,cols.ytdLY);
     if (colBL.includes("total")) {
       // Strip "Total" (case-insensitive) then normalize known case variants
       let name = colB.replace(/\s*total\s*/i, "").trim();
@@ -595,9 +610,61 @@ function parseExcelFile(data) {
       // Doctor row — normalize specialty for consistency
       let specialty = colB.trim();
       if (specialty.toLowerCase() === "family medicine") specialty = "Family Medicine";
-      doctors.push({ name: colA.trim(), specialty, today, mtdActual, mtdBudget, mtdLY, ytdActual, ytdBudget, ytdLY, mtdVarBudget: mtdBudget ? (mtdActual-mtdBudget)/mtdBudget : 0, ytdVarBudget: ytdBudget ? (ytdActual-ytdBudget)/ytdBudget : 0, mtdVarLY: mtdLY ? (mtdActual-mtdLY)/mtdLY : 0, ytdVarLY: ytdLY ? (ytdActual-ytdLY)/ytdLY : 0 });
+      const loc = isNewFormat && r[1] && typeof r[1] === "string" ? r[1].trim() : "";
+      doctors.push({ name: colA.trim(), specialty, today, mtdActual, mtdBudget, mtdLY, ytdActual, ytdBudget, ytdLY, mtdVarBudget: mtdBudget ? (mtdActual-mtdBudget)/mtdBudget : 0, ytdVarBudget: ytdBudget ? (ytdActual-ytdBudget)/ytdBudget : 0, mtdVarLY: mtdLY ? (mtdActual-mtdLY)/mtdLY : 0, ytdVarLY: ytdLY ? (ytdActual-ytdLY)/ytdLY : 0, _loc: loc });
     }
   }
+
+  // New format quirks: (1) each doctor appears once per location they worked at —
+  // sum across locations, accumulate the location list; (2) no specialty subtotal
+  // rows — synthesize them by grouping the deduped doctors.
+  if (isNewFormat) {
+    const docByName = {};
+    for (const d of doctors) {
+      const k = d.name;
+      if (!docByName[k]) {
+        docByName[k] = { ...d, _locSet: new Set() };
+      } else {
+        docByName[k].today += d.today;
+        docByName[k].mtdActual += d.mtdActual;
+        docByName[k].mtdBudget += d.mtdBudget;
+        docByName[k].ytdActual += d.ytdActual;
+        docByName[k].ytdBudget += d.ytdBudget;
+      }
+      if (d._loc) docByName[k]._locSet.add(d._loc);
+    }
+    doctors.length = 0;
+    for (const d of Object.values(docByName)) {
+      d.locations = [...d._locSet].sort().join(",");
+      delete d._locSet;
+      delete d._loc;
+      d.mtdVarBudget = d.mtdBudget ? (d.mtdActual - d.mtdBudget) / d.mtdBudget : 0;
+      d.ytdVarBudget = d.ytdBudget ? (d.ytdActual - d.ytdBudget) / d.ytdBudget : 0;
+      d.mtdVarLY = 0;
+      d.ytdVarLY = 0;
+      doctors.push(d);
+    }
+    // Synthesize specialty subtotals
+    const specMap = {};
+    for (const d of doctors) {
+      const k = d.specialty || "Other";
+      if (!specMap[k]) specMap[k] = { name: k, today: 0, mtdActual: 0, mtdBudget: 0, mtdLY: 0, ytdActual: 0, ytdBudget: 0, ytdLY: 0 };
+      specMap[k].today += d.today || 0;
+      specMap[k].mtdActual += d.mtdActual || 0;
+      specMap[k].mtdBudget += d.mtdBudget || 0;
+      specMap[k].ytdActual += d.ytdActual || 0;
+      specMap[k].ytdBudget += d.ytdBudget || 0;
+    }
+    specialties.length = 0;
+    for (const s of Object.values(specMap)) {
+      s.mtdVarBudget = s.mtdBudget ? (s.mtdActual - s.mtdBudget) / s.mtdBudget : 0;
+      s.mtdVarLY = 0;
+      s.ytdVarBudget = s.ytdBudget ? (s.ytdActual - s.ytdBudget) / s.ytdBudget : 0;
+      s.ytdVarLY = 0;
+      specialties.push(s);
+    }
+  }
+
   // Compute Today per specialty from doctor data
   const specTodayMap = {};
   doctors.forEach(d => {
