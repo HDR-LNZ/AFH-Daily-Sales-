@@ -2352,8 +2352,20 @@ function App() {
   const [dataWarnings, setDataWarnings] = useState([]);
   const [historicalMonth, setHistoricalMonth] = useState(null);
   const [userMonthlyHistory, setUserMonthlyHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("hh_user_monthly_history") || "[]"); }
-    catch (e) { return []; }
+    // Try primary key first; fall back to backup written on every archive/remove.
+    // Both are non-expiring — user archives are meant to survive dashboard state
+    // resets that only wipe hh_dashboard_state.
+    try {
+      const primary = JSON.parse(localStorage.getItem("hh_user_monthly_history") || "null");
+      if (Array.isArray(primary) && primary.length > 0) return primary;
+      const backup = JSON.parse(localStorage.getItem("hh_user_monthly_history_backup") || "null");
+      if (Array.isArray(backup) && backup.length > 0) {
+        // Restore from backup and re-seed primary
+        try { localStorage.setItem("hh_user_monthly_history", JSON.stringify(backup)); } catch (e) {}
+        return backup;
+      }
+      return primary || [];
+    } catch (e) { return []; }
   });
   const currentStateRef = useRef(null); // stores the "current month" state for Back to Current
 
@@ -2382,8 +2394,13 @@ function App() {
     if (!historicalMonth) {
       currentStateRef.current = { dsrTotals, locations, reportDate, specialties, doctors, ipSpecialties, ipDoctors, dailyRevenue, doctorLocations };
     }
-    // Check user-archived months first (newest first), then hardcoded MONTHLY_HISTORY
-    const hist = userMonthlyHistory.find(m => m.monthKey === monthKey)
+    // Look in user archives first (localStorage — always freshest, avoids the
+    // useState-in-closure staleness that the deps array would otherwise cause)
+    // then fall back to the hardcoded MONTHLY_HISTORY.
+    let userHist = [];
+    try { userHist = JSON.parse(localStorage.getItem("hh_user_monthly_history") || "[]"); } catch (e) {}
+    const hist = userHist.find(m => m.monthKey === monthKey)
+      || userMonthlyHistory.find(m => m.monthKey === monthKey)
       || MONTHLY_HISTORY.find(m => m.monthKey === monthKey);
     if (!hist) return;
     setHistoricalMonth(monthKey);
@@ -2447,7 +2464,7 @@ function App() {
     setIpDoctors([]);
 
     setDataWarnings(verifyHistoricalData(hist));
-  }, []);
+  }, [historicalMonth, userMonthlyHistory, dsrTotals, locations, reportDate, specialties, doctors, ipSpecialties, ipDoctors, dailyRevenue, doctorLocations]);
 
   const loadCurrentMonth = useCallback(() => {
     setHistoricalMonth(null);
@@ -2555,14 +2572,22 @@ function App() {
     const next = [...userMonthlyHistory.filter(m => m.monthKey !== monthKey), entry]
       .sort((a, b) => new Date(b.month) - new Date(a.month));
     setUserMonthlyHistory(next);
-    try { localStorage.setItem("hh_user_monthly_history", JSON.stringify(next)); } catch(e) { console.warn("Failed to persist monthly history:", e); }
+    try {
+      const json = JSON.stringify(next);
+      localStorage.setItem("hh_user_monthly_history", json);
+      localStorage.setItem("hh_user_monthly_history_backup", json); // dual-write for resilience
+    } catch(e) { console.warn("Failed to persist monthly history:", e); }
   }, [historicalMonth, dsrTotals, reportDate, locations, specialties, ipSpecialties, dailyRevenue, userMonthlyHistory]);
 
   const removeArchivedMonth = useCallback((monthKey) => {
     if (!confirm("Remove " + monthKey + " from Monthly History?")) return;
     const next = userMonthlyHistory.filter(m => m.monthKey !== monthKey);
     setUserMonthlyHistory(next);
-    try { localStorage.setItem("hh_user_monthly_history", JSON.stringify(next)); } catch(e) {}
+    try {
+      const json = JSON.stringify(next);
+      localStorage.setItem("hh_user_monthly_history", json);
+      localStorage.setItem("hh_user_monthly_history_backup", json);
+    } catch(e) {}
     if (historicalMonth === monthKey) loadCurrentMonth();
   }, [userMonthlyHistory, historicalMonth, loadCurrentMonth]);
 
