@@ -549,6 +549,16 @@ const DEFAULT_DSR_TOTALS = {
 };
 
 const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed"]);
+
+const LOCATION_ALIASES = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Festival City":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Day Surgery":"DSU","DSC":"DSU","Barsha Heights":"Tecom"};
+function normLoc(name) {
+  if (!name) return name;
+  const n = name.trim();
+  if (LOCATION_ALIASES[n]) return LOCATION_ALIASES[n];
+  if (CLINIC_COORDS[n]) return n;
+  for (const [k,v] of Object.entries(LOCATION_ALIASES)) { if (n.toLowerCase().includes(k.toLowerCase())) return v; }
+  return n;
+}
 // Specialties hidden from the Specialty Breakdown table — support / admin categories
 // that aren't revenue-generating clinical specialties. Case-insensitive match.
 const EXCLUDED_TABLE_SPECIALTIES = new Set(["anesthesia", "nursing care", "eeg technician", "eeg tech", "registered nurse"]);
@@ -748,7 +758,7 @@ function parseExcelFile(data) {
       const loc = r[1], doc = r[2], spec = r[3];
       if (!loc || typeof loc !== "string" || loc.toLowerCase().includes("total") || loc.toLowerCase().includes("grand")) continue;
       if (!doc || typeof doc !== "string" || !doc.trim()) continue;
-      rawLocs.push({ location: loc.trim(), doctor: doc.trim(), specialty: (spec && typeof spec === "string") ? spec.trim() : "Other", today: num(r[5]), mtdBudget: num(r[6]), mtdActual: num(r[7]), ytdBudget: num(r[10]), ytdActual: num(r[11]) });
+      rawLocs.push({ location: normLoc(loc.trim()), doctor: doc.trim(), specialty: (spec && typeof spec === "string") ? spec.trim() : "Other", today: num(r[5]), mtdBudget: num(r[6]), mtdActual: num(r[7]), ytdBudget: num(r[10]), ytdActual: num(r[11]) });
     }
     locations = aggregateLocationData(rawLocs);
     // Enrich locations with DSR-level totals (OP + Pharmacy + IP) from DSR rows 26-43
@@ -759,7 +769,7 @@ function parseExcelFile(data) {
         const r = dsRows2[i]; if (!r) continue;
         const code = r[2]; // C3 = clinic code (Qusais, Silicon, DSU, etc.)
         if (!code || typeof code !== "string") continue;
-        const loc = code.trim();
+        const loc = normLoc(code.trim());
         dsrClinicMap[loc] = {
           totalToday: Math.round(r[10] || 0),    // C11 = Today total
           totalRevenueMTD: Math.round(r[15] || 0), // C16 = MTD total
@@ -1035,6 +1045,7 @@ function parseExcelFile(data) {
 function aggregateLocationData(rawRows) {
   const map = {};
   for (const r of rawRows) {
+    r.location = normLoc(r.location);
     if (!map[r.location]) map[r.location] = {};
     if (!map[r.location][r.specialty]) map[r.location][r.specialty] = [];
     map[r.location][r.specialty].push(r);
@@ -2449,7 +2460,7 @@ function App() {
       mtdBudget: d.mtdActual,
     });
     const histLocs = hist.clinics.map(c => ({
-      location: c.loc,
+      location: normLoc(c.loc),
       totalToday: 0,
       totalRevenueMTD: c.mtd,
       mtdBudget: 0,
