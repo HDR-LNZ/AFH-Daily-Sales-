@@ -1397,6 +1397,7 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
     { id: "doctors", label: "Doctors", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
     { id: "inpatient", label: "Inpatient", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
     { id: "underperformers", label: "Underperformers", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg> },
+    { id: "monthly-trends", label: "Monthly Trends", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/><line x1="1" y1="20" x2="23" y2="20"/></svg> },
   ];
 
   if (isMobile) {
@@ -4577,6 +4578,159 @@ function App() {
             })()}
           </div>
         )}
+
+        {/* ── MONTHLY TRENDS ── */}
+        <div id="monthly-trends" style={{ marginTop:32 }}>
+          <h2 style={{ fontSize:18, fontWeight:700, color:C.text, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/><line x1="1" y1="20" x2="23" y2="20"/></svg>
+            Monthly Revenue &amp; Volume Trends
+          </h2>
+          {(() => {
+            const allMonths = [...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
+              .reduce((acc, m) => { if (!acc.find(x => x.monthKey === m.monthKey)) acc.push(m); return acc; }, [])
+              .sort((a, b) => new Date(a.month) - new Date(b.month));
+            if (allMonths.length === 0) return <div style={{ padding:40, textAlign:"center", color:C.textMuted, fontSize:13 }}>No monthly data available. Archive months from the sidebar to see trends.</div>;
+            const chartData = allMonths.map(m => ({
+              name: m.month,
+              revenue: m.revenue || 0,
+              lyRevenue: m.lyRevenue || 0,
+              budget: m.budget || 0,
+              volume: m.dsr?.opMtdVolume || 0,
+            }));
+
+            const clinicNames = [...new Set(allMonths.flatMap(m => (m.clinics || []).map(c => c.loc)))].filter(n => !["Staff DIP","Staff DFC","Stationed"].includes(n));
+            const clinicRevData = allMonths.map(m => {
+              const row = { name: m.month };
+              (m.clinics || []).forEach(c => { if (clinicNames.includes(c.loc)) row[c.loc] = c.mtd || 0; });
+              return row;
+            });
+            const clinicVolData = allMonths.map(m => {
+              const row = { name: m.month };
+              (m.clinics || []).forEach(c => { if (clinicNames.includes(c.loc)) row[c.loc] = c.vol || 0; });
+              return row;
+            });
+            const clinicAvgRevData = allMonths.map(m => {
+              const row = { name: m.month };
+              const days = m.days || 30;
+              (m.clinics || []).forEach(c => { if (clinicNames.includes(c.loc)) row[c.loc] = Math.round((c.mtd || 0) / days); });
+              return row;
+            });
+            const ttStyle = { background:C.cardBg, border:"1px solid "+C.border, borderRadius:8, fontSize:12 };
+            const ttLabel = { color:C.text, fontWeight:600, marginBottom:4 };
+
+            return (
+              <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+                {/* 1. Combined Revenue Trend */}
+                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Combined Revenue Trend (AED)</h3>
+                  <ResponsiveContainer width="100%" height={isMobile ? 250 : 320}>
+                    <ComposedChart data={chartData} margin={{ top:10, right:10, left:0, bottom:0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
+                      <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={ttStyle} formatter={(v, n) => [fmt(v) + " AED", n === "revenue" ? "Revenue" : n === "lyRevenue" ? "LY Revenue" : "Budget"]} labelStyle={ttLabel} />
+                      <Legend wrapperStyle={{ fontSize:11 }} />
+                      <Bar dataKey="revenue" name="Revenue" fill={C.primary} radius={[4,4,0,0]} barSize={isMobile ? 20 : 32} />
+                      <Bar dataKey="lyRevenue" name="LY Revenue" fill="rgba(100,116,139,0.5)" radius={[4,4,0,0]} barSize={isMobile ? 20 : 32} />
+                      <Line dataKey="budget" name="Budget" type="monotone" stroke={C.warning} strokeWidth={2} strokeDasharray="5 5" dot={{ r:3, fill:C.warning }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 2. Combined Volume Trend */}
+                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Combined OP Volume Trend (Visits)</h3>
+                  <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
+                    <AreaChart data={chartData} margin={{ top:10, right:10, left:0, bottom:0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
+                      <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={ttStyle} formatter={(v) => [fmt(v) + " visits"]} labelStyle={ttLabel} />
+                      <Area dataKey="volume" name="OP Volume" type="monotone" stroke={C.accent} fill="rgba(6,182,212,0.15)" strokeWidth={2} dot={{ r:4, fill:C.accent }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 3. Revenue by Clinic */}
+                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Revenue by Clinic (AED)</h3>
+                  <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
+                    <LineChart data={clinicRevData} margin={{ top:10, right:10, left:0, bottom:0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
+                      <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={ttStyle} formatter={(v) => [fmt(v) + " AED"]} labelStyle={ttLabel} />
+                      <Legend wrapperStyle={{ fontSize:10 }} />
+                      {clinicNames.map((cn, i) => <Line key={cn} dataKey={cn} name={cn} type="monotone" stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={{ r:3 }} />)}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 4. Volume by Clinic */}
+                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>OP Volume by Clinic (Visits)</h3>
+                  <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
+                    <LineChart data={clinicVolData} margin={{ top:10, right:10, left:0, bottom:0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
+                      <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={ttStyle} formatter={(v) => [fmt(v) + " visits"]} labelStyle={ttLabel} />
+                      <Legend wrapperStyle={{ fontSize:10 }} />
+                      {clinicNames.map((cn, i) => <Line key={cn} dataKey={cn} name={cn} type="monotone" stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={{ r:3 }} />)}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 5. Average Daily Revenue by Clinic */}
+                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Average Daily Revenue by Clinic (AED/day)</h3>
+                  <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
+                    <LineChart data={clinicAvgRevData} margin={{ top:10, right:10, left:0, bottom:0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
+                      <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={ttStyle} formatter={(v) => [fmt(v) + " AED/day"]} labelStyle={ttLabel} />
+                      <Legend wrapperStyle={{ fontSize:10 }} />
+                      {clinicNames.map((cn, i) => <Line key={cn} dataKey={cn} name={cn} type="monotone" stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={{ r:3 }} />)}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Summary Table */}
+                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20, overflowX:"auto" }}>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Monthly Summary</h3>
+                  <table style={{ width:"100%", fontSize: isMobile ? 11 : 12 }}>
+                    <thead>
+                      <tr style={{ borderBottom:"2px solid "+C.border }}>
+                        <th style={{ padding:"8px 10px", textAlign:"left", color:C.textMuted, fontWeight:600 }}>Month</th>
+                        <th style={{ padding:"8px 10px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>Revenue</th>
+                        <th style={{ padding:"8px 10px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>LY</th>
+                        <th style={{ padding:"8px 10px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>vs LY</th>
+                        <th style={{ padding:"8px 10px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>Budget</th>
+                        <th style={{ padding:"8px 10px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>Volume</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allMonths.slice().reverse().map((m, i) => {
+                        const varLY = m.lyRevenue ? (m.revenue - m.lyRevenue) / m.lyRevenue : null;
+                        return (
+                          <tr key={m.monthKey} style={{ borderBottom:"1px solid "+C.border, background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+                            <td style={{ padding:"8px 10px", fontWeight:600, color:C.text }}>{m.month}</td>
+                            <td style={{ padding:"8px 10px", textAlign:"right", color:C.text }}>{fmt(m.revenue)}</td>
+                            <td style={{ padding:"8px 10px", textAlign:"right", color:C.textSecondary }}>{fmt(m.lyRevenue)}</td>
+                            <td style={{ padding:"8px 10px", textAlign:"right", color: varLY != null ? varColor(varLY) : C.textMuted, fontWeight:600 }}>{varLY != null ? pct(varLY) : "—"}</td>
+                            <td style={{ padding:"8px 10px", textAlign:"right", color:C.textSecondary }}>{fmt(m.budget)}</td>
+                            <td style={{ padding:"8px 10px", textAlign:"right", color:C.accent }}>{fmt(m.dsr?.opMtdVolume)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
 
         <div style={{ textAlign:"center", padding:"28px 0 12px", color:C.textMuted, fontSize:11 }}>Al-Futtaim Health — HealthHub Executive Revenue Summary — All values in AED</div>
 
