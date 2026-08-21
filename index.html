@@ -2974,14 +2974,18 @@ function App() {
   }, [locations, dsrTotals]);
 
   const clinicPPCChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.totalRevenueYTD > 0 || l.ppcYTD > 0 || (l.ppcYTDLY || 0) > 0))
-      .sort((a, b) => (b.ppcYTD || 0) - (a.ppcYTD || 0))
-      .map(l => ({
-        name: CLINIC_COORDS[l.location]?.label || l.location,
-        code: l.location,
-        "2026": l.ppcYTD || 0,
-        "2025": l.ppcYTDLY || 0,
-      })), [locations]);
+    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && ((l.opVolMTD || 0) > 0 || (l.opVolMTDLY || 0) > 0))
+      .map(l => {
+        const vol = l.opVolMTD || 0;
+        const volLY = l.opVolMTDLY || 0;
+        return {
+          name: CLINIC_COORDS[l.location]?.label || l.location,
+          code: l.location,
+          "2026": vol > 0 ? Math.round(l.totalRevenueMTD / vol) : 0,
+          "2025": volLY > 0 ? Math.round((l.mtdLY || 0) / volLY) : 0,
+        };
+      })
+      .sort((a, b) => (b["2026"] || 0) - (a["2026"] || 0)), [locations]);
 
   const clinicYTDChartData = useMemo(() =>
     [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.totalRevenueYTD > 0 || (l.ytdLY || 0) > 0))
@@ -4017,9 +4021,9 @@ function App() {
           <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #8b5cf6" }}>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Avg Revenue per Patient by Clinic — YTD</h2>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Avg Revenue per Patient by Clinic — MTD</h2>
             </div>
-            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Total revenue / total visits per clinic — 2026 vs 2025 (AED)</p>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>MTD revenue / MTD OP visits per clinic — 2026 vs 2025 (AED)</p>
           </div>
           <ResponsiveContainer width="100%" height={Math.max(400, clinicPPCChartData.length * 38)}>
             <BarChart data={clinicPPCChartData} layout="vertical" margin={{ top:5, right:40, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
@@ -4044,10 +4048,10 @@ function App() {
               }} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(139,92,246,0.04)" }} />
               <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
-              <Bar dataKey="2026" fill="url(#ppc2026Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2026 YTD"
-                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 4} fontSize={10} fontWeight={600} fill={C.text}>AED {value}</text> : null} />
-              <Bar dataKey="2025" fill="url(#ppc2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 YTD"
-                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 12} fontSize={10} fontWeight={600} fill={C.textMuted}>AED {value}</text> : null} />
+              <Bar dataKey="2026" fill="url(#ppc2026Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2026 MTD"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 4} fontSize={10} fontWeight={600} fill={C.text}>AED {fmt(value)}</text> : null} />
+              <Bar dataKey="2025" fill="url(#ppc2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 MTD"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 12} fontSize={10} fontWeight={600} fill={C.textMuted}>AED {fmt(value)}</text> : null} />
             </BarChart>
           </ResponsiveContainer>
         </div>
