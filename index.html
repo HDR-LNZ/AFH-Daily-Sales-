@@ -4698,11 +4698,11 @@ function App() {
                             <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} />
                             <YAxis yAxisId="rev" tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} axisLine={false} />
                             <YAxis yAxisId="vol" orientation="right" tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} axisLine={false} hide />
-                            <Tooltip contentStyle={ttStyle} formatter={(v, n) => { const labels = { rev:["Revenue", " AED"], ly:["LY Revenue", " AED"], vol:["Volume", " visits"] }; const l = labels[n] || [n,""]; return [fmt(v) + l[1], l[0]]; }} labelStyle={ttLabel} />
+                            <Tooltip contentStyle={ttStyle} itemStyle={{ color:C.text }} formatter={(v, n) => { const labels = { rev:["Revenue", " AED"], ly:["LY Revenue", " AED"], vol:["OP Volume", " visits"] }; const l = labels[n] || [n,""]; return [fmt(v) + l[1], l[0]]; }} labelStyle={ttLabel} />
                             <Bar yAxisId="rev" dataKey="rev" name="Revenue" fill={color} radius={[3,3,0,0]} barSize={isMobile ? 12 : 16} opacity={0.9}>
                               <LabelList dataKey="rev" position="top" formatter={fmtK} style={{ fill:color, fontSize:8, fontWeight:600 }} />
                             </Bar>
-                            <Bar yAxisId="rev" dataKey="ly" name="LY Revenue" fill="rgba(100,116,139,0.4)" radius={[3,3,0,0]} barSize={isMobile ? 12 : 16}>
+                            <Bar yAxisId="rev" dataKey="ly" name="LY Revenue" fill="rgba(148,163,184,0.5)" radius={[3,3,0,0]} barSize={isMobile ? 12 : 16}>
                               <LabelList dataKey="ly" position="center" formatter={fmtK} style={{ fill:"#cbd5e1", fontSize:7, fontWeight:600 }} />
                             </Bar>
                             <Line yAxisId="vol" dataKey="vol" name="OP Volume" type="monotone" stroke={C.accent} strokeWidth={1.5} dot={{ r:2, fill:C.accent }} />
