@@ -1387,7 +1387,7 @@ function getDocLocation(name, excelLocs) {
 
 // ─── Sidebar Component ─────────────────────────────────────────────────────
 
-function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarOpen, setSidebarOpen, isMobile, loadHistoricalMonth, loadCurrentMonth, historicalMonth, dsrTotals, userMonthlyHistory, archiveCurrentMonth, removeArchivedMonth }) {
+function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarOpen, setSidebarOpen, isMobile, loadHistoricalMonth, loadCurrentMonth, historicalMonth, dsrTotals, userMonthlyHistory, archiveCurrentMonth, removeArchivedMonth, exportHistory, importHistory }) {
   const hasData = dsrTotals && dsrTotals.mtdActual > 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navItems = [
@@ -1457,6 +1457,23 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
                   style={{ padding:"6px 10px", background:"rgba(16,185,129,0.12)", border:"1px dashed "+C.success, borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
                   <span style={{ fontSize:11, fontWeight:600, color:C.success }}>+ Archive this month</span>
                 </div>
+              )}
+              {(userMonthlyHistory || []).length > 0 && (
+                <div style={{ display:"flex", gap:6, marginBottom:8 }}>
+                  <div onClick={() => { exportHistory(); setMobileMenuOpen(false); }} style={{ flex:1, padding:"5px 8px", background:"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.25)", borderRadius:6, cursor:"pointer", textAlign:"center" }}>
+                    <span style={{ fontSize:10, fontWeight:600, color:C.primaryLight }}>{"↓"} Export</span>
+                  </div>
+                  <label style={{ flex:1, padding:"5px 8px", background:"rgba(168,85,247,0.1)", border:"1px solid rgba(168,85,247,0.25)", borderRadius:6, cursor:"pointer", textAlign:"center" }}>
+                    <span style={{ fontSize:10, fontWeight:600, color:"#a855f7" }}>{"↑"} Import</span>
+                    <input type="file" accept=".json" style={{ display:"none" }} onChange={(e) => { importHistory(e); setMobileMenuOpen(false); }} />
+                  </label>
+                </div>
+              )}
+              {(userMonthlyHistory || []).length === 0 && (
+                <label style={{ display:"block", padding:"5px 8px", background:"rgba(168,85,247,0.1)", border:"1px solid rgba(168,85,247,0.25)", borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
+                  <span style={{ fontSize:10, fontWeight:600, color:"#a855f7" }}>{"↑"} Import History</span>
+                  <input type="file" accept=".json" style={{ display:"none" }} onChange={(e) => { importHistory(e); setMobileMenuOpen(false); }} />
+                </label>
               )}
               {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
                 .sort((a, b) => new Date(a.month) - new Date(b.month))
@@ -1552,6 +1569,23 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
               style={{ padding:"6px 10px", background:"rgba(16,185,129,0.12)", border:"1px dashed "+C.success, borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
               <span style={{ fontSize:11, fontWeight:600, color:C.success }}>+ Archive this month</span>
             </div>
+          )}
+          {(userMonthlyHistory || []).length > 0 && (
+            <div style={{ display:"flex", gap:6, marginBottom:8 }}>
+              <div onClick={exportHistory} title="Export archived months as JSON file" style={{ flex:1, padding:"5px 8px", background:"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.25)", borderRadius:6, cursor:"pointer", textAlign:"center" }}>
+                <span style={{ fontSize:10, fontWeight:600, color:C.primaryLight }}>{"↓"} Export</span>
+              </div>
+              <label title="Import archived months from JSON file" style={{ flex:1, padding:"5px 8px", background:"rgba(168,85,247,0.1)", border:"1px solid rgba(168,85,247,0.25)", borderRadius:6, cursor:"pointer", textAlign:"center" }}>
+                <span style={{ fontSize:10, fontWeight:600, color:"#a855f7" }}>{"↑"} Import</span>
+                <input type="file" accept=".json" style={{ display:"none" }} onChange={importHistory} />
+              </label>
+            </div>
+          )}
+          {(userMonthlyHistory || []).length === 0 && (
+            <label title="Import archived months from JSON file" style={{ display:"block", padding:"5px 8px", background:"rgba(168,85,247,0.1)", border:"1px solid rgba(168,85,247,0.25)", borderRadius:6, cursor:"pointer", textAlign:"center", marginBottom:8 }}>
+              <span style={{ fontSize:10, fontWeight:600, color:"#a855f7" }}>{"↑"} Import History</span>
+              <input type="file" accept=".json" style={{ display:"none" }} onChange={importHistory} />
+            </label>
           )}
           {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
             .sort((a, b) => new Date(a.month) - new Date(b.month))
@@ -2591,6 +2625,51 @@ function App() {
     if (historicalMonth === monthKey) loadCurrentMonth();
   }, [userMonthlyHistory, historicalMonth, loadCurrentMonth]);
 
+  const exportHistory = useCallback(() => {
+    if (!userMonthlyHistory || userMonthlyHistory.length === 0) return;
+    const blob = new Blob([JSON.stringify(userMonthlyHistory, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "afh-monthly-history.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [userMonthlyHistory]);
+
+  const importHistory = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!Array.isArray(data) || !data.every(m => m.monthKey && m.revenue != null)) {
+          alert("Invalid file format. Expected an array of monthly history objects with monthKey and revenue fields.");
+          return;
+        }
+        const existing = userMonthlyHistory || [];
+        const merged = [...existing];
+        let updated = 0, added = 0;
+        data.forEach(item => {
+          const idx = merged.findIndex(m => m.monthKey === item.monthKey);
+          if (idx >= 0) { merged[idx] = item; updated++; }
+          else { merged.push(item); added++; }
+        });
+        merged.sort((a, b) => new Date(b.month) - new Date(a.month));
+        setUserMonthlyHistory(merged);
+        try { localStorage.setItem("afh_user_monthly_history", JSON.stringify(merged)); } catch(e) {}
+        try { localStorage.setItem("afh_user_monthly_history_backup", JSON.stringify(merged)); } catch(e) {}
+        alert(`Import complete: ${added} month(s) added, ${updated} month(s) updated.`);
+      } catch (err) {
+        alert("Failed to parse file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }, [userMonthlyHistory]);
+
   React.useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handler);
@@ -3184,15 +3263,19 @@ function App() {
     // Build a lookup of current specialty by slug so we can fill in for older
     // first-seen entries that were stored before we started capturing specialty.
     const specBySlug = {};
+    const mtdBySlug = {};
     for (const d of doctors) {
       const s = getDoctorSlug(d.name);
       if (s && !specBySlug[s] && d.specialty) specBySlug[s] = d.specialty.trim();
+      if (s && d.mtdActual) mtdBySlug[s] = (mtdBySlug[s] || 0) + d.mtdActual;
     }
     const newDoctorEntries = Object.entries(doctorFirstSeen)
       .filter(([slug, info]) => !info.isBaseline && !NEW_DOCTOR_EXCLUDED_SLUGS.has(slug))
       .map(([slug, info]) => ({
         ...info,
+        slug,
         specialty: SPECIALTY_CORRECTIONS[slug] || info.specialty || specBySlug[slug] || "",
+        mtd: mtdBySlug[slug] || 0,
       }));
     if (newDoctorEntries.length > 0) {
       newDoctorEntries.sort((a, b) => {
@@ -3202,7 +3285,7 @@ function App() {
         return (a.name || "").localeCompare(b.name || "");
       });
       const show = newDoctorEntries.slice(0, 15).map(e =>
-        e.name + (e.specialty ? " \u2014 " + e.specialty : "") + " (" + e.month + ")"
+        e.name + (e.specialty ? " \u2014 " + e.specialty : "") + (e.mtd ? " \u2014 MTD " + fmt(e.mtd) : "") + " (" + e.month + ")"
       );
       const more = newDoctorEntries.length > 15 ? " \u2026+" + (newDoctorEntries.length - 15) + " more" : "";
       lines.push("\u2014 New Doctors \u2014");
@@ -3312,7 +3395,7 @@ function App() {
 
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.pageBg }}>
-      <Sidebar activeSection={activeSection} onNavigate={scrollToSection} reportDate={reportDate} onFileLoaded={handleFileLoaded} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} loadHistoricalMonth={loadHistoricalMonth} loadCurrentMonth={loadCurrentMonth} historicalMonth={historicalMonth} dsrTotals={dsrTotals} userMonthlyHistory={userMonthlyHistory} archiveCurrentMonth={archiveCurrentMonth} removeArchivedMonth={removeArchivedMonth} />
+      <Sidebar activeSection={activeSection} onNavigate={scrollToSection} reportDate={reportDate} onFileLoaded={handleFileLoaded} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} isMobile={isMobile} loadHistoricalMonth={loadHistoricalMonth} loadCurrentMonth={loadCurrentMonth} historicalMonth={historicalMonth} dsrTotals={dsrTotals} userMonthlyHistory={userMonthlyHistory} archiveCurrentMonth={archiveCurrentMonth} removeArchivedMonth={removeArchivedMonth} exportHistory={exportHistory} importHistory={importHistory} />
 
       <main style={{ flex:1, marginLeft: isMobile ? 0 : (sidebarOpen ? 220 : 64), transition:"margin-left 0.3s", padding: isMobile ? "68px 12px 16px" : "24px 32px", maxWidth:1800, overflowX:"hidden" }}>
 
@@ -3368,7 +3451,7 @@ function App() {
         {/* HISTORICAL DATA BANNER */}
         {historicalMonth && (
           <div style={{ ...card, background:"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.3)", padding:"10px 20px", marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontSize:13, color:C.primaryLight }}>Viewing historical data for <strong>{MONTHLY_HISTORY.find(m => m.monthKey === historicalMonth)?.month}</strong></span>
+            <span style={{ fontSize:13, color:C.primaryLight }}>Viewing historical data for <strong>{([...userMonthlyHistory, ...MONTHLY_HISTORY].find(m => m.monthKey === historicalMonth))?.month || historicalMonth}</strong></span>
             <button onClick={loadCurrentMonth} style={{ background:C.primary, border:"none", borderRadius:6, padding:"4px 12px", color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer" }}>Back to Current</button>
           </div>
         )}
