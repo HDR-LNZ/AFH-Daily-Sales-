@@ -4624,14 +4624,18 @@ function App() {
                 <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
                   <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Combined Revenue Trend (AED)</h3>
                   <ResponsiveContainer width="100%" height={isMobile ? 250 : 320}>
-                    <ComposedChart data={chartData} margin={{ top:10, right:10, left:0, bottom:0 }}>
+                    <ComposedChart data={chartData} margin={{ top:24, right:10, left:0, bottom:0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
                       <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
                       <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={ttStyle} formatter={(v, n) => [fmt(v) + " AED", n === "revenue" ? "Revenue" : n === "lyRevenue" ? "LY Revenue" : "Budget"]} labelStyle={ttLabel} />
                       <Legend wrapperStyle={{ fontSize:11 }} />
-                      <Bar dataKey="revenue" name="Revenue" fill={C.primary} radius={[4,4,0,0]} barSize={isMobile ? 20 : 32} />
-                      <Bar dataKey="lyRevenue" name="LY Revenue" fill="rgba(100,116,139,0.5)" radius={[4,4,0,0]} barSize={isMobile ? 20 : 32} />
+                      <Bar dataKey="revenue" name="Revenue" fill={C.primary} radius={[4,4,0,0]} barSize={isMobile ? 20 : 32}>
+                        <LabelList dataKey="revenue" position="top" formatter={fmtK} style={{ fill:C.primaryLight, fontSize:isMobile ? 8 : 10, fontWeight:600 }} />
+                      </Bar>
+                      <Bar dataKey="lyRevenue" name="LY Revenue" fill="rgba(100,116,139,0.5)" radius={[4,4,0,0]} barSize={isMobile ? 20 : 32}>
+                        <LabelList dataKey="lyRevenue" position="top" formatter={fmtK} style={{ fill:C.textMuted, fontSize:isMobile ? 8 : 10 }} />
+                      </Bar>
                       <Line dataKey="budget" name="Budget" type="monotone" stroke={C.warning} strokeWidth={2} strokeDasharray="5 5" dot={{ r:3, fill:C.warning }} />
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -4641,12 +4645,14 @@ function App() {
                 <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
                   <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Combined OP Volume Trend (Visits)</h3>
                   <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
-                    <AreaChart data={chartData} margin={{ top:10, right:10, left:0, bottom:0 }}>
+                    <AreaChart data={chartData} margin={{ top:24, right:10, left:0, bottom:0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
                       <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
                       <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={ttStyle} formatter={(v) => [fmt(v) + " visits"]} labelStyle={ttLabel} />
-                      <Area dataKey="volume" name="OP Volume" type="monotone" stroke={C.accent} fill="rgba(6,182,212,0.15)" strokeWidth={2} dot={{ r:4, fill:C.accent }} />
+                      <Area dataKey="volume" name="OP Volume" type="monotone" stroke={C.accent} fill="rgba(6,182,212,0.15)" strokeWidth={2} dot={{ r:4, fill:C.accent }}>
+                        <LabelList dataKey="volume" position="top" formatter={fmtK} style={{ fill:C.accent, fontSize:isMobile ? 8 : 10, fontWeight:600 }} />
+                      </Area>
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
