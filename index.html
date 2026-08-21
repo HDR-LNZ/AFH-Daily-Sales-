@@ -559,6 +559,20 @@ function normLoc(name) {
   for (const [k,v] of Object.entries(LOCATION_ALIASES)) { if (n.toLowerCase().includes(k.toLowerCase())) return v; }
   return n;
 }
+function _matchClinic(name, clinicMap) {
+  const norm = normLoc(name);
+  if (clinicMap[norm]) return norm;
+  if (clinicMap[name]) return name;
+  const nl = name.toLowerCase();
+  for (const code of Object.keys(clinicMap)) {
+    const label = (CLINIC_COORDS[code]?.label || code).toLowerCase();
+    if (nl.includes(label) || label.includes(nl) || nl.includes(code.toLowerCase()) || code.toLowerCase().includes(nl.split(' ')[0])) return code;
+  }
+  for (const [alias, short] of Object.entries(LOCATION_ALIASES)) {
+    if (nl.includes(alias.toLowerCase()) && clinicMap[short]) return short;
+  }
+  return null;
+}
 // Specialties hidden from the Specialty Breakdown table — support / admin categories
 // that aren't revenue-generating clinical specialties. Case-insensitive match.
 const EXCLUDED_TABLE_SPECIALTIES = new Set(["anesthesia", "nursing care", "eeg technician", "eeg tech", "registered nurse"]);
@@ -781,27 +795,22 @@ function parseExcelFile(data) {
       }
       // Also extract PPC per clinic from DSR PPC section (rows 82-93, offset +56 from revenue rows)
       const dsrPPCMap = {};
-      for (let i = 81; i < 100; i++) {
+      for (let i = 70; i < 110; i++) {
         const r = dsRows2[i]; if (!r) continue;
         const name = r[6]; // C7 = clinic name
         if (!name || typeof name !== "string") continue;
-        const normName = normLoc(name.trim());
-        for (const [code, data] of Object.entries(dsrClinicMap)) {
-          const label = CLINIC_COORDS[code]?.label || code;
-          if (normName === code || name.includes(label) || label.includes(name.trim().split(' ')[0])) {
-            dsrPPCMap[code] = { ppcYTD: Math.round(r[40] || 0), ppcYTDLY: Math.round(r[45] || 0) };
-          }
+        const matchCode = _matchClinic(name.trim(), dsrClinicMap);
+        if (matchCode) {
+            dsrPPCMap[matchCode] = { ppcYTD: Math.round(r[40] || 0), ppcYTDLY: Math.round(r[45] || 0) };
         }
       }
       const dsrVolMap = {};
-      for (let i = 53; i < 72; i++) {
+      for (let i = 45; i < 80; i++) {
         const r = dsRows2[i]; if (!r) continue;
         const name = r[6];
         if (!name || typeof name !== "string") continue;
-        const normName = normLoc(name.trim());
-        for (const [code, data] of Object.entries(dsrClinicMap)) {
-          const label = CLINIC_COORDS[code]?.label || code;
-          if (normName === code || name.includes(label) || label.includes(name.trim().split(' ')[0])) {
+        const matchCode = _matchClinic(name.trim(), dsrClinicMap);
+        if (matchCode) {
             dsrVolMap[code] = {
               opVolMTD: Math.round(r[12] || 0),
               opVolMTDLY: Math.round(r[17] || 0),
@@ -2966,7 +2975,7 @@ function App() {
   }, [locations, dsrTotals]);
 
   const clinicPPCChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.ppcYTD > 0 || (l.ppcYTDLY || 0) > 0))
+    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.totalRevenueYTD > 0 || l.ppcYTD > 0 || (l.ppcYTDLY || 0) > 0))
       .sort((a, b) => (b.ppcYTD || 0) - (a.ppcYTD || 0))
       .map(l => ({
         name: CLINIC_COORDS[l.location]?.label || l.location,
