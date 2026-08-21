@@ -797,20 +797,20 @@ function parseExcelFile(data) {
       const dsrPPCMap = {};
       for (let i = 70; i < 110; i++) {
         const r = dsRows2[i]; if (!r) continue;
-        const name = r[6]; // C7 = clinic name
+        const name = r[6] || r[2]; // try column G then column C
         if (!name || typeof name !== "string") continue;
         const matchCode = _matchClinic(name.trim(), dsrClinicMap);
-        if (matchCode) {
+        if (matchCode && !dsrPPCMap[matchCode]) {
             dsrPPCMap[matchCode] = { ppcYTD: Math.round(r[40] || 0), ppcYTDLY: Math.round(r[45] || 0) };
         }
       }
       const dsrVolMap = {};
       for (let i = 45; i < 80; i++) {
         const r = dsRows2[i]; if (!r) continue;
-        const name = r[6];
+        const name = r[6] || r[2];
         if (!name || typeof name !== "string") continue;
         const matchCode = _matchClinic(name.trim(), dsrClinicMap);
-        if (matchCode) {
+        if (matchCode && !dsrVolMap[matchCode]) {
             dsrVolMap[matchCode] = {
               opVolMTD: Math.round(r[12] || 0),
               opVolMTDLY: Math.round(r[17] || 0),
@@ -3013,20 +3013,22 @@ function App() {
       .sort((a, b) => b.revenueVar - a.revenueVar), [locations]);
 
   const clinicYTDVarianceChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && ((l.ytdLY || 0) > 0 || (l.opVolYTDLY || 0) > 0))
+    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && ((l.ytdLY || 0) > 0 || (l.opVolYTDLY || l.opVolMTDLY || 0) > 0))
       .map(l => {
         const hasRevLY = (l.ytdLY || 0) > 0;
-        const hasVolLY = (l.opVolYTDLY || 0) > 0;
+        const volYTD = l.opVolYTD || l.opVolMTD || 0;
+        const volYTDLY = l.opVolYTDLY || l.opVolMTDLY || 0;
+        const hasVolLY = volYTDLY > 0;
         const revenueVar = hasRevLY ? Number((((l.totalRevenueYTD || 0) - l.ytdLY) / l.ytdLY * 100).toFixed(1)) : 0;
-        const volumeVar = hasVolLY ? Number((((l.opVolYTD || 0) - l.opVolYTDLY) / l.opVolYTDLY * 100).toFixed(1)) : 0;
+        const volumeVar = hasVolLY ? Number(((volYTD - volYTDLY) / volYTDLY * 100).toFixed(1)) : 0;
         return {
           name: CLINIC_COORDS[l.location]?.label || l.location,
           code: l.location,
           revenueVar, volumeVar, hasRevLY, hasVolLY,
           revenueMTD: l.totalRevenueYTD || 0,
           revenueLY: l.ytdLY || 0,
-          volumeMTD: l.opVolYTD || 0,
-          volumeLY: l.opVolYTDLY || 0,
+          volumeMTD: volYTD,
+          volumeLY: volYTDLY,
         };
       })
       .sort((a, b) => b.revenueVar - a.revenueVar), [locations]);
