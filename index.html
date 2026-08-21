@@ -785,24 +785,23 @@ function parseExcelFile(data) {
         const r = dsRows2[i]; if (!r) continue;
         const name = r[6]; // C7 = clinic name
         if (!name || typeof name !== "string") continue;
-        // Find matching clinic code from revenue section
+        const normName = normLoc(name.trim());
         for (const [code, data] of Object.entries(dsrClinicMap)) {
           const label = CLINIC_COORDS[code]?.label || code;
-          if (name.includes(label) || label.includes(name.trim().split(' ')[0])) {
+          if (normName === code || name.includes(label) || label.includes(name.trim().split(' ')[0])) {
             dsrPPCMap[code] = { ppcYTD: Math.round(r[40] || 0), ppcYTDLY: Math.round(r[45] || 0) };
           }
         }
       }
-      // Extract OP volume per clinic from DSR volume section (rows 54-65, offset +28 from revenue)
-      // MTD at C13/C18, YTD follows same +25 column offset as revenue (C38/C43)
       const dsrVolMap = {};
       for (let i = 53; i < 72; i++) {
         const r = dsRows2[i]; if (!r) continue;
         const name = r[6];
         if (!name || typeof name !== "string") continue;
+        const normName = normLoc(name.trim());
         for (const [code, data] of Object.entries(dsrClinicMap)) {
           const label = CLINIC_COORDS[code]?.label || code;
-          if (name.includes(label) || label.includes(name.trim().split(' ')[0])) {
+          if (normName === code || name.includes(label) || label.includes(name.trim().split(' ')[0])) {
             dsrVolMap[code] = {
               opVolMTD: Math.round(r[12] || 0),
               opVolMTDLY: Math.round(r[17] || 0),
@@ -4597,11 +4596,9 @@ function App() {
               volume: m.dsr?.opMtdVolume || 0,
             }));
 
-            const clinicAlias = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Barsha Heights":"Tecom","Festival City":"Fest Plaza","DSC":"DSU","Day Surgery":"DSU"};
-            const normClinic = (n) => { if (!n) return n; const direct = clinicAlias[n]; if (direct) return direct; for (const [k,v] of Object.entries(clinicAlias)) { if (n.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(n.toLowerCase())) return v; } return n; };
             allMonths.forEach(m => {
               if (!m.clinics) return;
-              m.clinics.forEach(c => { c.loc = normClinic(c.loc); });
+              m.clinics.forEach(c => { c.loc = normLoc(c.loc); });
               const merged = {};
               m.clinics.forEach(c => {
                 if (!merged[c.loc]) { merged[c.loc] = { ...c }; }
