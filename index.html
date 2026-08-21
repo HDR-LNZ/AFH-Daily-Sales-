@@ -811,13 +811,12 @@ function parseExcelFile(data) {
         if (!name || typeof name !== "string") continue;
         const matchCode = _matchClinic(name.trim(), dsrClinicMap);
         if (matchCode) {
-            dsrVolMap[code] = {
+            dsrVolMap[matchCode] = {
               opVolMTD: Math.round(r[12] || 0),
               opVolMTDLY: Math.round(r[17] || 0),
               opVolYTD: Math.round(r[37] || 0),
               opVolYTDLY: Math.round(r[42] || 0),
             };
-          }
         }
       }
       locations.forEach(loc => {
