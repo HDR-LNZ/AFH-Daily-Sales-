@@ -3263,15 +3263,19 @@ function App() {
     // Build a lookup of current specialty by slug so we can fill in for older
     // first-seen entries that were stored before we started capturing specialty.
     const specBySlug = {};
+    const mtdBySlug = {};
     for (const d of doctors) {
       const s = getDoctorSlug(d.name);
       if (s && !specBySlug[s] && d.specialty) specBySlug[s] = d.specialty.trim();
+      if (s && d.mtdActual) mtdBySlug[s] = (mtdBySlug[s] || 0) + d.mtdActual;
     }
     const newDoctorEntries = Object.entries(doctorFirstSeen)
       .filter(([slug, info]) => !info.isBaseline && !NEW_DOCTOR_EXCLUDED_SLUGS.has(slug))
       .map(([slug, info]) => ({
         ...info,
+        slug,
         specialty: SPECIALTY_CORRECTIONS[slug] || info.specialty || specBySlug[slug] || "",
+        mtd: mtdBySlug[slug] || 0,
       }));
     if (newDoctorEntries.length > 0) {
       newDoctorEntries.sort((a, b) => {
@@ -3281,7 +3285,7 @@ function App() {
         return (a.name || "").localeCompare(b.name || "");
       });
       const show = newDoctorEntries.slice(0, 15).map(e =>
-        e.name + (e.specialty ? " \u2014 " + e.specialty : "") + " (" + e.month + ")"
+        e.name + (e.specialty ? " \u2014 " + e.specialty : "") + (e.mtd ? " \u2014 MTD " + fmt(e.mtd) : "") + " (" + e.month + ")"
       );
       const more = newDoctorEntries.length > 15 ? " \u2026+" + (newDoctorEntries.length - 15) + " more" : "";
       lines.push("\u2014 New Doctors \u2014");
