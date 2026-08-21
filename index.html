@@ -2585,7 +2585,7 @@ function App() {
         daysElapsed: dsrTotals.daysElapsed || 30,
       },
       clinics: locations.map(l => ({
-        loc: l.location,
+        loc: CLINIC_COORDS[l.location] ? l.location : Object.keys(CLINIC_COORDS).find(k => (CLINIC_COORDS[k].label||k).toLowerCase() === l.location.toLowerCase()) || l.location,
         mtd: l.totalRevenueMTD || 0, mtdLY: l.mtdLY || 0,
         ytd: l.totalRevenueYTD || 0, ytdLY: l.ytdLY || 0,
         vol: l.opVolMTD || 0, volLY: l.opVolMTDLY || 0,
@@ -4598,9 +4598,18 @@ function App() {
               volume: m.dsr?.opMtdVolume || 0,
             }));
 
-            const clinicAlias = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Barsha Heights":"Tecom"};
-            const normClinic = (n) => clinicAlias[n] || n;
-            allMonths.forEach(m => { if (m.clinics) m.clinics.forEach(c => { c.loc = normClinic(c.loc); }); });
+            const clinicAlias = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Barsha Heights":"Tecom","Festival City":"Fest Plaza","DSC":"DSU","Day Surgery":"DSU"};
+            const normClinic = (n) => { if (!n) return n; const direct = clinicAlias[n]; if (direct) return direct; for (const [k,v] of Object.entries(clinicAlias)) { if (n.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(n.toLowerCase())) return v; } return n; };
+            allMonths.forEach(m => {
+              if (!m.clinics) return;
+              m.clinics.forEach(c => { c.loc = normClinic(c.loc); });
+              const merged = {};
+              m.clinics.forEach(c => {
+                if (!merged[c.loc]) { merged[c.loc] = { ...c }; }
+                else { merged[c.loc].mtd = (merged[c.loc].mtd||0) + (c.mtd||0); merged[c.loc].mtdLY = (merged[c.loc].mtdLY||0) + (c.mtdLY||0); merged[c.loc].vol = (merged[c.loc].vol||0) + (c.vol||0); merged[c.loc].volLY = (merged[c.loc].volLY||0) + (c.volLY||0); }
+              });
+              m.clinics = Object.values(merged);
+            });
             const clinicNames = [...new Set(allMonths.flatMap(m => (m.clinics || []).map(c => c.loc)))].filter(n => !["Staff DIP","Staff DFC","Stationed"].includes(n));
             const clinicRevData = allMonths.map(m => {
               const row = { name: m.month };
