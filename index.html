@@ -4657,49 +4657,50 @@ function App() {
                   </ResponsiveContainer>
                 </div>
 
-                {/* 3. Revenue by Clinic */}
-                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
-                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Revenue by Clinic (AED)</h3>
-                  <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
-                    <LineChart data={clinicRevData} margin={{ top:10, right:10, left:0, bottom:0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                      <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
-                      <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={ttStyle} formatter={(v) => [fmt(v) + " AED"]} labelStyle={ttLabel} />
-                      <Legend wrapperStyle={{ fontSize:10 }} />
-                      {clinicNames.map((cn, i) => <Line key={cn} dataKey={cn} name={cn} type="monotone" stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={{ r:3 }} />)}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* 4. Volume by Clinic */}
-                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
-                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>OP Volume by Clinic (Visits)</h3>
-                  <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
-                    <LineChart data={clinicVolData} margin={{ top:10, right:10, left:0, bottom:0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                      <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
-                      <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={ttStyle} formatter={(v) => [fmt(v) + " visits"]} labelStyle={ttLabel} />
-                      <Legend wrapperStyle={{ fontSize:10 }} />
-                      {clinicNames.map((cn, i) => <Line key={cn} dataKey={cn} name={cn} type="monotone" stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={{ r:3 }} />)}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* 5. Average Daily Revenue by Clinic */}
-                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
-                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Average Daily Revenue by Clinic (AED/day)</h3>
-                  <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
-                    <LineChart data={clinicAvgRevData} margin={{ top:10, right:10, left:0, bottom:0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                      <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
-                      <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={ttStyle} formatter={(v) => [fmt(v) + " AED/day"]} labelStyle={ttLabel} />
-                      <Legend wrapperStyle={{ fontSize:10 }} />
-                      {clinicNames.map((cn, i) => <Line key={cn} dataKey={cn} name={cn} type="monotone" stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={{ r:3 }} />)}
-                    </LineChart>
-                  </ResponsiveContainer>
+                {/* 3. Individual Clinic Cards */}
+                <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12, marginTop:8 }}>Clinic Breakdown</h3>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:16 }}>
+                  {clinicNames.map((cn, ci) => {
+                    const color = PALETTE[ci % PALETTE.length];
+                    const clinicChart = allMonths.map(m => {
+                      const c = (m.clinics || []).find(x => x.loc === cn);
+                      const days = m.days || 30;
+                      return { name: m.month.replace(" 2026","").replace(" 2025",""), rev: c?.mtd || 0, ly: c?.mtdLY || 0, vol: c?.vol || 0, avgRev: Math.round((c?.mtd || 0) / days) };
+                    });
+                    const lastMonth = clinicChart[clinicChart.length - 1];
+                    const totalRev = clinicChart.reduce((a, d) => a + d.rev, 0);
+                    const totalLY = clinicChart.reduce((a, d) => a + d.ly, 0);
+                    const varLY = totalLY ? (totalRev - totalLY) / totalLY : null;
+                    return (
+                      <div key={cn} style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding:14 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                          <h4 style={{ fontSize:13, fontWeight:700, color, margin:0 }}>{cn}</h4>
+                          <div style={{ display:"flex", gap:10, fontSize:10, color:C.textMuted }}>
+                            <span>YTD: <strong style={{ color:C.text }}>{fmtK(totalRev)}</strong></span>
+                            {varLY != null && <span style={{ color:varColor(varLY), fontWeight:600 }}>{pct(varLY)} vs LY</span>}
+                          </div>
+                        </div>
+                        <ResponsiveContainer width="100%" height={160}>
+                          <ComposedChart data={clinicChart} margin={{ top:16, right:4, left:-20, bottom:0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                            <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} />
+                            <YAxis yAxisId="rev" tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} axisLine={false} />
+                            <YAxis yAxisId="vol" orientation="right" tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} axisLine={false} hide />
+                            <Tooltip contentStyle={ttStyle} formatter={(v, n) => [fmt(v) + (n === "vol" ? " visits" : " AED"), n === "rev" ? "Revenue" : n === "ly" ? "LY" : "Volume"]} labelStyle={ttLabel} />
+                            <Bar yAxisId="rev" dataKey="rev" name="Revenue" fill={color} radius={[3,3,0,0]} barSize={isMobile ? 12 : 16} opacity={0.9}>
+                              <LabelList dataKey="rev" position="top" formatter={fmtK} style={{ fill:color, fontSize:8, fontWeight:600 }} />
+                            </Bar>
+                            <Bar yAxisId="rev" dataKey="ly" name="LY" fill="rgba(100,116,139,0.4)" radius={[3,3,0,0]} barSize={isMobile ? 12 : 16} />
+                            <Line yAxisId="vol" dataKey="vol" name="Volume" type="monotone" stroke={C.accent} strokeWidth={1.5} dot={{ r:2, fill:C.accent }} />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                        <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, fontSize:10, color:C.textMuted }}>
+                          <span>Avg/day: <strong style={{ color:C.text }}>{fmtK(lastMonth?.avgRev)}</strong></span>
+                          <span>Last vol: <strong style={{ color:C.accent }}>{fmt(lastMonth?.vol)}</strong></span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Summary Table */}
