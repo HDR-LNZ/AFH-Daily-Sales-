@@ -3284,12 +3284,11 @@ function App() {
         if (da !== db) return db - da; // newest month first
         return (a.name || "").localeCompare(b.name || "");
       });
-      const show = newDoctorEntries.slice(0, 15).map(e =>
+      const show = newDoctorEntries.map(e =>
         e.name + (e.specialty ? " \u2014 " + e.specialty : "") + (e.mtd ? " \u2014 MTD " + fmt(e.mtd) : "") + " (" + e.month + ")"
       );
-      const more = newDoctorEntries.length > 15 ? " \u2026+" + (newDoctorEntries.length - 15) + " more" : "";
       lines.push("\u2014 New Doctors \u2014");
-      lines.push(newDoctorEntries.length + " new doctor" + (newDoctorEntries.length === 1 ? "" : "s") + " observed in revenue since January 2026: " + show.join("; ") + more + ".");
+      lines.push(newDoctorEntries.length + " new doctor" + (newDoctorEntries.length === 1 ? "" : "s") + " observed in revenue since January 2026: " + show.join("; ") + ".");
     }
 
     return lines;
