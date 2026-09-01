@@ -797,20 +797,20 @@ function parseExcelFile(data) {
       const dsrPPCMap = {};
       for (let i = 70; i < 110; i++) {
         const r = dsRows2[i]; if (!r) continue;
-        const name = r[6] || r[2]; // try column G then column C
+        const name = r[6];
         if (!name || typeof name !== "string") continue;
         const matchCode = _matchClinic(name.trim(), dsrClinicMap);
-        if (matchCode && !dsrPPCMap[matchCode]) {
+        if (matchCode) {
             dsrPPCMap[matchCode] = { ppcYTD: Math.round(r[40] || 0), ppcYTDLY: Math.round(r[45] || 0) };
         }
       }
       const dsrVolMap = {};
-      for (let i = 45; i < 80; i++) {
+      for (let i = 51; i < 80; i++) {
         const r = dsRows2[i]; if (!r) continue;
-        const name = r[6] || r[2];
+        const name = r[6];
         if (!name || typeof name !== "string") continue;
         const matchCode = _matchClinic(name.trim(), dsrClinicMap);
-        if (matchCode && !dsrVolMap[matchCode]) {
+        if (matchCode) {
             dsrVolMap[matchCode] = {
               opVolMTD: Math.round(r[12] || 0),
               opVolMTDLY: Math.round(r[17] || 0),
@@ -835,10 +835,6 @@ function parseExcelFile(data) {
         if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; loc.opVolYTD = vol.opVolYTD; loc.opVolYTDLY = vol.opVolYTDLY; }
       });
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
-      console.log("[DEBUG] dsrVolMap keys:", Object.keys(dsrVolMap));
-      console.log("[DEBUG] dsrVolMap:", JSON.stringify(dsrVolMap));
-      console.log("[DEBUG] dsrPPCMap:", JSON.stringify(dsrPPCMap));
-      console.log("[DEBUG] DG location:", JSON.stringify(locations.filter(l => l.location === "DG" || l.location.includes("iscovery")).map(l => ({loc:l.location, vol:l.opVolMTD, volLY:l.opVolMTDLY, volYTD:l.opVolYTD}))));
     }
   }
 
