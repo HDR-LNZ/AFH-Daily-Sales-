@@ -835,6 +835,10 @@ function parseExcelFile(data) {
         if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; loc.opVolYTD = vol.opVolYTD; loc.opVolYTDLY = vol.opVolYTDLY; }
       });
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
+      console.log("[DEBUG] dsrVolMap keys:", Object.keys(dsrVolMap));
+      console.log("[DEBUG] dsrVolMap:", JSON.stringify(dsrVolMap));
+      console.log("[DEBUG] dsrPPCMap:", JSON.stringify(dsrPPCMap));
+      console.log("[DEBUG] DG location:", JSON.stringify(locations.filter(l => l.location === "DG" || l.location.includes("iscovery")).map(l => ({loc:l.location, vol:l.opVolMTD, volLY:l.opVolMTDLY, volYTD:l.opVolYTD}))));
     }
   }
 
