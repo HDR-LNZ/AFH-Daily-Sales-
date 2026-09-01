@@ -1494,7 +1494,7 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
                   <input type="file" accept=".json" style={{ display:"none" }} onChange={(e) => { importHistory(e); setMobileMenuOpen(false); }} />
                 </label>
               )}
-              {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY.filter(m => !(hiddenBuiltinMonths || []).includes(m.monthKey))]
+              {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY.filter(m => !(hiddenBuiltinMonths || []).includes(m.monthKey) && !(userMonthlyHistory || []).some(u => u.month === m.month))]
                 .sort((a, b) => new Date(a.month) - new Date(b.month))
                 .map((m, i) => {
                 const varLY = m.lyRevenue ? ((m.revenue - m.lyRevenue) / m.lyRevenue * 100).toFixed(1) : 0;
@@ -1606,7 +1606,7 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
               <input type="file" accept=".json" style={{ display:"none" }} onChange={importHistory} />
             </label>
           )}
-          {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY.filter(m => !(hiddenBuiltinMonths || []).includes(m.monthKey))]
+          {[...(userMonthlyHistory || []), ...MONTHLY_HISTORY.filter(m => !(hiddenBuiltinMonths || []).includes(m.monthKey) && !(userMonthlyHistory || []).some(u => u.month === m.month))]
             .sort((a, b) => new Date(a.month) - new Date(b.month))
             .map((m, i) => {
             const varLY = m.lyRevenue ? ((m.revenue - m.lyRevenue) / m.lyRevenue * 100).toFixed(1) : 0;
@@ -4610,7 +4610,7 @@ function App() {
           </h2>
           {(() => {
             const allMonths = [...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
-              .reduce((acc, m) => { if (!acc.find(x => x.monthKey === m.monthKey)) acc.push(m); return acc; }, [])
+              .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, [])
               .sort((a, b) => new Date(a.month) - new Date(b.month));
             if (allMonths.length === 0) return <div style={{ padding:40, textAlign:"center", color:C.textMuted, fontSize:13 }}>No monthly data available. Archive months from the sidebar to see trends.</div>;
             const chartData = allMonths.map(m => ({
