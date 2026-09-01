@@ -809,11 +809,14 @@ function parseExcelFile(data) {
         const r = dsRows2[i]; if (!r) continue;
         const name = r[6];
         if (!name || typeof name !== "string") continue;
+        const volMTD = Math.round(r[12] || 0);
+        const volMTDLY = Math.round(r[17] || 0);
+        if (volMTD === 0 && volMTDLY === 0) continue;
         const matchCode = _matchClinic(name.trim(), dsrClinicMap);
-        if (matchCode) {
+        if (matchCode && !dsrVolMap[matchCode]) {
             dsrVolMap[matchCode] = {
-              opVolMTD: Math.round(r[12] || 0),
-              opVolMTDLY: Math.round(r[17] || 0),
+              opVolMTD: volMTD,
+              opVolMTDLY: volMTDLY,
               opVolYTD: Math.round(r[37] || 0),
               opVolYTDLY: Math.round(r[42] || 0),
             };
