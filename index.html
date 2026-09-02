@@ -4483,7 +4483,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...ipSpecialties].sort((a,b) => b.mtdActual - a.mtdActual).map((s,i) => {
+                  {[...ipSpecialties].sort((a,b) => (b.mtdVolume || 0) - (a.mtdVolume || 0)).map((s,i) => {
                     const vsLY = s.mtdLY ? (s.mtdActual - s.mtdLY) / s.mtdLY : 0;
                     const ytdVsLY = (s.ytdLY||0) ? ((s.ytdActual||0) - s.ytdLY) / s.ytdLY : 0;
                     return (
