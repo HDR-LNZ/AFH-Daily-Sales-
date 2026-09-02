@@ -3606,6 +3606,26 @@ function App() {
             );
           })()}
           {(() => {
+            const ytdVol = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolYTD || l.opVolMTD || 0), 0);
+            const ytdVolLY = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolYTDLY || l.opVolMTDLY || 0), 0);
+            const volVar = ytdVolLY ? (ytdVol - ytdVolLY) / ytdVolLY : 0;
+            return (
+              <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #06b6d4, #22d3ee)" }} />
+                <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>OP Visits YTD</div>
+                <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
+                  <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>{fmt(ytdVol)}</div>
+                  <div style={{ fontSize:12, color:C.textMuted }}>vs LY: {ytdVolLY ? fmt(ytdVolLY) : "—"}</div>
+                </div>
+                <div style={{ marginTop:6 }}>
+                  {ytdVolLY > 0
+                    ? <span style={{ fontSize:11, fontWeight:600, color:varColor(volVar), background:varBg(volVar), padding:"2px 8px", borderRadius:6 }}>{pct(volVar)} vs LY</span>
+                    : <span style={{ fontSize:11, color:C.textMuted }}>no LY data</span>}
+                </div>
+              </div>
+            );
+          })()}
+          {(() => {
             // CBD totals use doctorsWithIP so figures include the IP / daycare share —
             // some CBD doctors (e.g. Vascular, ENT, Urology) earn the majority of
             // their revenue from inpatient cases.
@@ -4616,13 +4636,17 @@ function App() {
               .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, [])
               .sort((a, b) => new Date(a.month) - new Date(b.month));
             if (allMonths.length === 0) return <div style={{ padding:40, textAlign:"center", color:C.textMuted, fontSize:13 }}>No monthly data available. Archive months from the sidebar to see trends.</div>;
-            const chartData = allMonths.map(m => ({
-              name: m.month,
-              revenue: m.revenue || 0,
-              lyRevenue: m.lyRevenue || 0,
-              budget: m.budget || 0,
-              volume: m.dsr?.opMtdVolume || 0,
-            }));
+            const chartData = allMonths.map(m => {
+              const volLY = (m.clinics || []).reduce((a,c) => a + (c.volLY || 0), 0);
+              return {
+                name: m.month,
+                revenue: m.revenue || 0,
+                lyRevenue: m.lyRevenue || 0,
+                budget: m.budget || 0,
+                volume: m.dsr?.opMtdVolume || 0,
+                volumeLY: volLY,
+              };
+            });
 
             allMonths.forEach(m => {
               if (!m.clinics) return;
@@ -4681,15 +4705,17 @@ function App() {
                 <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
                   <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Combined OP Volume Trend (Visits)</h3>
                   <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
-                    <AreaChart data={chartData} margin={{ top:24, right:10, left:0, bottom:0 }}>
+                    <ComposedChart data={chartData} margin={{ top:24, right:10, left:0, bottom:0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
                       <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
                       <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={ttStyle} formatter={(v) => [fmt(v) + " visits"]} labelStyle={ttLabel} />
-                      <Area dataKey="volume" name="OP Volume" type="monotone" stroke={C.accent} fill="rgba(6,182,212,0.15)" strokeWidth={2} dot={{ r:4, fill:C.accent }}>
+                      <Tooltip contentStyle={ttStyle} itemStyle={{ color:C.text }} formatter={(v, n) => [fmt(v) + " visits", n === "volume" ? "2026 Volume" : "2025 Volume"]} labelStyle={ttLabel} />
+                      <Legend wrapperStyle={{ fontSize:11 }} />
+                      <Area dataKey="volume" name="2026 Volume" type="monotone" stroke={C.accent} fill="rgba(6,182,212,0.15)" strokeWidth={2} dot={{ r:4, fill:C.accent }}>
                         <LabelList dataKey="volume" position="top" formatter={fmtK} style={{ fill:C.accent, fontSize:isMobile ? 8 : 10, fontWeight:600 }} />
                       </Area>
-                    </AreaChart>
+                      <Line dataKey="volumeLY" name="2025 Volume" type="monotone" stroke="rgba(148,163,184,0.6)" strokeWidth={2} strokeDasharray="5 5" dot={{ r:3, fill:"#94a3b8" }} />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
 
