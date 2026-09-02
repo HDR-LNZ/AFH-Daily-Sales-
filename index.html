@@ -4703,7 +4703,20 @@ function App() {
 
                 {/* 2. Combined Volume Trend */}
                 <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
-                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Combined OP Volume Trend (Visits)</h3>
+                  {(() => {
+                    const ytdVol = chartData.reduce((a,d) => a + (d.volume || 0), 0);
+                    const ytdVolLY = chartData.reduce((a,d) => a + (d.volumeLY || 0), 0);
+                    const volVar = ytdVolLY ? (ytdVol - ytdVolLY) / ytdVolLY : null;
+                    return (
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                        <h3 style={{ fontSize:14, fontWeight:600, color:C.text, margin:0 }}>Combined OP Volume Trend (Visits)</h3>
+                        <div style={{ textAlign:"right", lineHeight:1.4 }}>
+                          <div style={{ fontSize:11, color:C.textMuted }}>YTD: <strong style={{ color:C.accent, fontSize:13 }}>{fmtK(ytdVol)}</strong> <span style={{ color:C.textMuted }}>vs LY {fmtK(ytdVolLY)}</span></div>
+                          {volVar != null && <span style={{ fontSize:11, fontWeight:700, color:varColor(volVar), background:varBg(volVar), padding:"2px 8px", borderRadius:6 }}>{pct(volVar)}</span>}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
                     <ComposedChart data={chartData} margin={{ top:24, right:10, left:0, bottom:0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
