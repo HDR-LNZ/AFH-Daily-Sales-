@@ -816,6 +816,8 @@ function parseExcelFile(data) {
         if (cell && !['op','pharmacy','ip','total','for the day','actual','last year','revenue',''].includes(cell) && !/month|date|budget/i.test(cell)) break;
         revDataStart = i + 1;
       }
+      console.log("[DEBUG-REV] revStartRow:", revStartRow, "revDataStart:", revDataStart, "todayTotalCol:", todayTotalCol, "mtdTotalCol:", mtdTotalCol, "mtdLYTotalCol:", mtdLYTotalCol);
+      console.log("[DEBUG-REV] Header rows:", JSON.stringify([0,1,2,3].map(off => (dsRows2[revStartRow+off]||[]).slice(0,20).map(c => c === null || c === undefined ? '' : c))));
       for (let i = revDataStart; i < revDataStart + 25; i++) {
         const r = dsRows2[i]; if (!r) continue;
         // Try clinic name from column A/B first, then column C
@@ -946,6 +948,11 @@ function parseExcelFile(data) {
         if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; loc.opVolYTD = vol.opVolYTD; loc.opVolYTDLY = vol.opVolYTDLY; loc.opVolToday = vol.opVolToday || 0; }
       });
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
+      console.log("[DEBUG-REV] dsrClinicMap keys:", Object.keys(dsrClinicMap), "count:", Object.keys(dsrClinicMap).length);
+      console.log("[DEBUG-REV] Sample clinic:", JSON.stringify(dsrClinicMap[Object.keys(dsrClinicMap)[0]]));
+      console.log("[DEBUG-VOL] dsrVolMap keys:", Object.keys(dsrVolMap), "count:", Object.keys(dsrVolMap).length);
+      console.log("[DEBUG] Locations with today>0:", locations.filter(l => l.totalToday > 0).map(l => l.location + ":" + l.totalToday));
+      console.log("[DEBUG] Locations with volToday>0:", locations.filter(l => (l.opVolToday||0) > 0).map(l => l.location + ":" + l.opVolToday));
     }
   }
 
