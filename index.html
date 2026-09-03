@@ -857,7 +857,7 @@ function parseExcelFile(data) {
         if (cell && typeof cell === 'string' && /volume/i.test(cell.trim()) && !/total|corporate/i.test(cell.trim())) { volHeaderRow = i; break; }
       }
       // Find "Total" columns in volume section headers (same approach as revenue)
-      let volTodayTotalCol = 5, volMtdTotalCol = 12;
+      let volTodayTotalCol = 10, volMtdTotalCol = 12;
       if (volHeaderRow >= 0) {
         const vTotalCols = [];
         for (let hdrOff = 0; hdrOff <= 3; hdrOff++) {
@@ -900,8 +900,9 @@ function parseExcelFile(data) {
         if (!trimmed || /total|grand|corporate/i.test(trimmed)) continue;
         const matchCode = _matchClinic(trimmed, dsrClinicMap) || normLoc(trimmed);
         if (EXCLUDED_MAP_LOCATIONS.has(matchCode)) continue;
-        const todayOP = volTodayOPCol >= 0 ? Math.round(r[volTodayOPCol] || 0) : Math.round(r[2] || 0);
+        const todayOP = volTodayOPCol >= 0 ? Math.round(r[volTodayOPCol] || 0) : Math.round(r[7] || 0);
         const todayTotal = Math.round(r[volTodayTotalCol] || 0);
+        const todayVol = todayOP || todayTotal;
         const mtdOP = Math.round(r[volMtdTotalCol] || 0);
         // Fallback: scan for MTD value
         let mtdVal = mtdOP;
@@ -912,7 +913,7 @@ function parseExcelFile(data) {
         }
         if (mtdVal === 0 && todayOP === 0) continue;
         if (!dsrVolMap[matchCode]) {
-          dsrVolMap[matchCode] = { opVolMTD: mtdVal || todayOP, opVolMTDLY: 0, opVolYTD: 0, opVolYTDLY: 0, opVolToday: todayOP };
+          dsrVolMap[matchCode] = { opVolMTD: mtdVal || todayVol, opVolMTDLY: 0, opVolYTD: 0, opVolYTDLY: 0, opVolToday: todayVol };
         }
       }
       // Enrich volume entries with LY/YTD from hardcoded column offsets
@@ -5010,9 +5011,11 @@ function App() {
                   const chartDays = dates.map(d => {
                     const entry = entries.find(e => e.date === d);
                     const dt = new Date(d);
-                    const dow = !isNaN(dt.getTime()) ? dayNames[dt.getDay()] : "";
-                    const dayNum = !isNaN(dt.getTime()) ? dt.getDate() : d;
-                    return { name: dow + " " + dayNum, rev: entry?.rev || 0, vol: entry?.vol || 0 };
+                    const valid = !isNaN(dt.getTime());
+                    const dow = valid ? dayNames[dt.getDay()] : "";
+                    const dayNum = valid ? dt.getDate() : "";
+                    const label = (dow && dayNum) ? dow + " " + dayNum : d;
+                    return { name: label, rev: entry?.rev || 0, vol: entry?.vol || 0 };
                   }).filter(d => d.rev > 0 || d.vol > 0);
                   if (chartDays.length === 0) return null;
                   const totalRev = chartDays.reduce((a,d) => a + d.rev, 0);
