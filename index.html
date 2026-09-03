@@ -790,13 +790,16 @@ function parseExcelFile(data) {
       let todayTotalCol = 5, mtdTotalCol = 15, mtdLYTotalCol = 20, budgetCol = 30, ytdTotalCol = 40, ytdLYCol = 45;
       if (revStartRow >= 0) {
         // Scan the header rows for "Total" columns to map them
-        const hdr1 = dsRows2[revStartRow] || [];
-        const hdr2 = dsRows2[revStartRow + 1] || [];
         const totalCols = [];
-        for (let c = 0; c < Math.max(hdr1.length, hdr2.length, 50); c++) {
-          const h = (hdr2[c] || hdr1[c] || '').toString().toLowerCase().trim();
-          if (h === 'total') totalCols.push(c);
+        for (let hdrOff = 0; hdrOff <= 3; hdrOff++) {
+          const hdr = dsRows2[revStartRow + hdrOff] || [];
+          for (let c = 0; c < Math.max(hdr.length, 50); c++) {
+            const h = (hdr[c] || '').toString().toLowerCase().trim();
+            if (h === 'total' && !totalCols.includes(c)) totalCols.push(c);
+          }
+          if (totalCols.length >= 3) break;
         }
+        totalCols.sort((a,b) => a - b);
         if (totalCols.length >= 3) {
           todayTotalCol = totalCols[0];
           mtdTotalCol = totalCols[1];
@@ -805,7 +808,14 @@ function parseExcelFile(data) {
           if (totalCols.length >= 5) ytdLYCol = totalCols[4];
         }
       }
-      const revDataStart = revStartRow >= 0 ? revStartRow + 2 : 25;
+      // Find first data row (skip all header rows — look for a row with a clinic name)
+      let revDataStart = revStartRow >= 0 ? revStartRow + 2 : 25;
+      for (let i = revDataStart; i < revDataStart + 5; i++) {
+        const r = dsRows2[i]; if (!r) continue;
+        const cell = (r[0] || r[1] || '').toString().toLowerCase().trim();
+        if (cell && !['op','pharmacy','ip','total','for the day','actual','last year','revenue',''].includes(cell) && !/month|date|budget/i.test(cell)) break;
+        revDataStart = i + 1;
+      }
       for (let i = revDataStart; i < revDataStart + 25; i++) {
         const r = dsRows2[i]; if (!r) continue;
         // Try clinic name from column A/B first, then column C
@@ -840,34 +850,69 @@ function parseExcelFile(data) {
       }
       const dsrVolMap = {};
       // Find the "Volume" section header dynamically
-      let volStartRow = -1;
+      let volHeaderRow = -1;
       for (let i = 40; i < 120; i++) {
         const r = dsRows2[i]; if (!r) continue;
         const cell = r[0] || r[1];
-        if (cell && typeof cell === 'string' && /^\s*volume\s*$/i.test(cell.trim())) { volStartRow = i + 2; break; }
+        if (cell && typeof cell === 'string' && /^\s*volume\s*$/i.test(cell.trim())) { volHeaderRow = i; break; }
       }
-      if (volStartRow < 0) volStartRow = 51;
+      // Find "Total" columns in volume section headers (same approach as revenue)
+      let volTodayTotalCol = 5, volMtdTotalCol = -1;
+      if (volHeaderRow >= 0) {
+        const vTotalCols = [];
+        for (let hdrOff = 0; hdrOff <= 3; hdrOff++) {
+          const hdr = dsRows2[volHeaderRow + hdrOff] || [];
+          for (let c = 0; c < Math.max(hdr.length, 50); c++) {
+            const h = (hdr[c] || '').toString().toLowerCase().trim();
+            if (h === 'total' && !vTotalCols.includes(c)) vTotalCols.push(c);
+          }
+          if (vTotalCols.length >= 2) break;
+        }
+        vTotalCols.sort((a,b) => a - b);
+        if (vTotalCols.length >= 1) volTodayTotalCol = vTotalCols[0];
+        if (vTotalCols.length >= 2) volMtdTotalCol = vTotalCols[1];
+      }
+      // Also find the "OP" column for today's OP visits
+      let volTodayOPCol = -1;
+      if (volHeaderRow >= 0) {
+        for (let hdrOff = 0; hdrOff <= 3; hdrOff++) {
+          const hdr = dsRows2[volHeaderRow + hdrOff] || [];
+          for (let c = 0; c < Math.max(hdr.length, 20); c++) {
+            const h = (hdr[c] || '').toString().toLowerCase().trim();
+            if (h === 'op') { volTodayOPCol = c; break; }
+          }
+          if (volTodayOPCol >= 0) break;
+        }
+      }
+      // Find first data row after volume header
+      let volStartRow = volHeaderRow >= 0 ? volHeaderRow + 2 : 51;
+      for (let i = volStartRow; i < volStartRow + 5; i++) {
+        const r = dsRows2[i]; if (!r) continue;
+        const cell = (r[0] || r[1] || '').toString().toLowerCase().trim();
+        if (cell && !['op','pharmacy','ip','total','for the day','actual','last year','volume',''].includes(cell) && !/month|date|budget/i.test(cell)) break;
+        volStartRow = i + 1;
+      }
       for (let i = volStartRow; i < volStartRow + 25; i++) {
         const r = dsRows2[i]; if (!r) continue;
-        // Clinic name in column A or B
         const name = (r[0] && typeof r[0] === 'string' ? r[0] : null) || (r[1] && typeof r[1] === 'string' ? r[1] : null);
         if (!name) continue;
         const trimmed = name.trim();
         if (!trimmed || /total|grand|corporate/i.test(trimmed)) continue;
         const matchCode = _matchClinic(trimmed, dsrClinicMap) || normLoc(trimmed);
         if (EXCLUDED_MAP_LOCATIONS.has(matchCode)) continue;
-        // "For the Day" columns: OP=r[2], Pharmacy=r[3], IP=r[4], Total=r[5]
-        // "Actual Month to Date" columns: OP=r[6] or r[7], scan for the MTD OP value
-        const todayOP = Math.round(r[2] || 0);
-        const todayTotal = Math.round(r[5] || 0);
-        // MTD columns — find OP MTD (first numeric after "For the Day" block)
-        let mtdOP = 0, mtdTotal = 0;
-        for (let c = 6; c <= 12; c++) { if (typeof r[c] === 'number' && r[c] > todayTotal) { mtdOP = Math.round(r[c]); break; } }
-        // Find the MTD total (largest number in the MTD section)
-        for (let c = 6; c <= 15; c++) { if (typeof r[c] === 'number' && r[c] >= mtdOP) mtdTotal = Math.round(r[c]); }
-        if (mtdOP === 0 && todayOP === 0) continue;
+        const todayOP = volTodayOPCol >= 0 ? Math.round(r[volTodayOPCol] || 0) : Math.round(r[2] || 0);
+        const todayTotal = Math.round(r[volTodayTotalCol] || 0);
+        const mtdOP = volMtdTotalCol >= 0 ? Math.round(r[volMtdTotalCol] || 0) : 0;
+        // Fallback: scan for MTD value
+        let mtdVal = mtdOP;
+        if (mtdVal === 0) {
+          for (let c = volTodayTotalCol + 1; c <= volTodayTotalCol + 10; c++) {
+            if (typeof r[c] === 'number' && r[c] > todayTotal) { mtdVal = Math.round(r[c]); break; }
+          }
+        }
+        if (mtdVal === 0 && todayOP === 0) continue;
         if (!dsrVolMap[matchCode]) {
-          dsrVolMap[matchCode] = { opVolMTD: mtdOP || todayOP, opVolMTDLY: 0, opVolYTD: 0, opVolYTDLY: 0, opVolToday: todayOP };
+          dsrVolMap[matchCode] = { opVolMTD: mtdVal || todayOP, opVolMTDLY: 0, opVolYTD: 0, opVolYTDLY: 0, opVolToday: todayOP };
         }
       }
       // Also try the original column-based approach for LY/YTD if available
@@ -2896,7 +2941,7 @@ function App() {
         const next = prev.filter(e => e.date !== dateKey);
         locs.forEach(l => {
           if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
-          if (!l.totalToday && !l.opVolToday) return;
+          if ((l.totalToday || 0) === 0 && (l.opVolToday || 0) === 0 && (l.totalRevenueMTD || 0) === 0) return;
           next.push({ date: dateKey, clinic: l.location, rev: l.totalToday || 0, vol: l.opVolToday || 0 });
         });
         next.sort((a, b) => new Date(a.date) - new Date(b.date));
