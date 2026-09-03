@@ -805,21 +805,50 @@ function parseExcelFile(data) {
         }
       }
       const dsrVolMap = {};
-      for (let i = 51; i < 80; i++) {
+      // Find the "Volume" section header dynamically
+      let volStartRow = -1;
+      for (let i = 40; i < 120; i++) {
         const r = dsRows2[i]; if (!r) continue;
-        const name = r[6];
-        if (!name || typeof name !== "string") continue;
-        const volMTD = Math.round(r[12] || 0);
-        const volMTDLY = Math.round(r[17] || 0);
-        if (volMTD === 0 && volMTDLY === 0) continue;
-        const matchCode = _matchClinic(name.trim(), dsrClinicMap);
-        if (matchCode && !dsrVolMap[matchCode]) {
-            dsrVolMap[matchCode] = {
-              opVolMTD: volMTD,
-              opVolMTDLY: volMTDLY,
-              opVolYTD: Math.round(r[37] || 0),
-              opVolYTDLY: Math.round(r[42] || 0),
-            };
+        const cell = r[0] || r[1];
+        if (cell && typeof cell === 'string' && /^\s*volume\s*$/i.test(cell.trim())) { volStartRow = i + 2; break; }
+      }
+      if (volStartRow < 0) volStartRow = 51;
+      for (let i = volStartRow; i < volStartRow + 25; i++) {
+        const r = dsRows2[i]; if (!r) continue;
+        // Clinic name in column A or B
+        const name = (r[0] && typeof r[0] === 'string' ? r[0] : null) || (r[1] && typeof r[1] === 'string' ? r[1] : null);
+        if (!name) continue;
+        const trimmed = name.trim();
+        if (!trimmed || /total|grand|corporate/i.test(trimmed)) continue;
+        const matchCode = _matchClinic(trimmed, dsrClinicMap) || normLoc(trimmed);
+        if (EXCLUDED_MAP_LOCATIONS.has(matchCode)) continue;
+        // "For the Day" columns: OP=r[2], Pharmacy=r[3], IP=r[4], Total=r[5]
+        // "Actual Month to Date" columns: OP=r[6] or r[7], scan for the MTD OP value
+        const todayOP = Math.round(r[2] || 0);
+        const todayTotal = Math.round(r[5] || 0);
+        // MTD columns — find OP MTD (first numeric after "For the Day" block)
+        let mtdOP = 0, mtdTotal = 0;
+        for (let c = 6; c <= 12; c++) { if (typeof r[c] === 'number' && r[c] > todayTotal) { mtdOP = Math.round(r[c]); break; } }
+        // Find the MTD total (largest number in the MTD section)
+        for (let c = 6; c <= 15; c++) { if (typeof r[c] === 'number' && r[c] >= mtdOP) mtdTotal = Math.round(r[c]); }
+        if (mtdOP === 0 && todayOP === 0) continue;
+        if (!dsrVolMap[matchCode]) {
+          dsrVolMap[matchCode] = { opVolMTD: mtdOP || todayOP, opVolMTDLY: 0, opVolYTD: 0, opVolYTDLY: 0, opVolToday: todayOP };
+        }
+      }
+      // Also try the original column-based approach for LY/YTD if available
+      for (let i = volStartRow; i < volStartRow + 25; i++) {
+        const r = dsRows2[i]; if (!r) continue;
+        const name = r[6] && typeof r[6] === 'string' ? r[6].trim() : null;
+        if (!name || /total|grand/i.test(name)) continue;
+        const matchCode = _matchClinic(name, dsrClinicMap);
+        if (matchCode && dsrVolMap[matchCode]) {
+          const lyVal = Math.round(r[17] || 0);
+          const ytdVal = Math.round(r[37] || 0);
+          const ytdLYVal = Math.round(r[42] || 0);
+          if (lyVal) dsrVolMap[matchCode].opVolMTDLY = lyVal;
+          if (ytdVal) dsrVolMap[matchCode].opVolYTD = ytdVal;
+          if (ytdLYVal) dsrVolMap[matchCode].opVolYTDLY = ytdLYVal;
         }
       }
       locations.forEach(loc => {
@@ -835,7 +864,7 @@ function parseExcelFile(data) {
         const ppc = dsrPPCMap[loc.location];
         if (ppc) { loc.ppcYTD = ppc.ppcYTD; loc.ppcYTDLY = ppc.ppcYTDLY; }
         const vol = dsrVolMap[loc.location];
-        if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; loc.opVolYTD = vol.opVolYTD; loc.opVolYTDLY = vol.opVolYTDLY; }
+        if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; loc.opVolYTD = vol.opVolYTD; loc.opVolYTDLY = vol.opVolYTDLY; loc.opVolToday = vol.opVolToday || 0; }
       });
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
     }
