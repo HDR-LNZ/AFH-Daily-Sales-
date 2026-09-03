@@ -775,22 +775,56 @@ function parseExcelFile(data) {
       rawLocs.push({ location: normLoc(loc.trim()), doctor: doc.trim(), specialty: (spec && typeof spec === "string") ? spec.trim() : "Other", today: num(r[5]), mtdBudget: num(r[6]), mtdActual: num(r[7]), ytdBudget: num(r[10]), ytdActual: num(r[11]) });
     }
     locations = aggregateLocationData(rawLocs);
-    // Enrich locations with DSR-level totals (OP + Pharmacy + IP) from DSR rows 26-43
+    // Enrich locations with DSR-level totals from the Revenue section
     if (dsrName) {
       const dsRows2 = XLSX.utils.sheet_to_json(wb.Sheets[dsrName], { header: 1, defval: null });
       const dsrClinicMap = {};
-      for (let i = 25; i < 50; i++) {
+      // Find "Revenue" header row dynamically
+      let revStartRow = -1;
+      for (let i = 0; i < 40; i++) {
         const r = dsRows2[i]; if (!r) continue;
-        const code = r[2]; // C3 = clinic code (Qusais, Silicon, DSU, etc.)
-        if (!code || typeof code !== "string") continue;
-        const loc = normLoc(code.trim());
+        const cell = r[0] || r[1];
+        if (cell && typeof cell === 'string' && /^\s*revenue\s*$/i.test(cell.trim())) { revStartRow = i; break; }
+      }
+      // Find "Total" column indices from the sub-header row (For the Day Total, MTD Total, LY Total)
+      let todayTotalCol = 5, mtdTotalCol = 15, mtdLYTotalCol = 20, budgetCol = 30, ytdTotalCol = 40, ytdLYCol = 45;
+      if (revStartRow >= 0) {
+        // Scan the header rows for "Total" columns to map them
+        const hdr1 = dsRows2[revStartRow] || [];
+        const hdr2 = dsRows2[revStartRow + 1] || [];
+        const totalCols = [];
+        for (let c = 0; c < Math.max(hdr1.length, hdr2.length, 50); c++) {
+          const h = (hdr2[c] || hdr1[c] || '').toString().toLowerCase().trim();
+          if (h === 'total') totalCols.push(c);
+        }
+        if (totalCols.length >= 3) {
+          todayTotalCol = totalCols[0];
+          mtdTotalCol = totalCols[1];
+          mtdLYTotalCol = totalCols[2];
+          if (totalCols.length >= 4) ytdTotalCol = totalCols[3];
+          if (totalCols.length >= 5) ytdLYCol = totalCols[4];
+        }
+      }
+      const revDataStart = revStartRow >= 0 ? revStartRow + 2 : 25;
+      for (let i = revDataStart; i < revDataStart + 25; i++) {
+        const r = dsRows2[i]; if (!r) continue;
+        // Try clinic name from column A/B first, then column C
+        const name = (r[0] && typeof r[0] === 'string' ? r[0] : null) || (r[1] && typeof r[1] === 'string' ? r[1] : null) || (r[2] && typeof r[2] === 'string' ? r[2] : null);
+        if (!name) continue;
+        const trimmed = name.trim();
+        if (!trimmed || /total|grand|corporate|homecare/i.test(trimmed)) continue;
+        const loc = normLoc(trimmed);
+        const todayVal = Math.round(r[todayTotalCol] || 0);
+        const mtdVal = Math.round(r[mtdTotalCol] || 0);
+        const mtdLYVal = Math.round(r[mtdLYTotalCol] || 0);
+        if (mtdVal === 0 && todayVal === 0) continue;
         dsrClinicMap[loc] = {
-          totalToday: Math.round(r[10] || 0),    // C11 = Today total
-          totalRevenueMTD: Math.round(r[15] || 0), // C16 = MTD total
-          mtdLY: Math.round(r[20] || 0),           // C21 = MTD LY total
-          mtdBudget: Math.round(r[30] || 0),       // C31 = Budget MTD total
-          totalRevenueYTD: Math.round(r[40] || 0), // C41 = YTD total
-          ytdLY: Math.round(r[45] || 0),           // C46 = YTD LY total
+          totalToday: todayVal,
+          totalRevenueMTD: mtdVal,
+          mtdLY: mtdLYVal,
+          mtdBudget: Math.round(r[budgetCol] || 0),
+          totalRevenueYTD: Math.round(r[ytdTotalCol] || 0),
+          ytdLY: Math.round(r[ytdLYCol] || 0),
         };
       }
       // Also extract PPC per clinic from DSR PPC section (rows 82-93, offset +56 from revenue rows)
