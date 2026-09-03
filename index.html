@@ -4927,58 +4927,104 @@ function App() {
         <div id="daily-trends" style={{ marginTop:32 }}>
           <h2 style={{ fontSize:18, fontWeight:700, color:C.text, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Daily Revenue &amp; Volume by Clinic
+            Daily Clinic Snapshot
           </h2>
           {(() => {
-            const clinics = Object.keys(dailyByClinic).filter(c => !EXCLUDED_MAP_LOCATIONS.has(c)).sort((a,b) => {
-              const aTotal = Object.values(dailyByClinic[a]).reduce((s,d) => s + d.rev, 0);
-              const bTotal = Object.values(dailyByClinic[b]).reduce((s,d) => s + d.rev, 0);
-              return bTotal - aTotal;
-            });
-            if (clinics.length === 0) return <div style={{ padding:40, textAlign:"center", color:C.textMuted, fontSize:13 }}>No daily clinic data available. Upload a DSR to see daily trends by clinic.</div>;
-            const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-            const rd = new Date(reportDate);
-            const validRD = !isNaN(rd.getTime());
-            const rYear = validRD ? rd.getFullYear() : 2026;
-            const rMonth = validRD ? rd.getMonth() : 7;
+            const days = dsrTotals.daysElapsed || 1;
+            const clinicData = [...locations]
+              .filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.totalRevenueMTD > 0 || (l.opVolMTD || 0) > 0))
+              .sort((a,b) => (b.totalRevenueMTD || 0) - (a.totalRevenueMTD || 0))
+              .map((l, i) => {
+                const avgRev = Math.round(l.totalRevenueMTD / days);
+                const avgVol = Math.round((l.opVolMTD || 0) / days);
+                const avgRevLY = l.mtdLY ? Math.round(l.mtdLY / days) : 0;
+                const avgVolLY = (l.opVolMTDLY || 0) ? Math.round(l.opVolMTDLY / days) : 0;
+                return {
+                  name: CLINIC_COORDS[l.location]?.label || l.location,
+                  code: l.location,
+                  todayRev: l.totalToday || 0,
+                  todayVol: l.opVolToday || 0,
+                  mtdRev: l.totalRevenueMTD || 0,
+                  mtdVol: l.opVolMTD || 0,
+                  mtdRevLY: l.mtdLY || 0,
+                  mtdVolLY: l.opVolMTDLY || 0,
+                  avgRev, avgVol, avgRevLY, avgVolLY,
+                  color: PALETTE[i % PALETTE.length],
+                };
+              });
+            if (clinicData.length === 0) return <div style={{ padding:40, textAlign:"center", color:C.textMuted, fontSize:13 }}>No data available. Upload a DSR.</div>;
+            const ttStyle = { background:C.cardBg, border:"1px solid "+C.border, borderRadius:8, fontSize:12 };
+            const barData = clinicData.map(c => ({ name: c.name, "Today Rev": c.todayRev, "Avg/Day": c.avgRev, "Avg/Day LY": c.avgRevLY }));
+            const volBarData = clinicData.map(c => ({ name: c.name, "Today Vol": c.todayVol, "Avg/Day": c.avgVol, "Avg/Day LY": c.avgVolLY }));
             return (
-              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:16 }}>
-                {clinics.map((clinic, ci) => {
-                  const color = PALETTE[ci % PALETTE.length];
-                  const days = dailyByClinic[clinic];
-                  const chartDays = Object.keys(days).map(Number).sort((a,b) => a - b).map(day => {
-                    const dt = new Date(rYear, rMonth, day);
-                    const dow = validRD ? dayNames[dt.getDay()] : "";
-                    return { name: dow + " " + day, rev: Math.round(days[day].rev), vol: Math.round(days[day].vol) };
-                  });
-                  const totalRev = chartDays.reduce((a,d) => a + d.rev, 0);
-                  const totalVol = chartDays.reduce((a,d) => a + d.vol, 0);
-                  const avgVol = chartDays.length ? Math.round(totalVol / chartDays.length) : 0;
-                  const label = CLINIC_COORDS[clinic]?.label || clinic;
-                  return (
-                    <div key={clinic} style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding:14 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                        <h4 style={{ fontSize:13, fontWeight:700, color, margin:0 }}>{label}</h4>
-                        <div style={{ display:"flex", gap:10, fontSize:10, color:C.textMuted }}>
-                          <span>MTD: <strong style={{ color:C.text }}>{fmtK(totalRev)}</strong></span>
-                          <span>Vol: <strong style={{ color:C.accent }}>{fmt(totalVol)}</strong></span>
-                          <span>Avg/day: <strong style={{ color:C.accent }}>{fmt(avgVol)}</strong> visits</span>
-                        </div>
-                      </div>
-                      <ResponsiveContainer width="100%" height={160}>
-                        <ComposedChart data={chartDays} margin={{ top:16, right:4, left:-20, bottom:0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
-                          <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:8 }} tickLine={false} interval={isMobile ? 3 : 1} angle={-45} textAnchor="end" height={40} />
-                          <YAxis yAxisId="rev" tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} axisLine={false} />
-                          <YAxis yAxisId="vol" orientation="right" hide />
-                          <Tooltip contentStyle={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:8, fontSize:12 }} itemStyle={{ color:C.text }} formatter={(v, n) => [fmt(v) + (n === "vol" ? " visits" : " AED"), n === "rev" ? "Revenue" : "Volume"]} labelStyle={{ color:C.text, fontWeight:600, marginBottom:4 }} />
-                          <Bar yAxisId="rev" dataKey="rev" fill={color} radius={[2,2,0,0]} barSize={isMobile ? 6 : 10} opacity={0.85} />
-                          <Line yAxisId="vol" dataKey="vol" type="monotone" stroke={C.accent} strokeWidth={1.5} dot={false} />
-                        </ComposedChart>
-                      </ResponsiveContainer>
-                    </div>
-                  );
-                })}
+              <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+                {/* Revenue: Today vs Avg/Day vs Avg/Day LY */}
+                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Today's Revenue vs Daily Average (AED)</h3>
+                  <ResponsiveContainer width="100%" height={Math.max(300, clinicData.length * 38)}>
+                    <BarChart data={barData} layout="vertical" margin={{ top:5, right:50, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+                      <XAxis type="number" tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
+                      <YAxis type="category" dataKey="name" tick={{ fill:C.textSecondary, fontSize:11 }} tickLine={false} axisLine={false} width={isMobile ? 80 : 120} />
+                      <Tooltip contentStyle={ttStyle} itemStyle={{ color:C.text }} formatter={(v) => [fmt(v) + " AED"]} labelStyle={{ color:C.text, fontWeight:600, marginBottom:4 }} />
+                      <Legend wrapperStyle={{ fontSize:11 }} />
+                      <Bar dataKey="Today Rev" fill={C.primary} radius={[0,4,4,0]} maxBarSize={14} label={({ x, y, width, value }) => value > 0 ? <text x={x+width+4} y={y+4} fontSize={9} fontWeight={600} fill={C.primaryLight}>{fmtK(value)}</text> : null} />
+                      <Bar dataKey="Avg/Day" fill={C.accent} radius={[0,4,4,0]} maxBarSize={14} label={({ x, y, width, value }) => value > 0 ? <text x={x+width+4} y={y+10} fontSize={9} fontWeight={600} fill={C.accent}>{fmtK(value)}</text> : null} />
+                      <Bar dataKey="Avg/Day LY" fill="rgba(148,163,184,0.4)" radius={[0,4,4,0]} maxBarSize={14} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Volume: Today vs Avg/Day vs Avg/Day LY */}
+                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20 }}>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Today's OP Volume vs Daily Average (Visits)</h3>
+                  <ResponsiveContainer width="100%" height={Math.max(300, clinicData.length * 38)}>
+                    <BarChart data={volBarData} layout="vertical" margin={{ top:5, right:50, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+                      <XAxis type="number" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
+                      <YAxis type="category" dataKey="name" tick={{ fill:C.textSecondary, fontSize:11 }} tickLine={false} axisLine={false} width={isMobile ? 80 : 120} />
+                      <Tooltip contentStyle={ttStyle} itemStyle={{ color:C.text }} formatter={(v) => [fmt(v) + " visits"]} labelStyle={{ color:C.text, fontWeight:600, marginBottom:4 }} />
+                      <Legend wrapperStyle={{ fontSize:11 }} />
+                      <Bar dataKey="Today Vol" fill="#f59e0b" radius={[0,4,4,0]} maxBarSize={14} label={({ x, y, width, value }) => value > 0 ? <text x={x+width+4} y={y+4} fontSize={9} fontWeight={600} fill="#fbbf24">{value}</text> : null} />
+                      <Bar dataKey="Avg/Day" fill={C.accent} radius={[0,4,4,0]} maxBarSize={14} label={({ x, y, width, value }) => value > 0 ? <text x={x+width+4} y={y+10} fontSize={9} fontWeight={600} fill={C.accent}>{value}</text> : null} />
+                      <Bar dataKey="Avg/Day LY" fill="rgba(148,163,184,0.4)" radius={[0,4,4,0]} maxBarSize={14} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Summary Table */}
+                <div style={{ background:C.cardBg, borderRadius:12, border:"1px solid "+C.border, padding: isMobile ? 12 : 20, overflowX:"auto" }}>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Clinic Summary ({days} days)</h3>
+                  <table style={{ width:"100%", fontSize: isMobile ? 10 : 12 }}>
+                    <thead>
+                      <tr style={{ borderBottom:"2px solid "+C.border }}>
+                        <th style={{ padding:"8px 8px", textAlign:"left", color:C.textMuted, fontWeight:600 }}>Clinic</th>
+                        <th style={{ padding:"8px 8px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>Today Rev</th>
+                        <th style={{ padding:"8px 8px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>Avg/Day</th>
+                        <th style={{ padding:"8px 8px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>Today Vol</th>
+                        <th style={{ padding:"8px 8px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>Avg Vol/Day</th>
+                        <th style={{ padding:"8px 8px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>MTD Rev</th>
+                        <th style={{ padding:"8px 8px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>MTD Vol</th>
+                        <th style={{ padding:"8px 8px", textAlign:"right", color:C.textMuted, fontWeight:600 }}>Rev vs LY</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clinicData.map((c, i) => {
+                        const revVar = c.mtdRevLY ? (c.mtdRev - c.mtdRevLY) / c.mtdRevLY : null;
+                        return (
+                          <tr key={c.code} style={{ borderBottom:"1px solid "+C.border, background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+                            <td style={{ padding:"8px 8px", fontWeight:600, color:c.color }}>{c.name}</td>
+                            <td style={{ padding:"8px 8px", textAlign:"right", color:C.text }}>{fmt(c.todayRev)}</td>
+                            <td style={{ padding:"8px 8px", textAlign:"right", color:C.accent }}>{fmt(c.avgRev)}</td>
+                            <td style={{ padding:"8px 8px", textAlign:"right", color:"#fbbf24" }}>{fmt(c.todayVol)}</td>
+                            <td style={{ padding:"8px 8px", textAlign:"right", color:C.accent }}>{fmt(c.avgVol)}</td>
+                            <td style={{ padding:"8px 8px", textAlign:"right", color:C.text }}>{fmt(c.mtdRev)}</td>
+                            <td style={{ padding:"8px 8px", textAlign:"right", color:C.text }}>{fmt(c.mtdVol)}</td>
+                            <td style={{ padding:"8px 8px", textAlign:"right", color: revVar != null ? varColor(revVar) : C.textMuted, fontWeight:600 }}>{revVar != null ? pct(revVar) : "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             );
           })()}
