@@ -550,14 +550,22 @@ const DEFAULT_DSR_TOTALS = {
 
 const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed"]);
 
-const LOCATION_ALIASES = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Festival City":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Day Surgery":"DSU","DSC":"DSU","Barsha Heights":"Tecom"};
+const LOCATION_ALIASES = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Festival City":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Day Surgery":"DSU","DSC":"DSU","Barsha Heights":"Tecom","Jumeirah Village Circle":"JVC","Jumeirah Village":"JVC","HealthHub – Tecom":"Tecom","HealthHub – Barsha Heights":"Tecom","HealthHub – Jumeirah Village Circle":"JVC","HealthHub – Al Warqa":"Warqa","HealthHub – Al Karama":"Karama","HealthHub – Al Qusais":"Qusais","HealthHub – Al Nahda":"Nahda","HealthHub – Festival Plaza":"Fest Plaza","HealthHub – Arabian Center":"Arabian","HealthHub – Jumeirah Village":"JVC","HealthHub Jumeirah Village Circle":"JVC"};
 function normLoc(name) {
   if (!name) return name;
-  const n = name.trim();
+  let n = name.trim();
   if (LOCATION_ALIASES[n]) return LOCATION_ALIASES[n];
   if (CLINIC_COORDS[n]) return n;
+  const stripped = n.replace(/^HealthHub\s*[-–—]\s*/i, '').replace(/^HealthHub\s+/i, '').trim();
+  if (stripped !== n) {
+    if (LOCATION_ALIASES[stripped]) return LOCATION_ALIASES[stripped];
+    if (CLINIC_COORDS[stripped]) return stripped;
+  }
   for (const [k,v] of Object.entries(LOCATION_ALIASES)) { if (n.toLowerCase().includes(k.toLowerCase())) return v; }
-  return n;
+  if (stripped !== n) {
+    for (const [k,v] of Object.entries(LOCATION_ALIASES)) { if (stripped.toLowerCase().includes(k.toLowerCase())) return v; }
+  }
+  return stripped || n;
 }
 function _matchClinic(name, clinicMap) {
   const norm = normLoc(name);
