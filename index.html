@@ -2946,6 +2946,10 @@ function App() {
     // Capture today's per-clinic revenue + volume into the daily log
     if (locs?.length && rd) {
       const dateKey = rd;
+      const festPlaza = locs.find(l => l.location === "Fest Plaza" || l.location.includes("estival"));
+      console.log("[DEBUG-DAILY] dateKey:", dateKey, "parsed:", new Date(dateKey).toDateString());
+      console.log("[DEBUG-DAILY] Fest Plaza:", festPlaza ? {loc:festPlaza.location, today:festPlaza.totalToday, mtd:festPlaza.totalRevenueMTD, volToday:festPlaza.opVolToday, volMTD:festPlaza.opVolMTD} : "NOT FOUND");
+      console.log("[DEBUG-DAILY] All clinics today rev:", locs.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).map(l => l.location + ":" + (l.totalToday||0)).join(", "));
       setDailyClinicLog(prev => {
         const next = prev.filter(e => e.date !== dateKey);
         locs.forEach(l => {
@@ -2954,6 +2958,7 @@ function App() {
           next.push({ date: dateKey, clinic: l.location, rev: l.totalToday || 0, vol: l.opVolToday || 0 });
         });
         next.sort((a, b) => new Date(a.date) - new Date(b.date));
+        console.log("[DEBUG-DAILY] Log dates:", [...new Set(next.map(e => e.date))]);
         try { localStorage.setItem("hh_daily_clinic_log", JSON.stringify(next)); } catch(e) {}
         return next;
       });
