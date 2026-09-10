@@ -3396,7 +3396,7 @@ function App() {
     // card and the Daily Trend chart). Per-clinic sum here would drop Staff DIP /
     // Stationed (which the map excludes) and create a confusing discrepancy.
     const totalVolMTD = dsrTotals.opMtdVolume || locations.reduce((a,l) => a + (l.opVolMTD || 0), 0);
-    const totalVolLY = locations.reduce((a,l) => a + (l.opVolMTDLY || 0), 0);
+    const totalVolLY = dsrTotals.opMtdLYVolume || locations.reduce((a,l) => a + (l.opVolMTDLY || 0), 0);
     const days = dsrTotals.daysElapsed || 1;
     const avgVolPerDay = Math.round(totalVolMTD / days);
     const avgVolPerDayLY = Math.round(totalVolLY / days);
