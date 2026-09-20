@@ -2948,22 +2948,18 @@ function App() {
     setReportDate(rd);
     setHistoricalMonth(null);
 
-    // Capture today's per-clinic revenue + volume into the daily log
+    // Capture today's per-clinic MTD revenue + volume into the daily log.
+    // Daily revenue is derived as the delta between consecutive MTD snapshots.
     if (locs?.length && rd) {
       const dateKey = rd;
-      const festPlaza = locs.find(l => l.location === "Fest Plaza" || l.location.includes("estival"));
-      console.log("[DEBUG-DAILY] dateKey:", dateKey, "parsed:", new Date(dateKey).toDateString());
-      console.log("[DEBUG-DAILY] Fest Plaza:", festPlaza ? {loc:festPlaza.location, today:festPlaza.totalToday, mtd:festPlaza.totalRevenueMTD, volToday:festPlaza.opVolToday, volMTD:festPlaza.opVolMTD} : "NOT FOUND");
-      console.log("[DEBUG-DAILY] All clinics today rev:", locs.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).map(l => l.location + ":" + (l.totalToday||0)).join(", "));
       setDailyClinicLog(prev => {
         const next = prev.filter(e => e.date !== dateKey);
         locs.forEach(l => {
           if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
-          if ((l.totalToday || 0) === 0 && (l.opVolToday || 0) === 0 && (l.totalRevenueMTD || 0) === 0) return;
-          next.push({ date: dateKey, clinic: l.location, rev: l.totalToday || 0, vol: l.opVolToday || 0 });
+          if ((l.totalRevenueMTD || 0) === 0 && (l.opVolMTD || 0) === 0) return;
+          next.push({ date: dateKey, clinic: l.location, mtdRev: l.totalRevenueMTD || 0, mtdVol: l.opVolMTD || 0 });
         });
         next.sort((a, b) => new Date(a.date) - new Date(b.date));
-        console.log("[DEBUG-DAILY] Log dates:", [...new Set(next.map(e => e.date))]);
         try { localStorage.setItem("hh_daily_clinic_log", JSON.stringify(next)); } catch(e) {}
         return next;
       });
@@ -5026,18 +5022,25 @@ function App() {
                 {sortedClinics.map((clinic, ci) => {
                   const color = PALETTE[ci % PALETTE.length];
                   const entries = dailyClinicLog.filter(e => e.clinic === clinic);
-                  const chartDays = dates.map(d => {
+                  const chartDays = dates.map((d, di) => {
                     const entry = entries.find(e => e.date === d);
+                    if (!entry) return null;
                     const dt = new Date(d);
                     const valid = !isNaN(dt.getTime());
                     const dow = valid ? dayNames[dt.getDay()] : "";
                     const dayNum = valid ? dt.getDate() : "";
                     const label = (dow && dayNum) ? dow + " " + dayNum : d;
-                    return { name: label, rev: entry?.rev || 0, vol: entry?.vol || 0 };
-                  }).filter(d => d.rev > 0 || d.vol > 0);
+                    // Compute daily revenue/volume as delta from previous day's MTD
+                    const prevDate = dates[di - 1];
+                    const prevEntry = prevDate ? entries.find(e => e.date === prevDate) : null;
+                    const rev = prevEntry ? Math.max(0, (entry.mtdRev || entry.rev || 0) - (prevEntry.mtdRev || prevEntry.rev || 0)) : (entry.mtdRev || entry.rev || 0);
+                    const vol = prevEntry ? Math.max(0, (entry.mtdVol || entry.vol || 0) - (prevEntry.mtdVol || prevEntry.vol || 0)) : (entry.mtdVol || entry.vol || 0);
+                    return { name: label, rev, vol };
+                  }).filter(d => d && (d.rev > 0 || d.vol > 0));
                   if (chartDays.length === 0) return null;
-                  const totalRev = chartDays.reduce((a,d) => a + d.rev, 0);
-                  const totalVol = chartDays.reduce((a,d) => a + d.vol, 0);
+                  const lastEntry = entries[entries.length - 1];
+                  const totalRev = lastEntry?.mtdRev || chartDays.reduce((a,d) => a + d.rev, 0);
+                  const totalVol = lastEntry?.mtdVol || chartDays.reduce((a,d) => a + d.vol, 0);
                   const avgVol = chartDays.length ? Math.round(totalVol / chartDays.length) : 0;
                   const label = CLINIC_COORDS[clinic]?.label || clinic;
                   return (
