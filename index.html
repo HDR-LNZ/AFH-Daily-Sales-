@@ -5030,17 +5030,24 @@ function App() {
                     const dow = valid ? dayNames[dt.getDay()] : "";
                     const dayNum = valid ? dt.getDate() : "";
                     const label = (dow && dayNum) ? dow + " " + dayNum : d;
-                    // Compute daily revenue/volume as delta from previous day's MTD
-                    const prevDate = dates[di - 1];
-                    const prevEntry = prevDate ? entries.find(e => e.date === prevDate) : null;
-                    const rev = prevEntry ? Math.max(0, (entry.mtdRev || entry.rev || 0) - (prevEntry.mtdRev || prevEntry.rev || 0)) : (entry.mtdRev || entry.rev || 0);
-                    const vol = prevEntry ? Math.max(0, (entry.mtdVol || entry.vol || 0) - (prevEntry.mtdVol || prevEntry.vol || 0)) : (entry.mtdVol || entry.vol || 0);
+                    // New format (mtdRev): compute daily as delta between consecutive MTDs
+                    // Old format (rev): use the stored value directly
+                    let rev, vol;
+                    if (entry.mtdRev != null) {
+                      const prevDate = dates[di - 1];
+                      const prevEntry = prevDate ? entries.find(e => e.date === prevDate) : null;
+                      rev = prevEntry && prevEntry.mtdRev != null ? Math.max(0, entry.mtdRev - prevEntry.mtdRev) : Math.round(entry.mtdRev / (di + 1));
+                      vol = prevEntry && prevEntry.mtdVol != null ? Math.max(0, entry.mtdVol - prevEntry.mtdVol) : Math.round((entry.mtdVol || 0) / (di + 1));
+                    } else {
+                      rev = entry.rev || 0;
+                      vol = entry.vol || 0;
+                    }
                     return { name: label, rev, vol };
                   }).filter(d => d && (d.rev > 0 || d.vol > 0));
                   if (chartDays.length === 0) return null;
                   const lastEntry = entries[entries.length - 1];
-                  const totalRev = lastEntry?.mtdRev || chartDays.reduce((a,d) => a + d.rev, 0);
-                  const totalVol = lastEntry?.mtdVol || chartDays.reduce((a,d) => a + d.vol, 0);
+                  const totalRev = lastEntry?.mtdRev || chartDays.reduce((a,d) => a + (d.rev || 0), 0);
+                  const totalVol = lastEntry?.mtdVol || chartDays.reduce((a,d) => a + (d.vol || 0), 0);
                   const avgVol = chartDays.length ? Math.round(totalVol / chartDays.length) : 0;
                   const label = CLINIC_COORDS[clinic]?.label || clinic;
                   return (
