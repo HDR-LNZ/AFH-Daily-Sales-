@@ -836,9 +836,10 @@ function parseExcelFile(data) {
         const trimmed = name.trim();
         if (!trimmed || /total|grand|corporate|homecare/i.test(trimmed)) continue;
         const loc = normLoc(trimmed);
-        const todayVal = Math.round(r[todayTotalCol] || 0);
         const mtdVal = Math.round(r[mtdTotalCol] || 0);
         const mtdLYVal = Math.round(r[mtdLYTotalCol] || 0);
+        const todayVal = Math.round(r[todayTotalCol] || 0);
+        if (loc === "Fest Plaza" || /festival/i.test(trimmed)) console.log("[DEBUG-FP] Festival Plaza row:", JSON.stringify(r.slice(0,20).map(v => v === null || v === undefined ? '' : v)), "todayCol:", todayTotalCol, "todayVal:", todayVal, "mtdVal:", mtdVal);
         if (mtdVal === 0 && todayVal === 0) continue;
         dsrClinicMap[loc] = {
           totalToday: todayVal,
