@@ -2950,14 +2950,19 @@ function App() {
 
     // Capture today's per-clinic MTD revenue + volume into the daily log.
     // Daily revenue is derived as the delta between consecutive MTD snapshots.
+    // Use specialty-level aggregated MTD (from doctor data) as it's more reliable
+    // than the DSR enrichment which can read wrong columns for some clinics.
     if (locs?.length && rd) {
       const dateKey = rd;
       setDailyClinicLog(prev => {
         const next = prev.filter(e => e.date !== dateKey);
         locs.forEach(l => {
           if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
-          if ((l.totalRevenueMTD || 0) === 0 && (l.opVolMTD || 0) === 0) return;
-          next.push({ date: dateKey, clinic: l.location, mtdRev: l.totalRevenueMTD || 0, mtdVol: l.opVolMTD || 0 });
+          const specMtd = (l.specialties || []).reduce((a,s) => a + (s.mtdActual || 0), 0);
+          const mtdRev = specMtd || l.totalRevenueMTD || 0;
+          const mtdVol = l.opVolMTD || 0;
+          if (mtdRev === 0 && mtdVol === 0) return;
+          next.push({ date: dateKey, clinic: l.location, mtdRev, mtdVol });
         });
         next.sort((a, b) => new Date(a.date) - new Date(b.date));
         try { localStorage.setItem("hh_daily_clinic_log", JSON.stringify(next)); } catch(e) {}
