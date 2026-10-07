@@ -753,6 +753,14 @@ function parseExcelFile(data) {
     dsrTotals.daysElapsed = (dsRows[11] && typeof dsRows[11][3] === 'number') ? dsRows[11][3] : 6;
     // IP MTD from DSR R48 C15 (raw AED, not x1000) for cross-validation
     dsrTotals.dsrIpMTD = Math.round(dsRows[47] && typeof dsRows[47][14] === 'number' ? dsRows[47][14] : 0);
+    // Debug: dump DSR rows around the volume section
+    console.log("[DEBUG-VOL-ROWS] Scanning DSR rows 55-90 for volume total:");
+    for (let i = 55; i < 90; i++) {
+      const r = dsRows[i]; if (!r) continue;
+      const cells = r.slice(0, 20).map(v => v === null || v === undefined ? '' : v);
+      const hasContent = cells.some(c => c !== '');
+      if (hasContent) console.log("[DEBUG-VOL-ROWS] Row " + (i+1) + ":", JSON.stringify(cells));
+    }
     // Find the Total Volume row dynamically instead of hardcoding row 75
     const rawNum = (r, c) => { const v = dsRows[r] && dsRows[r][c]; return typeof v === 'number' ? Math.round(v) : 0; };
     let volTotalRow = 75; // fallback
@@ -767,6 +775,7 @@ function parseExcelFile(data) {
     const opMtdRev = specialties.reduce((a,s) => a + s.mtdActual, 0);
     const opMtdLYRev = specialties.reduce((a,s) => a + s.mtdLY, 0);
     dsrTotals.opMtdVolume = opMtdVol;
+    console.log("[DEBUG-VOL] volTotalRow:", volTotalRow+1, "opMtdVol:", opMtdVol, "opMtdLYVol:", rawNum(volTotalRow, 17), "row content:", JSON.stringify((dsRows[volTotalRow]||[]).slice(0,20).map(v => v===null||v===undefined?'':v)));
     dsrTotals.opMtdRevenue = opMtdRev;
     dsrTotals.opMtdPPC = 0; // computed in App using (DSR total - IP) / OP volume
     dsrTotals.opMtdLYRevenue = opMtdLYRev;
