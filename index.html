@@ -753,10 +753,17 @@ function parseExcelFile(data) {
     dsrTotals.daysElapsed = (dsRows[11] && typeof dsRows[11][3] === 'number') ? dsRows[11][3] : 6;
     // IP MTD from DSR R48 C15 (raw AED, not x1000) for cross-validation
     dsrTotals.dsrIpMTD = Math.round(dsRows[47] && typeof dsRows[47][14] === 'number' ? dsRows[47][14] : 0);
-    dsrTotals.dsrIpVol = Math.round(dsRows[75] && typeof dsRows[75][14] === 'number' ? dsRows[75][14] : 0);
-    // OP volume and PPC from DSR R76
+    // Find the Total Volume row dynamically instead of hardcoding row 75
     const rawNum = (r, c) => { const v = dsRows[r] && dsRows[r][c]; return typeof v === 'number' ? Math.round(v) : 0; };
-    const opMtdVol = rawNum(75, 12); // R76 C13 (0-indexed: row 75, col 12)
+    let volTotalRow = 75; // fallback
+    for (let i = 60; i < 100; i++) {
+      const r = dsRows[i]; if (!r) continue;
+      const cell = (r[0] || r[1] || r[2] || '').toString().toLowerCase().trim();
+      if (/total\s*volume|clinics\s*volume\s*total/i.test(cell)) { volTotalRow = i; break; }
+    }
+    dsrTotals.dsrIpVol = Math.round(dsRows[volTotalRow] && typeof dsRows[volTotalRow][14] === 'number' ? dsRows[volTotalRow][14] : 0);
+    // OP volume and PPC from the Total Volume row
+    const opMtdVol = rawNum(volTotalRow, 12); // OP MTD column
     const opMtdRev = specialties.reduce((a,s) => a + s.mtdActual, 0);
     const opMtdLYRev = specialties.reduce((a,s) => a + s.mtdLY, 0);
     dsrTotals.opMtdVolume = opMtdVol;
@@ -766,7 +773,7 @@ function parseExcelFile(data) {
     // MTD LY OP volume — read directly from DSR R76 C18 (Total Volume row, OP LY column).
     // Previously this was estimated by scaling current MTD by the YTD ratio, which is
     // unnecessary since the DSR already has the same-period prior-year value.
-    const opMtdLYVol = rawNum(75, 17); // R76 C18 (0-indexed row 75, col 17)
+    const opMtdLYVol = rawNum(volTotalRow, 17); // LY OP MTD column
     dsrTotals.opMtdLYVolume = opMtdLYVol;
     dsrTotals.opMtdLYPPC = opMtdLYVol ? Math.round(opMtdLYRev / opMtdLYVol) : 0;
     // MTD IP volume and LY (R76 C15 and C20) — for the IP Cases KPI card
@@ -960,6 +967,15 @@ function parseExcelFile(data) {
         if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; loc.opVolYTD = vol.opVolYTD; loc.opVolYTDLY = vol.opVolYTDLY; loc.opVolToday = vol.opVolToday || 0; }
       });
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
+      // Update total OP volume from per-clinic data if hardcoded DSR cell was empty/wrong
+      const clinicVolSum = locations.reduce((a,l) => a + (l.opVolMTD || 0), 0);
+      if (clinicVolSum > 0 && (!dsrTotals.opMtdVolume || clinicVolSum > dsrTotals.opMtdVolume)) {
+        dsrTotals.opMtdVolume = clinicVolSum;
+      }
+      const clinicVolLYSum = locations.reduce((a,l) => a + (l.opVolMTDLY || 0), 0);
+      if (clinicVolLYSum > 0 && !dsrTotals.opMtdLYVolume) {
+        dsrTotals.opMtdLYVolume = clinicVolLYSum;
+      }
     }
   }
 
