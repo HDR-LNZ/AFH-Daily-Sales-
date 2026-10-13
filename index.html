@@ -714,6 +714,21 @@ function parseExcelFile(data) {
   const dsrName = wb.SheetNames.find((n) => n.toUpperCase().includes("DSR"));
   if (dsrName) {
     const dsRows = XLSX.utils.sheet_to_json(wb.Sheets[dsrName], { header:1, defval:null });
+    // DSR structure dump for debugging
+    console.log("[DSR-AUDIT] Sheet:", dsrName, "total rows:", dsRows.length);
+    console.log("[DSR-AUDIT] First 15 rows (cols 0-10):");
+    for (let i = 0; i < Math.min(15, dsRows.length); i++) {
+      const r = dsRows[i] || [];
+      console.log("  R" + (i+1) + ":", JSON.stringify(r.slice(0,11).map(v => v===null||v===undefined?'':typeof v==='number'?Math.round(v*100)/100:v)));
+    }
+    console.log("[DSR-AUDIT] Key rows (containing revenue/volume/total/ppc):");
+    for (let i = 0; i < dsRows.length; i++) {
+      const r = dsRows[i] || [];
+      const text = r.slice(0,5).map(v => (v||'').toString().toLowerCase()).join(' ');
+      if (/revenue|volume|total|ppc|clinic/i.test(text)) {
+        console.log("  R" + (i+1) + ":", JSON.stringify(r.slice(0,22).map(v => v===null||v===undefined?'':typeof v==='number'?Math.round(v*100)/100:v)));
+      }
+    }
     // Report date from DSR R7 C8 (0-indexed: row 6, col 7) or R7 C3 (row 6, col 2)
     const dateCell = dsRows[6] && (dsRows[6][7] || dsRows[6][2]);
     if (dateCell instanceof Date) { reportDate = dateCell.toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); }
