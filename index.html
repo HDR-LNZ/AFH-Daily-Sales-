@@ -977,14 +977,14 @@ function parseExcelFile(data) {
           loc.totalToday = dsr.totalToday;
           loc.totalRevenueMTD = dsr.totalRevenueMTD;
           loc.mtdLY = dsr.mtdLY;
-          loc.mtdBudget = dsr.mtdBudget;
-          loc.totalRevenueYTD = dsr.totalRevenueYTD;
-          loc.ytdLY = dsr.ytdLY;
+          if (dsr.mtdBudget) loc.mtdBudget = dsr.mtdBudget;
+          if (dsr.totalRevenueYTD) loc.totalRevenueYTD = dsr.totalRevenueYTD;
+          if (dsr.ytdLY) loc.ytdLY = dsr.ytdLY;
         }
         const ppc = dsrPPCMap[loc.location];
         if (ppc) { loc.ppcYTD = ppc.ppcYTD; loc.ppcYTDLY = ppc.ppcYTDLY; }
         const vol = dsrVolMap[loc.location];
-        if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; loc.opVolYTD = vol.opVolYTD; loc.opVolYTDLY = vol.opVolYTDLY; loc.opVolToday = vol.opVolToday || 0; }
+        if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; if (vol.opVolYTD) loc.opVolYTD = vol.opVolYTD; if (vol.opVolYTDLY) loc.opVolYTDLY = vol.opVolYTDLY; loc.opVolToday = vol.opVolToday || 0; }
       });
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
       // Update total OP volume from per-clinic data if hardcoded DSR cell was empty/wrong
