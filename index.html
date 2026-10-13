@@ -714,21 +714,6 @@ function parseExcelFile(data) {
   const dsrName = wb.SheetNames.find((n) => n.toUpperCase().includes("DSR"));
   if (dsrName) {
     const dsRows = XLSX.utils.sheet_to_json(wb.Sheets[dsrName], { header:1, defval:null });
-    // DSR structure dump for debugging
-    console.log("[DSR-AUDIT] Sheet:", dsrName, "total rows:", dsRows.length);
-    console.log("[DSR-AUDIT] First 15 rows (cols 0-10):");
-    for (let i = 0; i < Math.min(15, dsRows.length); i++) {
-      const r = dsRows[i] || [];
-      console.log("  R" + (i+1) + ":", JSON.stringify(r.slice(0,11).map(v => v===null||v===undefined?'':typeof v==='number'?Math.round(v*100)/100:v)));
-    }
-    console.log("[DSR-AUDIT] Key rows (containing revenue/volume/total/ppc):");
-    for (let i = 0; i < dsRows.length; i++) {
-      const r = dsRows[i] || [];
-      const text = r.slice(0,5).map(v => (v||'').toString().toLowerCase()).join(' ');
-      if (/revenue|volume|total|ppc|clinic/i.test(text)) {
-        console.log("  R" + (i+1) + ":", JSON.stringify(r.slice(0,22).map(v => v===null||v===undefined?'':typeof v==='number'?Math.round(v*100)/100:v)));
-      }
-    }
     // Report date from DSR R7 C8 (0-indexed: row 6, col 7) or R7 C3 (row 6, col 2)
     const dateCell = dsRows[6] && (dsRows[6][7] || dsRows[6][2]);
     if (dateCell instanceof Date) { reportDate = dateCell.toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); }
@@ -768,29 +753,24 @@ function parseExcelFile(data) {
     dsrTotals.daysElapsed = (dsRows[11] && typeof dsRows[11][3] === 'number') ? dsRows[11][3] : 6;
     // IP MTD from DSR R48 C15 (raw AED, not x1000) for cross-validation
     dsrTotals.dsrIpMTD = Math.round(dsRows[47] && typeof dsRows[47][14] === 'number' ? dsRows[47][14] : 0);
-    // Debug: dump DSR rows around the volume section
-    console.log("[DEBUG-VOL-ROWS] Scanning DSR rows 55-90 for volume total:");
-    for (let i = 55; i < 90; i++) {
-      const r = dsRows[i]; if (!r) continue;
-      const cells = r.slice(0, 20).map(v => v === null || v === undefined ? '' : v);
-      const hasContent = cells.some(c => c !== '');
-      if (hasContent) console.log("[DEBUG-VOL-ROWS] Row " + (i+1) + ":", JSON.stringify(cells));
-    }
-    // Find the Total Volume row dynamically instead of hardcoding row 75
+    // Find the Total Volume row dynamically
     const rawNum = (r, c) => { const v = dsRows[r] && dsRows[r][c]; return typeof v === 'number' ? Math.round(v) : 0; };
-    let volTotalRow = 75; // fallback
+    let volTotalRow = -1;
     for (let i = 60; i < 100; i++) {
       const r = dsRows[i]; if (!r) continue;
-      const cell = (r[0] || r[1] || r[2] || '').toString().toLowerCase().trim();
-      if (/total\s*volume|clinics\s*volume\s*total/i.test(cell)) { volTotalRow = i; break; }
+      for (let c = 0; c < Math.min(r.length, 10); c++) {
+        const cell = (r[c] || '').toString().toLowerCase().trim();
+        if (/total\s*volume|clinics\s*volume\s*total/i.test(cell)) { volTotalRow = i; break; }
+      }
+      if (volTotalRow >= 0) break;
     }
+    if (volTotalRow < 0) volTotalRow = 75;
     dsrTotals.dsrIpVol = Math.round(dsRows[volTotalRow] && typeof dsRows[volTotalRow][14] === 'number' ? dsRows[volTotalRow][14] : 0);
     // OP volume and PPC from the Total Volume row
     const opMtdVol = rawNum(volTotalRow, 12); // OP MTD column
     const opMtdRev = specialties.reduce((a,s) => a + s.mtdActual, 0);
     const opMtdLYRev = specialties.reduce((a,s) => a + s.mtdLY, 0);
     dsrTotals.opMtdVolume = opMtdVol;
-    console.log("[DEBUG-VOL] volTotalRow:", volTotalRow+1, "opMtdVol:", opMtdVol, "opMtdLYVol:", rawNum(volTotalRow, 17), "row content:", JSON.stringify((dsRows[volTotalRow]||[]).slice(0,20).map(v => v===null||v===undefined?'':v)));
     dsrTotals.opMtdRevenue = opMtdRev;
     dsrTotals.opMtdPPC = 0; // computed in App using (DSR total - IP) / OP volume
     dsrTotals.opMtdLYRevenue = opMtdLYRev;
@@ -801,8 +781,8 @@ function parseExcelFile(data) {
     dsrTotals.opMtdLYVolume = opMtdLYVol;
     dsrTotals.opMtdLYPPC = opMtdLYVol ? Math.round(opMtdLYRev / opMtdLYVol) : 0;
     // MTD IP volume and LY (R76 C15 and C20) — for the IP Cases KPI card
-    dsrTotals.ipMtdVolume = rawNum(75, 14);   // R76 C15
-    dsrTotals.ipMtdLYVolume = rawNum(75, 19); // R76 C20
+    dsrTotals.ipMtdVolume = rawNum(volTotalRow, 14);
+    dsrTotals.ipMtdLYVolume = rawNum(volTotalRow, 19);
   }
   let locations = null;
   const locSheetName = wb.SheetNames.find((n) => n.toLowerCase().includes("location"));
@@ -826,8 +806,11 @@ function parseExcelFile(data) {
       let revStartRow = -1;
       for (let i = 0; i < 40; i++) {
         const r = dsRows2[i]; if (!r) continue;
-        const cell = r[0] || r[1];
-        if (cell && typeof cell === 'string' && /revenue/i.test(cell.trim()) && !/total|corporate|per/i.test(cell.trim())) { revStartRow = i; break; }
+        for (let c = 0; c < Math.min(r.length, 10); c++) {
+          const cell = (r[c] || '').toString().trim();
+          if (/^revenue$/i.test(cell) || /^clinics\s*revenue/i.test(cell)) { revStartRow = i; break; }
+        }
+        if (revStartRow >= 0) break;
       }
       // Find "Total" column indices from the sub-header row (For the Day Total, MTD Total, LY Total)
       let todayTotalCol = 10, mtdTotalCol = 15, mtdLYTotalCol = 20, budgetCol = 30, ytdTotalCol = 40, ytdLYCol = 45;
@@ -870,7 +853,6 @@ function parseExcelFile(data) {
         const mtdVal = Math.round(r[mtdTotalCol] || 0);
         const mtdLYVal = Math.round(r[mtdLYTotalCol] || 0);
         const todayVal = Math.round(r[todayTotalCol] || 0);
-        if (loc === "Fest Plaza" || /festival/i.test(trimmed)) console.log("[DEBUG-FP] Festival Plaza row:", JSON.stringify(r.slice(0,20).map(v => v === null || v === undefined ? '' : v)), "todayCol:", todayTotalCol, "todayVal:", todayVal, "mtdVal:", mtdVal);
         if (mtdVal === 0 && todayVal === 0) continue;
         dsrClinicMap[loc] = {
           totalToday: todayVal,
@@ -897,8 +879,12 @@ function parseExcelFile(data) {
       let volHeaderRow = -1;
       for (let i = 40; i < 120; i++) {
         const r = dsRows2[i]; if (!r) continue;
-        const cell = r[0] || r[1];
-        if (cell && typeof cell === 'string' && /volume/i.test(cell.trim()) && !/total|corporate/i.test(cell.trim())) { volHeaderRow = i; break; }
+        for (let c = 0; c < Math.min(r.length, 10); c++) {
+          const cell = (r[c] || '').toString().trim();
+          if (/^volume$/i.test(cell)) { volHeaderRow = i; break; }
+        }
+        if (volHeaderRow >= 0) break;
+      }
       }
       // Find "Total" columns in volume section headers (same approach as revenue)
       let volTodayTotalCol = 10, volMtdTotalCol = 12;
