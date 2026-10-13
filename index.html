@@ -849,6 +849,10 @@ function parseExcelFile(data) {
         if (!name) continue;
         const trimmed = name.trim();
         if (!trimmed || /total|grand|corporate|homecare/i.test(trimmed)) continue;
+        const col6 = (r[6] || '').toString().toLowerCase().trim();
+        const col2 = (r[2] || '').toString().toLowerCase().trim();
+        if (/corporate|gatekeep|homecare|closed|total\s*(care|revenue|volume)|uw\s*mall|muteena|sonapur/i.test(col6)) continue;
+        if (/corporate|gatekeep|homecare|closed/i.test(col2)) continue;
         const loc = normLoc(trimmed);
         const mtdVal = Math.round(r[mtdTotalCol] || 0);
         const mtdLYVal = Math.round(r[mtdLYTotalCol] || 0);
@@ -927,6 +931,10 @@ function parseExcelFile(data) {
         if (!name) continue;
         const trimmed = name.trim();
         if (!trimmed || /total|grand|corporate/i.test(trimmed)) continue;
+        const vCol6 = (r[6] || '').toString().toLowerCase().trim();
+        const vCol2 = (r[2] || '').toString().toLowerCase().trim();
+        if (/corporate|gatekeep|homecare|closed|total\s*(care|revenue|volume)|uw\s*mall|muteena|sonapur/i.test(vCol6)) continue;
+        if (/corporate|gatekeep|homecare|closed/i.test(vCol2)) continue;
         const matchCode = _matchClinic(trimmed, dsrClinicMap) || normLoc(trimmed);
         if (EXCLUDED_MAP_LOCATIONS.has(matchCode)) continue;
         const todayOP = volTodayOPCol >= 0 ? Math.round(r[volTodayOPCol] || 0) : Math.round(r[7] || 0);
@@ -950,6 +958,8 @@ function parseExcelFile(data) {
         const r = dsRows2[i]; if (!r) continue;
         const name = (r[0] && typeof r[0] === 'string' ? r[0] : null) || (r[1] && typeof r[1] === 'string' ? r[1] : null);
         if (!name || /total|grand|corporate/i.test(name.trim())) continue;
+        const lyCol6 = (r[6] || '').toString().toLowerCase().trim();
+        if (/corporate|gatekeep|homecare|closed|total/i.test(lyCol6)) continue;
         const matchCode = _matchClinic(name.trim(), dsrClinicMap) || normLoc(name.trim());
         if (matchCode && dsrVolMap[matchCode]) {
           const lyVal = Math.round(r[17] || 0);
