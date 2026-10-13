@@ -3229,13 +3229,13 @@ function App() {
       .sort((a, b) => (b["2026"] || 0) - (a["2026"] || 0)), [locations]);
 
   const clinicYTDChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.totalRevenueYTD > 0 || (l.ytdLY || 0) > 0))
+    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueYTD > 0)
       .sort((a, b) => b.totalRevenueYTD - a.totalRevenueYTD)
       .map(l => ({
         name: CLINIC_COORDS[l.location]?.label || l.location,
         code: l.location,
         "2026": l.totalRevenueYTD,
-        "2025": l.ytdLY || 0,
+        "2025": (l.ytdLY && l.ytdLY > l.totalRevenueMTD) ? l.ytdLY : 0,
       })), [locations]);
 
   const clinicVarianceChartData = useMemo(() =>
@@ -3258,20 +3258,21 @@ function App() {
       .sort((a, b) => b.revenueVar - a.revenueVar), [locations]);
 
   const clinicYTDVarianceChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && ((l.ytdLY || 0) > 0 || (l.opVolYTDLY || l.opVolMTDLY || 0) > 0))
+    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueYTD > 0)
       .map(l => {
-        const hasRevLY = (l.ytdLY || 0) > 0;
-        const volYTD = l.opVolYTD || l.opVolMTD || 0;
-        const volYTDLY = l.opVolYTDLY || l.opVolMTDLY || 0;
-        const hasVolLY = volYTDLY > 0;
-        const revenueVar = hasRevLY ? Number((((l.totalRevenueYTD || 0) - l.ytdLY) / l.ytdLY * 100).toFixed(1)) : 0;
+        const realYtdLY = (l.ytdLY && l.ytdLY > l.totalRevenueMTD) ? l.ytdLY : 0;
+        const hasRevLY = realYtdLY > 0;
+        const volYTD = l.opVolYTD || 0;
+        const volYTDLY = l.opVolYTDLY || 0;
+        const hasVolLY = volYTDLY > 0 && volYTDLY > (l.opVolMTD || 0);
+        const revenueVar = hasRevLY ? Number((((l.totalRevenueYTD || 0) - realYtdLY) / realYtdLY * 100).toFixed(1)) : 0;
         const volumeVar = hasVolLY ? Number(((volYTD - volYTDLY) / volYTDLY * 100).toFixed(1)) : 0;
         return {
           name: CLINIC_COORDS[l.location]?.label || l.location,
           code: l.location,
           revenueVar, volumeVar, hasRevLY, hasVolLY,
           revenueMTD: l.totalRevenueYTD || 0,
-          revenueLY: l.ytdLY || 0,
+          revenueLY: realYtdLY,
           volumeMTD: volYTD,
           volumeLY: volYTDLY,
         };
