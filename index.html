@@ -3235,7 +3235,7 @@ function App() {
         name: CLINIC_COORDS[l.location]?.label || l.location,
         code: l.location,
         "2026": l.totalRevenueYTD,
-        "2025": (l.ytdLY && l.ytdLY > l.totalRevenueMTD) ? l.ytdLY : 0,
+        "2025": 0,
       })), [locations]);
 
   const clinicVarianceChartData = useMemo(() =>
@@ -3260,8 +3260,8 @@ function App() {
   const clinicYTDVarianceChartData = useMemo(() =>
     [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueYTD > 0)
       .map(l => {
-        const realYtdLY = (l.ytdLY && l.ytdLY > l.totalRevenueMTD) ? l.ytdLY : 0;
-        const hasRevLY = realYtdLY > 0;
+        const realYtdLY = 0;
+        const hasRevLY = false;
         const volYTD = l.opVolYTD || 0;
         const volYTDLY = l.opVolYTDLY || 0;
         const hasVolLY = volYTDLY > 0 && volYTDLY > (l.opVolMTD || 0);
