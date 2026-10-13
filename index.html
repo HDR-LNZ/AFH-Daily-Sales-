@@ -3228,15 +3228,44 @@ function App() {
       })
       .sort((a, b) => (b["2026"] || 0) - (a["2026"] || 0)), [locations]);
 
-  const clinicYTDChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueYTD > 0)
-      .sort((a, b) => b.totalRevenueYTD - a.totalRevenueYTD)
-      .map(l => ({
-        name: CLINIC_COORDS[l.location]?.label || l.location,
-        code: l.location,
-        "2026": l.totalRevenueYTD,
-        "2025": 0,
-      })), [locations]);
+  const clinicYTDChartData = useMemo(() => {
+    // Compute per-clinic YTD by summing archived monthly data
+    const allMonths = [...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
+      .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, []);
+    const ytdByClinic = {};
+    const ytdLYByClinic = {};
+    allMonths.forEach(m => {
+      (m.clinics || []).forEach(c => {
+        const loc = normLoc(c.loc);
+        if (EXCLUDED_MAP_LOCATIONS.has(loc)) return;
+        ytdByClinic[loc] = (ytdByClinic[loc] || 0) + (c.mtd || 0);
+        ytdLYByClinic[loc] = (ytdLYByClinic[loc] || 0) + (c.mtdLY || 0);
+      });
+    });
+    // Also add current month from locations state (if not already archived)
+    const currentInArchive = allMonths.some(m => {
+      const rd = new Date(reportDate);
+      if (isNaN(rd.getTime())) return false;
+      const curKey = rd.toLocaleDateString('en-US', {month:'short'}) + "-" + rd.getFullYear();
+      return m.monthKey === curKey || m.monthKey === rd.toLocaleDateString('en-US', {month:'short'});
+    });
+    if (!currentInArchive) {
+      locations.forEach(l => {
+        if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
+        ytdByClinic[l.location] = (ytdByClinic[l.location] || 0) + (l.totalRevenueMTD || 0);
+        ytdLYByClinic[l.location] = (ytdLYByClinic[l.location] || 0) + (l.mtdLY || 0);
+      });
+    }
+    return Object.keys(ytdByClinic)
+      .filter(loc => ytdByClinic[loc] > 0)
+      .sort((a, b) => ytdByClinic[b] - ytdByClinic[a])
+      .map(loc => ({
+        name: CLINIC_COORDS[loc]?.label || loc,
+        code: loc,
+        "2026": ytdByClinic[loc],
+        "2025": ytdLYByClinic[loc] || 0,
+      }));
+  }, [locations, userMonthlyHistory, reportDate]);
 
   const clinicVarianceChartData = useMemo(() =>
     [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && ((l.mtdLY || 0) > 0 || (l.opVolMTDLY || 0) > 0))
@@ -3257,27 +3286,24 @@ function App() {
       })
       .sort((a, b) => b.revenueVar - a.revenueVar), [locations]);
 
-  const clinicYTDVarianceChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueYTD > 0)
-      .map(l => {
-        const realYtdLY = 0;
-        const hasRevLY = false;
-        const volYTD = l.opVolYTD || 0;
-        const volYTDLY = l.opVolYTDLY || 0;
-        const hasVolLY = volYTDLY > 0 && volYTDLY > (l.opVolMTD || 0);
-        const revenueVar = hasRevLY ? Number((((l.totalRevenueYTD || 0) - realYtdLY) / realYtdLY * 100).toFixed(1)) : 0;
-        const volumeVar = hasVolLY ? Number(((volYTD - volYTDLY) / volYTDLY * 100).toFixed(1)) : 0;
+  const clinicYTDVarianceChartData = useMemo(() => {
+    // Use the same archived-month YTD data as the YTD revenue chart
+    return clinicYTDChartData
+      .filter(c => c["2025"] > 0)
+      .map(c => {
+        const revenueVar = Number(((c["2026"] - c["2025"]) / c["2025"] * 100).toFixed(1));
         return {
-          name: CLINIC_COORDS[l.location]?.label || l.location,
-          code: l.location,
-          revenueVar, volumeVar, hasRevLY, hasVolLY,
-          revenueMTD: l.totalRevenueYTD || 0,
-          revenueLY: realYtdLY,
-          volumeMTD: volYTD,
-          volumeLY: volYTDLY,
+          name: c.name,
+          code: c.code,
+          revenueVar, volumeVar: 0, hasRevLY: true, hasVolLY: false,
+          revenueMTD: c["2026"],
+          revenueLY: c["2025"],
+          volumeMTD: 0,
+          volumeLY: 0,
         };
       })
-      .sort((a, b) => b.revenueVar - a.revenueVar), [locations]);
+      .sort((a, b) => b.revenueVar - a.revenueVar);
+  }, [clinicYTDChartData]);
 
   // Filter out minor specialties (< AED 10K MTD and < AED 50K YTD) from charts
   const chartSpecialties = useMemo(() => sorted.filter(s => s.mtdActual >= 10000 || s.ytdActual >= 50000), [sorted]);
