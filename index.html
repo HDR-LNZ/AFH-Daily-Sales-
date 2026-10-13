@@ -885,7 +885,6 @@ function parseExcelFile(data) {
         }
         if (volHeaderRow >= 0) break;
       }
-      }
       // Find "Total" columns in volume section headers (same approach as revenue)
       let volTodayTotalCol = 10, volMtdTotalCol = 12;
       if (volHeaderRow >= 0) {
