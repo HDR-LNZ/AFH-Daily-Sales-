@@ -938,9 +938,9 @@ function parseExcelFile(data) {
         const matchCode = _matchClinic(trimmed, dsrClinicMap) || normLoc(trimmed);
         if (EXCLUDED_MAP_LOCATIONS.has(matchCode)) continue;
         const todayOP = volTodayOPCol >= 0 ? Math.round(r[volTodayOPCol] || 0) : Math.round(r[7] || 0);
-        const todayTotal = Math.round(r[volTodayTotalCol] || 0);
+        const todayTotal = Math.round(r[10] || 0);
         const todayVol = todayOP || todayTotal;
-        const mtdOP = Math.round(r[volMtdTotalCol] || 0);
+        const mtdOP = Math.round(r[12] || 0);
         // Fallback: scan for MTD value
         let mtdVal = mtdOP;
         if (mtdVal === 0) {
@@ -988,7 +988,7 @@ function parseExcelFile(data) {
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
       // Update total OP volume from per-clinic data if hardcoded DSR cell was empty/wrong
       const clinicVolSum = locations.reduce((a,l) => a + (l.opVolMTD || 0), 0);
-      if (clinicVolSum > 0 && (!dsrTotals.opMtdVolume || clinicVolSum > dsrTotals.opMtdVolume)) {
+      if (clinicVolSum > 0 && !dsrTotals.opMtdVolume) {
         dsrTotals.opMtdVolume = clinicVolSum;
       }
       const clinicVolLYSum = locations.reduce((a,l) => a + (l.opVolMTDLY || 0), 0);
