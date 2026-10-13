@@ -518,7 +518,8 @@ const CLINIC_COORDS = {
   "DSU":       { lat: 25.2219, lng: 55.3527, label: "DSU", url: "https://www.healthhubalfuttaim.com/clinics/day-surgery-center/" },
   "Staff DFC": { lat: 25.2230, lng: 55.3540, label: "Staff DFC", url: null },
   "Arabian":   { lat: 25.2346, lng: 55.4364, label: "Arabian Center", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-arabian-center/" },
-  "Karama":    { lat: 25.2414, lng: 55.3025, label: "Karama", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-al-karama/" },
+  "Karama":    { lat: 25.2414, lng: 55.3025, label: "Karama (Closed)", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-al-karama/" },
+  "UW Mall":   { lat: 25.2350, lng: 55.3100, label: "UW Mall", url: null },
   "Qusais":    { lat: 25.2770, lng: 55.3721, label: "Qusais", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-al-qusais/" },
   "Nahda":     { lat: 25.2940, lng: 55.3720, label: "Nahda", url: "https://www.healthhubalfuttaim.com/clinics/healthhub-al-nahda/" },
 };
@@ -554,7 +555,7 @@ const DEFAULT_DSR_TOTALS = {
 
 const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed"]);
 
-const LOCATION_ALIASES = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Festival City":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Day Surgery":"DSU","DSC":"DSU","Barsha Heights":"Tecom","Jumeirah Village Circle":"JVC","Jumeirah Village":"JVC","HealthHub – Tecom":"Tecom","HealthHub – Barsha Heights":"Tecom","HealthHub – Jumeirah Village Circle":"JVC","HealthHub – Al Warqa":"Warqa","HealthHub – Al Karama":"Karama","HealthHub – Al Qusais":"Qusais","HealthHub – Al Nahda":"Nahda","HealthHub – Festival Plaza":"Fest Plaza","HealthHub – Arabian Center":"Arabian","HealthHub – Jumeirah Village":"JVC","HealthHub Jumeirah Village Circle":"JVC"};
+const LOCATION_ALIASES = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Festival City":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Day Surgery":"DSU","DSC":"DSU","Barsha Heights":"Tecom","Jumeirah Village Circle":"JVC","Jumeirah Village":"JVC","HealthHub – Tecom":"Tecom","HealthHub – Barsha Heights":"Tecom","HealthHub – Jumeirah Village Circle":"JVC","HealthHub – Al Warqa":"Warqa","HealthHub – Al Karama":"Karama","HealthHub – Al Qusais":"Qusais","HealthHub – Al Nahda":"Nahda","HealthHub – Festival Plaza":"Fest Plaza","HealthHub – Arabian Center":"Arabian","HealthHub – Jumeirah Village":"JVC","HealthHub Jumeirah Village Circle":"JVC","HealthHub – UW Mall":"UW Mall","UW Mall":"UW Mall"};
 function normLoc(name) {
   if (!name) return name;
   let n = name.trim();
@@ -851,7 +852,7 @@ function parseExcelFile(data) {
         if (!trimmed || /total|grand|corporate|homecare/i.test(trimmed)) continue;
         const col6 = (r[6] || '').toString().toLowerCase().trim();
         const col2 = (r[2] || '').toString().toLowerCase().trim();
-        if (/corporate|gatekeep|homecare|closed|total\s*(care|revenue|volume)|uw\s*mall|muteena|sonapur/i.test(col6)) continue;
+        if (/corporate|gatekeep|homecare|closed|total\s*(care|revenue|volume)|muteena|sonapur/i.test(col6)) continue;
         if (/corporate|gatekeep|homecare|closed/i.test(col2)) continue;
         const loc = normLoc(trimmed);
         const mtdVal = Math.round(r[mtdTotalCol] || 0);
@@ -933,7 +934,7 @@ function parseExcelFile(data) {
         if (!trimmed || /total|grand|corporate/i.test(trimmed)) continue;
         const vCol6 = (r[6] || '').toString().toLowerCase().trim();
         const vCol2 = (r[2] || '').toString().toLowerCase().trim();
-        if (/corporate|gatekeep|homecare|closed|total\s*(care|revenue|volume)|uw\s*mall|muteena|sonapur/i.test(vCol6)) continue;
+        if (/corporate|gatekeep|homecare|closed|total\s*(care|revenue|volume)|muteena|sonapur/i.test(vCol6)) continue;
         if (/corporate|gatekeep|homecare|closed/i.test(vCol2)) continue;
         const matchCode = _matchClinic(trimmed, dsrClinicMap) || normLoc(trimmed);
         if (EXCLUDED_MAP_LOCATIONS.has(matchCode)) continue;
