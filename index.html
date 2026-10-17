@@ -623,12 +623,6 @@ function parseExcelFile(data) {
   const cols = isNewFormat
     ? { doc: 2, spec: 3, today: 5, mtdB: 6, mtdA: 7, mtdLY: -1, mtdVBR: -1, mtdVLR: -1, ytdB: 10, ytdA: 11, ytdLY: -1 }
     : { doc: 0, spec: 1, today: 2, mtdB: 3, mtdA: 4, mtdLY: 5, mtdVBR: 6, mtdVLR: 7, ytdB: 8, ytdA: 9, ytdLY: 10 };
-  // Check if doctors appear at multiple locations (new format quirk) even if header detection missed "Location"
-  const hasDuplicateDocs = !isNewFormat && doctors.length > 0 && (() => {
-    const names = doctors.map(d => d.name);
-    return new Set(names).size < names.length;
-  })();
-  const needsDedup = isNewFormat || hasDuplicateDocs;
   // Old layout has a column-titles row + a sub-headers row before data → offset +2.
   // New layout's matched "header" row IS the column names → offset +1.
   const dataStart = isNewFormat ? headerIdx + 1 : headerIdx + 2;
@@ -661,6 +655,12 @@ function parseExcelFile(data) {
   // New format quirks: (1) each doctor appears once per location they worked at —
   // sum across locations, accumulate the location list; (2) no specialty subtotal
   // rows — synthesize them by grouping the deduped doctors.
+  // Check if doctors appear at multiple locations (new format quirk) even if header detection missed "Location"
+  const hasDuplicateDocs = !isNewFormat && doctors.length > 0 && (() => {
+    const names = doctors.map(d => d.name);
+    return new Set(names).size < names.length;
+  })();
+  const needsDedup = isNewFormat || hasDuplicateDocs;
   if (needsDedup) {
     const docByName = {};
     for (const d of doctors) {
