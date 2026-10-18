@@ -3000,8 +3000,7 @@ function App() {
         const next = prev.filter(e => e.date !== dateKey);
         locs.forEach(l => {
           if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
-          const specMtd = (l.specialties || []).reduce((a,s) => a + (s.mtdActual || 0), 0);
-          const mtdRev = specMtd || l.totalRevenueMTD || 0;
+          const mtdRev = l.totalRevenueMTD || 0;
           const mtdVol = l.opVolMTD || 0;
           if (mtdRev === 0 && mtdVol === 0) return;
           next.push({ date: dateKey, clinic: l.location, mtdRev, mtdVol });
