@@ -655,13 +655,9 @@ function parseExcelFile(data) {
   // New format quirks: (1) each doctor appears once per location they worked at —
   // sum across locations, accumulate the location list; (2) no specialty subtotal
   // rows — synthesize them by grouping the deduped doctors.
-  // Check if doctors appear at multiple locations (new format quirk) even if header detection missed "Location"
-  const hasDuplicateDocs = !isNewFormat && doctors.length > 0 && (() => {
-    const names = doctors.map(d => d.name);
-    return new Set(names).size < names.length;
-  })();
-  const needsDedup = isNewFormat || hasDuplicateDocs;
-  if (needsDedup) {
+  // Always dedup doctors — the specialty sheet may list doctors per-location,
+  // and inconsistent dedup causes MTD spikes in the daily log.
+  {
     const docByName = {};
     for (const d of doctors) {
       const k = d.name;
