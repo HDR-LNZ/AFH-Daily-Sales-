@@ -3212,29 +3212,33 @@ function App() {
 
   const clinicVolChartData = useMemo(() => {
     const days = dsrTotals.daysElapsed || 1;
-    return [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && (l.opVolMTD > 0 || (l.opVolMTDLY || 0) > 0))
+    const karamaLoc = locations.find(l => l.location === "Karama");
+    return [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.location !== "Karama" && (l.opVolMTD > 0 || (l.opVolMTDLY || 0) > 0))
       .sort((a, b) => (b.opVolMTD || 0) - (a.opVolMTD || 0))
       .map(l => ({
         name: CLINIC_COORDS[l.location]?.label || l.location,
         code: l.location,
         "2026": Math.round((l.opVolMTD || 0) / days),
-        "2025": Math.round((l.opVolMTDLY || 0) / days),
+        "2025": Math.round(((l.location === "UW Mall" && karamaLoc ? karamaLoc.opVolMTDLY : l.opVolMTDLY) || 0) / days),
       }));
   }, [locations, dsrTotals]);
 
-  const clinicPPCChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && ((l.opVolMTD || 0) > 0 || (l.opVolMTDLY || 0) > 0))
+  const clinicPPCChartData = useMemo(() => {
+    const karamaLoc = locations.find(l => l.location === "Karama");
+    return [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.location !== "Karama" && ((l.opVolMTD || 0) > 0 || (l.opVolMTDLY || 0) > 0))
       .map(l => {
         const vol = l.opVolMTD || 0;
-        const volLY = l.opVolMTDLY || 0;
+        const volLY = (l.location === "UW Mall" && karamaLoc) ? (karamaLoc.opVolMTDLY || 0) : (l.opVolMTDLY || 0);
+        const revLY = (l.location === "UW Mall" && karamaLoc) ? (karamaLoc.mtdLY || 0) : (l.mtdLY || 0);
         return {
           name: CLINIC_COORDS[l.location]?.label || l.location,
           code: l.location,
           "2026": vol > 0 ? Math.round(l.totalRevenueMTD / vol) : 0,
-          "2025": volLY > 0 ? Math.round((l.mtdLY || 0) / volLY) : 0,
+          "2025": volLY > 0 ? Math.round(revLY / volLY) : 0,
         };
       })
-      .sort((a, b) => (b["2026"] || 0) - (a["2026"] || 0)), [locations]);
+      .sort((a, b) => (b["2026"] || 0) - (a["2026"] || 0));
+  }, [locations]);
 
   const clinicYTDChartData = useMemo(() => {
     // Compute per-clinic YTD by summing archived monthly data
@@ -3295,19 +3299,23 @@ function App() {
       .sort((a, b) => b.revenueVar - a.revenueVar), [locations]);
 
   const clinicYTDVarianceChartData = useMemo(() => {
-    // Use the same archived-month YTD data as the YTD revenue chart
     return clinicYTDChartData
-      .filter(c => c["2025"] > 0)
       .map(c => {
-        const revenueVar = Number(((c["2026"] - c["2025"]) / c["2025"] * 100).toFixed(1));
+        const hasRevLY = c["2025"] > 0;
+        const revenueVar = hasRevLY ? Number(((c["2026"] - c["2025"]) / c["2025"] * 100).toFixed(1)) : 0;
+        const loc = locations.find(l => l.location === c.code || (CLINIC_COORDS[l.location]?.label || l.location) === c.name);
+        const volMTD = loc?.opVolMTD || 0;
+        const volLY = loc?.opVolMTDLY || 0;
+        const hasVolLY = volLY > 0;
+        const volumeVar = hasVolLY ? Number(((volMTD - volLY) / volLY * 100).toFixed(1)) : 0;
         return {
           name: c.name,
           code: c.code,
-          revenueVar, volumeVar: 0, hasRevLY: true, hasVolLY: false,
+          revenueVar, volumeVar, hasRevLY, hasVolLY,
           revenueMTD: c["2026"],
           revenueLY: c["2025"],
-          volumeMTD: 0,
-          volumeLY: 0,
+          volumeMTD: volMTD,
+          volumeLY: volLY,
         };
       })
       .sort((a, b) => b.revenueVar - a.revenueVar);
