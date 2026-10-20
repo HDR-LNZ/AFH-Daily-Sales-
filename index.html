@@ -3272,6 +3272,13 @@ function App() {
         ytdLYByClinic[l.location] = (ytdLYByClinic[l.location] || 0) + (l.mtdLY || 0);
       });
     }
+    // Merge Karama + UW Mall: combine 2026 revenue, use Karama's LY as the baseline
+    if (ytdByClinic["Karama"] || ytdByClinic["UW Mall"]) {
+      ytdByClinic["UW Mall"] = (ytdByClinic["UW Mall"] || 0) + (ytdByClinic["Karama"] || 0);
+      ytdLYByClinic["UW Mall"] = (ytdLYByClinic["UW Mall"] || 0) + (ytdLYByClinic["Karama"] || 0);
+      delete ytdByClinic["Karama"];
+      delete ytdLYByClinic["Karama"];
+    }
     return Object.keys(ytdByClinic)
       .filter(loc => ytdByClinic[loc] > 0)
       .sort((a, b) => ytdByClinic[b] - ytdByClinic[a])
