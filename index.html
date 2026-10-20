@@ -4782,10 +4782,10 @@ function App() {
             </div>
           </div>
 
-          {/* IP Doctor Table */}
+          {/* IP Doctor Tables */}
           <div style={{ ...card, overflow:"hidden" }}>
             <div style={{ padding:"14px 24px", borderBottom:"1px solid " + C.border }}>
-              <h3 style={{ margin:0, fontSize:15, fontWeight:700, color:C.text }}>IP Doctor Performance</h3>
+              <h3 style={{ margin:0, fontSize:15, fontWeight:700, color:C.text }}>IP Doctor Performance — Top 5 MTD</h3>
             </div>
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
@@ -4793,9 +4793,9 @@ function App() {
                   <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>MTD Revenue</th><th style={{ ...dth, textAlign:"right" }}>Cases</th>
                 </tr></thead>
                 <tbody>
-                  {ipDoctors.map((d,i) => (
+                  {ipDoctors.slice(0, 5).map((d,i) => (
                     <tr key={d.name+i} style={{ background: i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
-                      <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:i<3?"rgba(245,158,11,0.15)":"rgba(100,116,139,0.1)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:i<3?C.warning:C.textMuted }}>{i+1}</span></td>
+                      <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:"rgba(245,158,11,0.15)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:C.warning }}>{i+1}</span></td>
                       <td style={{ ...dtd }}><DoctorName name={d.name} /></td>
                       <td style={{ ...dtd, color:C.textMuted }}>{d.specialty}</td>
                       <td style={dtn}>{fmt(d.mtdRevenue)}</td>
@@ -4807,6 +4807,78 @@ function App() {
               </table>
             </div>
           </div>
+
+          {/* IP Doctor Top 5 YTD */}
+          {ipDoctors.length > 0 && (
+            <div style={{ ...card, overflow:"hidden", marginTop:12 }}>
+              <div style={{ padding:"14px 24px", borderBottom:"1px solid " + C.border }}>
+                <h3 style={{ margin:0, fontSize:15, fontWeight:700, color:C.text }}>IP Doctor Performance — Top 5 YTD</h3>
+              </div>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
+                  <thead><tr style={{ background:"#1e293b" }}>
+                    <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>YTD Revenue</th><th style={{ ...dth, textAlign:"right" }}>YTD Cases</th>
+                  </tr></thead>
+                  <tbody>
+                    {(() => {
+                      const ipDocYTD = ipDoctors.map(d => {
+                        const mainDoc = doctors.find(doc => doc.name === d.name);
+                        return { ...d, ytdRev: mainDoc?.ytdActual || d.mtdRevenue, ytdVol: mainDoc?.ytdVolume || d.mtdCount };
+                      }).sort((a,b) => b.ytdRev - a.ytdRev).slice(0, 5);
+                      return ipDocYTD.map((d,i) => (
+                        <tr key={d.name+i} style={{ background: i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
+                          <td style={dtd}><span style={{ width:20, height:20, borderRadius:6, background:"rgba(16,185,129,0.15)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:C.success }}>{i+1}</span></td>
+                          <td style={{ ...dtd }}><DoctorName name={d.name} /></td>
+                          <td style={{ ...dtd, color:C.textMuted }}>{d.specialty}</td>
+                          <td style={dtn}>{fmt(d.ytdRev)}</td>
+                          <td style={dtn}>{d.ytdVol}</td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* IP Bottom 3 by Specialty YTD */}
+          {ipDoctors.length > 0 && (
+            <div style={{ ...card, overflow:"hidden", marginTop:12 }}>
+              <div style={{ padding:"14px 24px", borderBottom:"1px solid " + C.border }}>
+                <h3 style={{ margin:0, fontSize:15, fontWeight:700, color:C.text }}>IP Bottom Performers by Specialty — YTD</h3>
+                <p style={{ margin:"4px 0 0", fontSize:11, color:C.textMuted }}>Lowest 3 revenue doctors in key surgical specialties</p>
+              </div>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
+                  <thead><tr style={{ background:"#1e293b" }}>
+                    <th style={dth}>Specialty</th><th style={dth}>Doctor</th><th style={{ ...dth, textAlign:"right" }}>YTD Revenue</th><th style={{ ...dth, textAlign:"right" }}>MTD Revenue</th><th style={{ ...dth, textAlign:"right" }}>Cases MTD</th>
+                  </tr></thead>
+                  <tbody>
+                    {(() => {
+                      const targetSpecs = ["Orthopaedics","Obstetrics & Gynaecology","General Surgeon","Urology","ENT"];
+                      const rows = [];
+                      targetSpecs.forEach(spec => {
+                        const specDocs = ipDoctors.filter(d => d.specialty === spec).map(d => {
+                          const mainDoc = doctors.find(doc => doc.name === d.name);
+                          return { ...d, ytdRev: mainDoc?.ytdActual || d.mtdRevenue };
+                        }).sort((a,b) => a.ytdRev - b.ytdRev).slice(0, 3);
+                        specDocs.forEach(d => rows.push({ ...d, specGroup: spec }));
+                      });
+                      return rows.map((d,i) => (
+                        <tr key={d.name+d.specGroup+i} style={{ background: i%2===0 ? C.cardBg : C.cardHover, borderBottom:"1px solid "+C.border }}>
+                          <td style={{ ...dtd, color:C.danger, fontWeight:600, fontSize:11 }}>{d.specGroup}</td>
+                          <td style={{ ...dtd }}><DoctorName name={d.name} /></td>
+                          <td style={{ ...dtn, color:C.danger }}>{fmt(d.ytdRev)}</td>
+                          <td style={dtn}>{fmt(d.mtdRevenue)}</td>
+                          <td style={dtn}>{d.mtdCount}</td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* UNDERPERFORMERS SECTION */}
