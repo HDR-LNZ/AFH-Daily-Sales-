@@ -21,11 +21,19 @@
   body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1e2230; color: #e2e8f0; }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-  .fade-in { animation: fadeIn 0.4s ease-out; }
-  .slide-up { animation: slideUp 0.5s ease-out both; }
-  .scale-in { animation: scaleIn 0.4s ease-out both; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+  @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.4s ease-out both; }
+  .slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .scale-in { animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .anim-card { opacity: 0; transform: translateY(24px); transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+  .anim-card.visible { opacity: 1; transform: translateY(0); }
+  .anim-stagger-1 { transition-delay: 0.05s; }
+  .anim-stagger-2 { transition-delay: 0.1s; }
+  .anim-stagger-3 { transition-delay: 0.15s; }
+  .anim-stagger-4 { transition-delay: 0.2s; }
+  .anim-stagger-5 { transition-delay: 0.25s; }
   table { border-collapse: collapse; }
   ::-webkit-scrollbar { height: 6px; width: 6px; }
   ::-webkit-scrollbar-track { background: #1e2230; }
@@ -2043,8 +2051,8 @@ function DoctorMonthlyHistory({ doctor, monthlyLog, onClose }) {
                   <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.05)" }} />
                   <Legend wrapperStyle={{ fontSize:11, color:C.textSecondary }} iconType="circle" iconSize={8} />
-                  <Bar dataKey="opMtd" stackId="m" fill="#3b82f6" maxBarSize={44} name="OP MTD (AED)" isAnimationActive={false} />
-                  <Bar dataKey="ipMtd" stackId="m" fill="#ec4899" radius={[4,4,0,0]} maxBarSize={44} name="IP MTD (AED)" isAnimationActive={false} />
+                  <Bar dataKey="opMtd" stackId="m" fill="#3b82f6" maxBarSize={44} name="OP MTD (AED)" isAnimationActive={true} animationDuration={800} />
+                  <Bar dataKey="ipMtd" stackId="m" fill="#ec4899" radius={[4,4,0,0]} maxBarSize={44} name="IP MTD (AED)" isAnimationActive={true} animationDuration={800} />
                 </BarChart>
               </ResponsiveContainer>
               <div style={{ fontSize:10, color:C.textMuted, marginTop:14, fontStyle:"italic" }}>
@@ -2555,6 +2563,20 @@ Answer concisely with specific numbers. Focus on actionable insights.`;
       )
     )
   );
+}
+
+// ─── Animation Helper ────────────────────────────────────────────────────────
+function AnimatedSection({ children, delay = 0, className = "" }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = React.useState(false);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold: 0.1 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return <div ref={ref} className={className} style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(24px)", transition: `opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${delay}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${delay}s` }}>{children}</div>;
 }
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
@@ -3810,6 +3832,7 @@ function App() {
         </div>
 
         {/* KPI STRIP */}
+        <AnimatedSection delay={0.1}>
         <div id="overview" style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? 10 : 16 }}>
           <div style={{ ...card, padding:"22px 24px", position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, ${C.primaryDark}, ${C.accent})` }} />
@@ -3847,6 +3870,7 @@ function App() {
             <div style={{ fontSize:11, color:C.textMuted, marginTop:4 }}>{dsrTotals.daysElapsed || 1} days</div>
           </div>
         </div>
+        </AnimatedSection>
 
         {/* PPC STRIP */}
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(5, 1fr)", gap: isMobile ? 10 : 12, marginTop:16 }}>
@@ -3970,6 +3994,7 @@ function App() {
         </div>
 
         {/* CHARTS */}
+        <AnimatedSection delay={0.05}>
         <div id="specialties" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:20, marginTop:24 }}>
 
           {/* Variance Waterfall */}
@@ -4057,8 +4082,10 @@ function App() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+        </AnimatedSection>
 
         {/* CLINIC MAP + REGION PANEL */}
+        <AnimatedSection delay={0.05}>
         <div id="map" style={{ display:"flex", gap:16, flexDirection: isMobile ? "column" : "row", marginTop:20 }}>
           <div style={{ flex: isMobile ? "1" : "1 1 70%" }}>
             <DubaiMap locations={locations} onClinicClick={setSelectedClinic} isMobile={isMobile} />
@@ -4492,7 +4519,10 @@ function App() {
           </div>
         </div>
 
+        </AnimatedSection>
+
         {/* DOCTOR PANELS */}
+        <AnimatedSection delay={0.05}>
         <div id="doctors" style={{ display:"flex", flexDirection:"column", gap:20, marginTop:24 }}>
           {/* Top Performers MTD */}
           <div style={{ ...card, overflow:"hidden" }}>
@@ -4703,6 +4733,9 @@ function App() {
         )}
 
         {/* INPATIENT SECTION */}
+        </AnimatedSection>
+
+        <AnimatedSection delay={0.05}>
         <div id="inpatient" style={{ marginTop:32 }}>
           <h2 style={{ fontSize:17, fontWeight:700, color:C.text, marginBottom:16 }}>Inpatient (IP) Revenue</h2>
 
@@ -4899,6 +4932,9 @@ function App() {
         </div>
 
         {/* UNDERPERFORMERS SECTION */}
+        </AnimatedSection>
+
+        <AnimatedSection delay={0.05}>
         <div id="underperformers" style={{ marginTop:32 }}>
           <h2 style={{ fontSize:17, fontWeight:700, color:C.text, marginBottom:4 }}>Underperforming Specialties</h2>
           <p style={{ fontSize:12, color:C.textMuted, marginBottom:16 }}>Specialties with YTD revenue below last year, with contributing doctors</p>
@@ -4975,6 +5011,9 @@ function App() {
         )}
 
         {/* ── MONTHLY TRENDS ── */}
+        </AnimatedSection>
+
+        <AnimatedSection delay={0.05}>
         <div id="monthly-trends" style={{ marginTop:32 }}>
           <h2 style={{ fontSize:18, fontWeight:700, color:C.text, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/><line x1="1" y1="20" x2="23" y2="20"/></svg>
@@ -5166,6 +5205,9 @@ function App() {
         </div>
 
         {/* ── DAILY TRENDS ── */}
+        </AnimatedSection>
+
+        <AnimatedSection delay={0.05}>
         <div id="daily-trends" style={{ marginTop:32 }}>
           <h2 style={{ fontSize:18, fontWeight:700, color:C.text, marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -5255,6 +5297,7 @@ function App() {
             );
           })()}
         </div>
+        </AnimatedSection>
 
         <div style={{ textAlign:"center", padding:"28px 0 12px", color:C.textMuted, fontSize:11 }}>Al-Futtaim Health — HealthHub Executive Revenue Summary — All values in AED</div>
 
