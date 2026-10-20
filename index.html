@@ -435,6 +435,7 @@ const RESIGNED_DOCTORS = new Set([
   "dr-fatima-qurratulain",
   "dr-uma-bilgi",
   "dr-rasha-alani", "dr-rasha-al-ani",
+  "dr-ahmed-almousa", "prof-dr-ahmed-almousa",
 ]);
 
 // Active-doctor overrides — for newly joined doctors who don't have a website
@@ -460,6 +461,8 @@ const SPECIALTY_CORRECTIONS = {
 // existed. Per request: Dr. Abhay is Radiology and not relevant.
 const NEW_DOCTOR_EXCLUDED_SLUGS = new Set([
   "dr-abhay-aryan", "dr-abhay-kumar-aryan",
+  "dr-fatima-qurratulain", "dr-ahmed-almousa", "prof-dr-ahmed-almousa",
+  "dr-rasha-alani", "dr-rasha-al-ani", "dr-uma-bilgi",
 ]);
 
 function isCBD(name) {
@@ -684,6 +687,8 @@ function parseExcelFile(data) {
       doctors.push(d);
     }
     // Synthesize specialty subtotals
+    const origSpecLY = {};
+    specialties.forEach(s => { if (s.mtdLY) origSpecLY[s.name] = { mtdLY: s.mtdLY, ytdLY: s.ytdLY || 0 }; });
     const specMap = {};
     for (const d of doctors) {
       const k = d.specialty || "Other";
@@ -696,10 +701,12 @@ function parseExcelFile(data) {
     }
     specialties.length = 0;
     for (const s of Object.values(specMap)) {
+      const orig = origSpecLY[s.name];
+      if (orig) { s.mtdLY = orig.mtdLY; s.ytdLY = orig.ytdLY; }
       s.mtdVarBudget = s.mtdBudget ? (s.mtdActual - s.mtdBudget) / s.mtdBudget : 0;
-      s.mtdVarLY = 0;
+      s.mtdVarLY = s.mtdLY ? (s.mtdActual - s.mtdLY) / s.mtdLY : 0;
       s.ytdVarBudget = s.ytdBudget ? (s.ytdActual - s.ytdBudget) / s.ytdBudget : 0;
-      s.ytdVarLY = 0;
+      s.ytdVarLY = s.ytdLY ? (s.ytdActual - s.ytdLY) / s.ytdLY : 0;
       specialties.push(s);
     }
   }
@@ -3324,7 +3331,8 @@ function App() {
     const volLY = ipSpecialties.reduce((a,s) => a + (s.mtdVolLY||0), 0);
     const ytdA = ipSpecialties.reduce((a,s) => a + (s.ytdActual||0), 0);
     const ytdL = ipSpecialties.reduce((a,s) => a + (s.ytdLY||0), 0);
-    return { mtdActual: mtdA, mtdLY: mtdL, mtdBudget: mtdB, volume: vol, volumeLY: volLY, mtdVarLY: mtdL ? (mtdA-mtdL)/mtdL : 0, ytdActual: ytdA, ytdLY: ytdL, ytdVarLY: ytdL ? (ytdA-ytdL)/ytdL : 0 };
+    const ytdVol = ipSpecialties.reduce((a,s) => a + (s.ytdVolume||0), 0);
+    return { mtdActual: mtdA, mtdLY: mtdL, mtdBudget: mtdB, volume: vol, volumeLY: volLY, mtdVarLY: mtdL ? (mtdA-mtdL)/mtdL : 0, ytdActual: ytdA, ytdLY: ytdL, ytdVolume: ytdVol || vol, ytdVarLY: ytdL ? (ytdA-ytdL)/ytdL : 0 };
   }, [ipSpecialties]);
 
   // OP+Pharmacy PPC = (DSR total - IP revenue) / OP visit count
@@ -3923,35 +3931,6 @@ function App() {
 
         {/* CHARTS */}
         <div id="specialties" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:20, marginTop:24 }}>
-          {/* Bar Chart */}
-          <div style={{ ...card, padding:28 }}>
-            <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid "+C.primary, display:"flex", alignItems:"center", gap:10 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              <div>
-                <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>MTD Performance by Specialty</h2>
-                <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>All specialties — This Year vs Last Year (AED)</p>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={isMobile ? 320 : 420}>
-              <BarChart data={barChartData} margin={{ top:10, right:10, left:0, bottom:80 }} barGap={1} barCategoryGap="18%">
-                <defs>
-                  <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity={0.9}/><stop offset="100%" stopColor="#60a5fa" stopOpacity={0.9}/></linearGradient>
-                  <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#475569" stopOpacity={0.5}/><stop offset="100%" stopColor="#64748b" stopOpacity={0.5}/></linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize:10, fill:C.textMuted }} angle={-45} textAnchor="end" interval={0} height={95} axisLine={{ stroke:C.border }} tickLine={false} />
-                <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.05)" }} />
-                <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
-                <Bar dataKey="Last Year" fill="url(#gL)" radius={[5,5,0,0]} maxBarSize={22}
-                  label={({ x, y, width, height, value }) => height < 28 || !value ? null :
-                    <text x={x + width/2} y={y + height/2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#e2e8f0" transform={`rotate(-90, ${x + width/2}, ${y + height/2})`}>{fmtK(value)}</text>} />
-                <Bar dataKey="This Year" fill="url(#gA)" radius={[5,5,0,0]} maxBarSize={22}
-                  label={({ x, y, width, height, value }) => height < 28 || !value ? null :
-                    <text x={x + width/2} y={y + height/2} textAnchor="middle" fontSize={9} fontWeight={700} fill="#fff" transform={`rotate(-90, ${x + width/2}, ${y + height/2})`}>{fmtK(value)}</text>} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
 
           {/* Variance Waterfall */}
           <div style={{ ...card, padding:28 }}>
@@ -4702,7 +4681,7 @@ function App() {
               <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:C.text, marginTop:4 }}>{ipTotals.volume}</div>
             </div>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 10 : 12, marginBottom:20 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: isMobile ? 10 : 12, marginBottom:20 }}>
             <div style={{ ...card, padding:"14px 18px" }}>
               <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>YTD Revenue</div>
               <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:C.primaryLight, marginTop:4 }}>AED {fmt(ipTotals.ytdActual)}</div>
@@ -4710,6 +4689,10 @@ function App() {
             <div style={{ ...card, padding:"14px 18px" }}>
               <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>YTD vs LY</div>
               <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:varColor(ipTotals.ytdVarLY), marginTop:4 }}>{pct(ipTotals.ytdVarLY)}</div>
+            </div>
+            <div style={{ ...card, padding:"14px 18px" }}>
+              <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Avg Revenue per Case YTD</div>
+              <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:800, color:"#a855f7", marginTop:4 }}>AED {fmt(ipTotals.ytdActual && ipTotals.ytdVolume ? Math.round(ipTotals.ytdActual / ipTotals.ytdVolume) : 0)}</div>
             </div>
             <div style={{ ...card, padding:"14px 18px" }}>
               <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>vs Budget</div>
