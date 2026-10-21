@@ -3874,7 +3874,7 @@ function App() {
           </div>
           <ul style={{ margin:0, paddingLeft: isMobile ? 16 : 20, listStyle:"disc" }}>
             {commentary.map((line, i) => {
-              const parts = line.split(/((?:Dr\.|Prof\.\s*Dr\.)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g);
+              const parts = line.split(/((?:Dr\.|Prof\.\s*Dr\.)\s+[A-Za-z][a-z]+(?:\s+[A-Za-z][a-z]+)*)/g);
               return (
                 <li key={i} style={{ fontSize: isMobile ? 12 : 13, lineHeight:1.7, color:C.textSecondary, marginBottom:4, wordWrap:"break-word", overflowWrap:"break-word" }}>
                   {parts.map((part, j) => {
