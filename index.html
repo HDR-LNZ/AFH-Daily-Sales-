@@ -3507,6 +3507,26 @@ function App() {
     if (totals.ytdVarLY < 0) lines.push("YTD revenue of AED " + fmtK(totals.ytdActual) + " is " + ytdVarLY + "% below last year (AED " + fmtK(totals.ytdLY) + "), indicating a need for focused recovery strategies.");
     else lines.push("YTD revenue of AED " + fmtK(totals.ytdActual) + " is +" + ytdVarLY + "% above last year.");
 
+    // YTD OP Volume from archived months + current
+    const allHistMonths = [...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
+      .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, []);
+    let ytdOpVol = allHistMonths.reduce((a, m) => a + (m.dsr?.opMtdVolume || 0), 0);
+    let ytdOpVolLY = allHistMonths.reduce((a, m) => a + (m.clinics || []).reduce((s, c) => s + (c.volLY || 0), 0), 0);
+    const currentMonthInArchive = allHistMonths.some(m => {
+      const rd = new Date(reportDate);
+      if (isNaN(rd.getTime())) return false;
+      const curKey = rd.toLocaleDateString('en-US', {month:'short'}) + "-" + rd.getFullYear();
+      return m.monthKey === curKey || m.monthKey === rd.toLocaleDateString('en-US', {month:'short'});
+    });
+    if (!currentMonthInArchive && dsrTotals.opMtdVolume) {
+      ytdOpVol += dsrTotals.opMtdVolume;
+      ytdOpVolLY += dsrTotals.opMtdLYVolume || 0;
+    }
+    if (ytdOpVol > 0) {
+      const ytdVolVar = ytdOpVolLY ? ((ytdOpVol - ytdOpVolLY) / ytdOpVolLY * 100).toFixed(1) : null;
+      lines.push("YTD OP volume: " + fmt(ytdOpVol) + " visits" + (ytdVolVar != null ? " (" + (ytdVolVar >= 0 ? "+" : "") + ytdVolVar + "% vs LY " + fmt(ytdOpVolLY) + " visits)" : "") + ".");
+    }
+
     const mtdVarLYPct = totals.mtdLY ? ((totals.mtdActual - totals.mtdLY) / totals.mtdLY * 100).toFixed(1) : 0;
     lines.push("MTD revenue stands at AED " + fmt(totals.mtdActual) + " (" + (mtdVarLYPct >= 0 ? "+" : "") + mtdVarLYPct + "% vs LY), averaging AED " + fmt(avgPerDay) + " per day across " + (dsrTotals.daysElapsed || 1) + " operating days.");
 
