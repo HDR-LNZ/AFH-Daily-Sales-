@@ -3686,7 +3686,7 @@ function App() {
       if (s && d.mtdActual) mtdBySlug[s] = (mtdBySlug[s] || 0) + d.mtdActual;
     }
     const newDoctorEntries = Object.entries(doctorFirstSeen)
-      .filter(([slug, info]) => !info.isBaseline && !NEW_DOCTOR_EXCLUDED_SLUGS.has(slug))
+      .filter(([slug, info]) => !info.isBaseline && !NEW_DOCTOR_EXCLUDED_SLUGS.has(slug) && !RESIGNED_DOCTORS.has(slug))
       .map(([slug, info]) => ({
         ...info,
         slug,
