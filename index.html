@@ -1527,7 +1527,7 @@ function PctVarianceTooltip({ active, payload, label }) {
         </span>
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
-        <div style={{ width:10, height:10, borderRadius:3, background:C.warning }} />
+        <div style={{ width:10, height:10, borderRadius:3, background:"#8b5cf6" }} />
         <span style={{ fontSize:12, color:"#94a3b8", flex:1 }}>OP Volume vs LY</span>
         <span style={{ fontSize:13, fontWeight:600, color: d.hasVolLY ? varColor(d.volumeVar) : C.textMuted, fontVariantNumeric:"tabular-nums" }}>
           {d.hasVolLY ? fmtPct(d.volumeVar) : "\u2014"}
