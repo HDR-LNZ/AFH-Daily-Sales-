@@ -3370,7 +3370,7 @@ function App() {
         ytdVolLYByClinic[l.location] = (ytdVolLYByClinic[l.location] || 0) + (l.opVolMTDLY || 0);
       });
     }
-    // Override with Location sheet's actual YTD when available (more accurate than archived sums)
+    // Override with DSR's actual YTD when available (more accurate than archived sums)
     locations.forEach(l => {
       if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
       if (l.totalRevenueYTD && l.totalRevenueYTD > (l.totalRevenueMTD || 0)) {
@@ -3378,6 +3378,12 @@ function App() {
       }
       if (l.ytdLY && l.ytdLY > (l.mtdLY || 0)) {
         ytdLYByClinic[l.location] = l.ytdLY;
+      }
+      if (l.opVolYTD && l.opVolYTD > (l.opVolMTD || 0)) {
+        ytdVolByClinic[l.location] = l.opVolYTD;
+      }
+      if (l.opVolYTDLY && l.opVolYTDLY > (l.opVolMTDLY || 0)) {
+        ytdVolLYByClinic[l.location] = l.opVolYTDLY;
       }
     });
     // Merge Karama + UW Mall: combine 2026 revenue, use Karama's LY as the baseline
