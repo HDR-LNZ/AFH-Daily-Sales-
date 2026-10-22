@@ -3382,6 +3382,7 @@ function App() {
       if (l.opVolYTDLY && l.opVolYTDLY > (l.opVolMTDLY || 0)) {
         ytdVolLYByClinic[l.location] = l.opVolYTDLY;
       }
+      if (/fest/i.test(l.location)) console.log('[YTD CHART DEBUG] Fest Plaza:', 'opVolYTD:', l.opVolYTD, 'opVolMTD:', l.opVolMTD, 'opVolYTDLY:', l.opVolYTDLY, 'opVolMTDLY:', l.opVolMTDLY, 'ytdVol set to:', ytdVolByClinic[l.location], 'ytdVolLY set to:', ytdVolLYByClinic[l.location]);
     });
     // Merge Karama + UW Mall: combine 2026 revenue, use Karama's LY as the baseline
     if (ytdByClinic["Karama"] || ytdByClinic["UW Mall"]) {
