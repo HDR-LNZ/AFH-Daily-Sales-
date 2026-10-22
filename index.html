@@ -1031,7 +1031,7 @@ function parseExcelFile(data) {
         const name = (r[0] && typeof r[0] === 'string' ? r[0] : null) || (r[1] && typeof r[1] === 'string' ? r[1] : null);
         if (!name || /total|grand|corporate/i.test(name.trim())) continue;
         const lyCol6 = (r[6] || '').toString().toLowerCase().trim();
-        if (/corporate|gatekeep|homecare|closed|total/i.test(lyCol6)) continue;
+        if (/corporate|gatekeep|homecare|closed|total\s*(care|revenue|volume)|muteena|sonapur/i.test(lyCol6)) continue;
         const matchCode = _matchClinic(name.trim(), dsrClinicMap) || normLoc(name.trim());
         if (matchCode && dsrVolMap[matchCode]) {
           const lyVal = Math.round(r[17] || 0);
