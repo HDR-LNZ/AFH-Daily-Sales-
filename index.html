@@ -5142,7 +5142,7 @@ function App() {
               });
               m.clinics = Object.values(merged);
             });
-            const clinicNames = [...new Set(allMonths.flatMap(m => (m.clinics || []).map(c => c.loc)))].filter(n => !["Staff DIP","Staff DFC","Stationed"].includes(n));
+            const clinicNames = [...new Set(allMonths.flatMap(m => (m.clinics || []).map(c => c.loc)))].filter(n => !["Staff DIP","Staff DFC","Stationed","Clinic-ENBD","HealthHub – Clinic-ENBD"].includes(n) && !EXCLUDED_DAILY_LOG.has(n));
             const clinicRevData = allMonths.map(m => {
               const row = { name: m.month };
               (m.clinics || []).forEach(c => { if (clinicNames.includes(c.loc)) row[c.loc] = c.mtd || 0; });
