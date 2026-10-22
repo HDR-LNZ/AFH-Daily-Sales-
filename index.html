@@ -732,8 +732,10 @@ function parseExcelFile(data) {
         docByName[k].today += d.today;
         docByName[k].mtdActual += d.mtdActual;
         docByName[k].mtdBudget += d.mtdBudget;
+        docByName[k].mtdLY = (docByName[k].mtdLY || 0) + (d.mtdLY || 0);
         docByName[k].ytdActual += d.ytdActual;
         docByName[k].ytdBudget += d.ytdBudget;
+        docByName[k].ytdLY = (docByName[k].ytdLY || 0) + (d.ytdLY || 0);
       }
       if (d._loc) docByName[k]._locSet.add(d._loc);
     }
@@ -744,8 +746,8 @@ function parseExcelFile(data) {
       delete d._loc;
       d.mtdVarBudget = d.mtdBudget ? (d.mtdActual - d.mtdBudget) / d.mtdBudget : 0;
       d.ytdVarBudget = d.ytdBudget ? (d.ytdActual - d.ytdBudget) / d.ytdBudget : 0;
-      d.mtdVarLY = 0;
-      d.ytdVarLY = 0;
+      d.mtdVarLY = d.mtdLY ? (d.mtdActual - d.mtdLY) / d.mtdLY : 0;
+      d.ytdVarLY = d.ytdLY ? (d.ytdActual - d.ytdLY) / d.ytdLY : 0;
       doctors.push(d);
     }
     // Synthesize specialty subtotals
