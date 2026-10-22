@@ -860,15 +860,50 @@ function parseExcelFile(data) {
   if (locSheetName) {
     const locWs = wb.Sheets[locSheetName];
     const locRows = XLSX.utils.sheet_to_json(locWs, { header: 1, defval: null });
-    const rawLocs = [];
-    for (let i = 6; i < locRows.length; i++) {
-      const r = locRows[i]; if (!r) continue;
-      const loc = r[1], doc = r[2], spec = r[3];
-      if (!loc || typeof loc !== "string" || loc.toLowerCase().includes("total") || loc.toLowerCase().includes("grand")) continue;
-      if (!doc || typeof doc !== "string" || !doc.trim()) continue;
-      rawLocs.push({ location: normLoc(loc.trim()), doctor: doc.trim(), specialty: (spec && typeof spec === "string") ? spec.trim() : "Other", today: num(r[5]), mtdBudget: num(r[6]), mtdActual: num(r[7]), ytdBudget: num(r[10]), ytdActual: num(r[11]) });
+    // Check if the Location sheet actually has location data (col 1=location, col 2=doctor)
+    // vs being a copy of the Specialty sheet (col 0=doctor, col 1=specialty)
+    let locHeaderIdx = 5;
+    for (let i = 0; i < 10; i++) { const r = locRows[i] || []; if (r.join(" ").toLowerCase().match(/location|clinic/)) { locHeaderIdx = i; break; } }
+    const locHeader = locRows[locHeaderIdx] || [];
+    const hasLocColumn = locHeader.some(c => typeof c === 'string' && /^\s*location\s*$/i.test(c));
+    // If no Location column, try the old format where col 1 is location name (not specialty)
+    // Detect by checking if the first data row's col 2 is a string (doctor name) vs number (revenue)
+    const firstDataRow = locRows[locHeaderIdx + 1] || locRows[6] || [];
+    const col2IsName = firstDataRow[2] && typeof firstDataRow[2] === 'string' && firstDataRow[2].trim().length > 1;
+    if (hasLocColumn || col2IsName) {
+      const rawLocs = [];
+      for (let i = 6; i < locRows.length; i++) {
+        const r = locRows[i]; if (!r) continue;
+        const loc = r[1], doc = r[2], spec = r[3];
+        if (!loc || typeof loc !== "string" || loc.toLowerCase().includes("total") || loc.toLowerCase().includes("grand")) continue;
+        if (!doc || typeof doc !== "string" || !doc.trim()) continue;
+        rawLocs.push({ location: normLoc(loc.trim()), doctor: doc.trim(), specialty: (spec && typeof spec === "string") ? spec.trim() : "Other", today: num(r[5]), mtdBudget: num(r[6]), mtdActual: num(r[7]), ytdBudget: num(r[10]), ytdActual: num(r[11]) });
+      }
+      locations = aggregateLocationData(rawLocs);
+    } else {
+      // Location sheet has same format as Specialty sheet — build locations from specialty data
+      // Group doctors by their _loc field (from the specialty parser)
+      const locMap = {};
+      for (const d of doctors) {
+        const loc = d._loc ? normLoc(d._loc) : "Unknown";
+        if (!locMap[loc]) locMap[loc] = [];
+        locMap[loc].push(d);
+      }
+      locations = Object.keys(locMap).filter(l => l !== "Unknown").map(loc => {
+        const docs = locMap[loc];
+        return {
+          location: loc,
+          totalToday: docs.reduce((a,d) => a + (d.today || 0), 0),
+          totalRevenueMTD: docs.reduce((a,d) => a + (d.mtdActual || 0), 0),
+          mtdBudget: docs.reduce((a,d) => a + (d.mtdBudget || 0), 0),
+          mtdLY: docs.reduce((a,d) => a + (d.mtdLY || 0), 0),
+          totalRevenueYTD: docs.reduce((a,d) => a + (d.ytdActual || 0), 0),
+          ytdBudget: docs.reduce((a,d) => a + (d.ytdBudget || 0), 0),
+          ytdLY: docs.reduce((a,d) => a + (d.ytdLY || 0), 0),
+          specialties: [],
+        };
+      }).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD);
     }
-    locations = aggregateLocationData(rawLocs);
     // Enrich locations with DSR-level totals from the Revenue section
     if (dsrName) {
       const dsRows2 = XLSX.utils.sheet_to_json(wb.Sheets[dsrName], { header: 1, defval: null });
