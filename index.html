@@ -881,28 +881,9 @@ function parseExcelFile(data) {
       }
       locations = aggregateLocationData(rawLocs);
     } else {
-      // Location sheet has same format as Specialty sheet — build locations from specialty data
-      // Group doctors by their _loc field (from the specialty parser)
-      const locMap = {};
-      for (const d of doctors) {
-        const loc = d._loc ? normLoc(d._loc) : "Unknown";
-        if (!locMap[loc]) locMap[loc] = [];
-        locMap[loc].push(d);
-      }
-      locations = Object.keys(locMap).filter(l => l !== "Unknown").map(loc => {
-        const docs = locMap[loc];
-        return {
-          location: loc,
-          totalToday: docs.reduce((a,d) => a + (d.today || 0), 0),
-          totalRevenueMTD: docs.reduce((a,d) => a + (d.mtdActual || 0), 0),
-          mtdBudget: docs.reduce((a,d) => a + (d.mtdBudget || 0), 0),
-          mtdLY: docs.reduce((a,d) => a + (d.mtdLY || 0), 0),
-          totalRevenueYTD: docs.reduce((a,d) => a + (d.ytdActual || 0), 0),
-          ytdBudget: docs.reduce((a,d) => a + (d.ytdBudget || 0), 0),
-          ytdLY: docs.reduce((a,d) => a + (d.ytdLY || 0), 0),
-          specialties: [],
-        };
-      }).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD);
+      // Location sheet has same format as Specialty sheet — no location data available
+      // Set empty so the DSR fallback will populate locations from the revenue section
+      locations = [];
     }
     // Enrich locations with DSR-level totals from the Revenue section
     if (dsrName) {
