@@ -618,6 +618,7 @@ const DEFAULT_DSR_TOTALS = {
 };
 
 const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed"]);
+const EXCLUDED_DAILY_LOG = new Set(["Staff DFC", "Staff DIP", "Stationed", "Karama", "Clinic-ENBD", "HealthHub – Clinic-ENBD", "AF Staff Clinic, DIP 1 & DIP 2", "HealthHub – AF Staff Clinic, DIP 1 & DIP 2"]);
 
 const LOCATION_ALIASES = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Festival City":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Day Surgery":"DSU","DSC":"DSU","Barsha Heights":"Tecom","Jumeirah Village Circle":"JVC","Jumeirah Village":"JVC","HealthHub – Tecom":"Tecom","HealthHub – Barsha Heights":"Tecom","HealthHub – Jumeirah Village Circle":"JVC","HealthHub – Al Warqa":"Warqa","HealthHub – Al Karama":"Karama","HealthHub – Al Qusais":"Qusais","HealthHub – Al Nahda":"Nahda","HealthHub – Festival Plaza":"Fest Plaza","HealthHub – Arabian Center":"Arabian","HealthHub – Jumeirah Village":"JVC","HealthHub Jumeirah Village Circle":"JVC","HealthHub – UW Mall":"UW Mall","UW Mall":"UW Mall"};
 function normLoc(name) {
@@ -5312,7 +5313,7 @@ function App() {
           {(() => {
             if (dailyClinicLog.length === 0) return <div style={{ padding:40, textAlign:"center", color:C.textMuted, fontSize:13 }}>No daily log data yet. Upload DSR files day by day to build the chart.</div>;
             const dates = [...new Set(dailyClinicLog.map(e => e.date))].sort((a,b) => new Date(a) - new Date(b));
-            const clinicNames = [...new Set(dailyClinicLog.map(e => e.clinic))].filter(c => !EXCLUDED_MAP_LOCATIONS.has(c));
+            const clinicNames = [...new Set(dailyClinicLog.map(e => e.clinic))].filter(c => !EXCLUDED_DAILY_LOG.has(c));
             const clinicTotals = {};
             clinicNames.forEach(c => { clinicTotals[c] = dailyClinicLog.filter(e => e.clinic === c).reduce((a,e) => a + e.rev, 0); });
             const sortedClinics = clinicNames.sort((a,b) => (clinicTotals[b]||0) - (clinicTotals[a]||0));
