@@ -997,12 +997,6 @@ function parseExcelFile(data) {
         if (cell && !['op','pharmacy','ip','total','for the day','actual','last year','volume',''].includes(cell) && !/month|date|budget/i.test(cell)) break;
         volStartRow = i + 1;
       }
-      console.log('[VOL DEBUG] volHeaderRow:', volHeaderRow, 'volStartRow:', volStartRow, 'totalRows:', dsRows2.length);
-      for (let vdi = volStartRow; vdi < Math.min(volStartRow + 25, dsRows2.length); vdi++) {
-        const vdr = dsRows2[vdi]; if (!vdr) continue;
-        const vdn = (vdr[0] && typeof vdr[0] === 'string' ? vdr[0] : '') || (vdr[1] && typeof vdr[1] === 'string' ? vdr[1] : '');
-        console.log('[VOL DEBUG] row', vdi, 'name:', JSON.stringify(vdn.trim()), 'col6:', JSON.stringify((vdr[6]||'').toString().trim()), 'col12:', vdr[12], 'col37:', vdr[37], 'col42:', vdr[42]);
-      }
       for (let i = volStartRow; i < volStartRow + 25; i++) {
         const r = dsRows2[i]; if (!r) continue;
         const name = (r[0] && typeof r[0] === 'string' ? r[0] : null) || (r[1] && typeof r[1] === 'string' ? r[1] : null);
@@ -1037,7 +1031,7 @@ function parseExcelFile(data) {
           if (ytdVal) dsrVolMap[matchCode].opVolYTD = ytdVal;
           if (ytdLYVal) dsrVolMap[matchCode].opVolYTDLY = ytdLYVal;
         }
-        if (/fest/i.test(matchCode)) console.log('[VOL DEBUG] Festival Plaza:', matchCode, 'row', i, 'mtd:', mtdVal, 'lyMTD:', lyVal, 'ytd:', ytdVal, 'ytdLY:', ytdLYVal, 'raw37:', r[37], 'raw42:', r[42]);
+
       }
       locations.forEach(loc => {
         const dsr = dsrClinicMap[loc.location];
@@ -3382,7 +3376,7 @@ function App() {
       if (l.opVolYTDLY && l.opVolYTDLY > (l.opVolMTDLY || 0)) {
         ytdVolLYByClinic[l.location] = l.opVolYTDLY;
       }
-      if (/fest/i.test(l.location)) console.log('[YTD CHART DEBUG] Fest Plaza:', 'opVolYTD:', l.opVolYTD, 'opVolMTD:', l.opVolMTD, 'opVolYTDLY:', l.opVolYTDLY, 'opVolMTDLY:', l.opVolMTDLY, 'ytdVol set to:', ytdVolByClinic[l.location], 'ytdVolLY set to:', ytdVolLYByClinic[l.location]);
+
     });
     // Merge Karama + UW Mall: combine 2026 revenue, use Karama's LY as the baseline
     if (ytdByClinic["Karama"] || ytdByClinic["UW Mall"]) {
@@ -3448,6 +3442,28 @@ function App() {
         };
       })
       .sort((a, b) => b.revenueVar - a.revenueVar);
+  }, [clinicYTDChartData]);
+
+  const volumeBridgeData = useMemo(() => {
+    const total2025 = clinicYTDChartData.reduce((s, c) => s + (c.vol2025 || 0), 0);
+    const total2026 = clinicYTDChartData.reduce((s, c) => s + (c.vol2026 || 0), 0);
+    const deltas = clinicYTDChartData
+      .map(c => ({ name: c.name, delta: (c.vol2026 || 0) - (c.vol2025 || 0) }))
+      .filter(d => d.delta !== 0)
+      .sort((a, b) => b.delta - a.delta);
+    const result = [{ name: '2025 YTD', base: 0, total: total2025, up: 0, down: 0, isTotal: true, raw: total2025 }];
+    let running = total2025;
+    deltas.forEach(d => {
+      if (d.delta >= 0) {
+        result.push({ name: d.name, base: running, up: d.delta, down: 0, total: 0, raw: d.delta });
+        running += d.delta;
+      } else {
+        result.push({ name: d.name, base: running + d.delta, up: 0, down: -d.delta, total: 0, raw: d.delta });
+        running += d.delta;
+      }
+    });
+    result.push({ name: '2026 YTD', base: 0, total: total2026, up: 0, down: 0, isTotal: true, raw: total2026 });
+    return result;
   }, [clinicYTDChartData]);
 
   // Filter out minor specialties (< AED 10K MTD and < AED 50K YTD) from charts
@@ -4528,6 +4544,56 @@ function App() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        {/* VOLUME BRIDGE CHART — YTD */}
+        {volumeBridgeData.length > 2 && (
+        <div style={{ ...card, padding:28, marginTop:20 }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #06b6d4", display:"flex", alignItems:"center", gap:10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
+            <div>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>OP Volume Bridge — YTD</h2>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Each clinic's contribution to the total OP volume change from 2025 to 2026 YTD</p>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={420}>
+            <BarChart data={volumeBridgeData} margin={{ top:20, right:30, left:10, bottom:60 }} barCategoryGap="20%">
+              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize:10, fill:C.textMuted }} angle={-35} textAnchor="end" interval={0} height={70} />
+              <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={v => v >= 1000 ? (v/1000).toFixed(0) + 'K' : v} axisLine={false} tickLine={false} />
+              <Tooltip content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0]?.payload;
+                if (!d) return null;
+                return (
+                  <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"10px 14px", fontSize:12 }}>
+                    <div style={{ fontWeight:700, color:C.text, marginBottom:4 }}>{d.name}</div>
+                    {d.isTotal ? (
+                      <div style={{ color:C.textSecondary }}>Total: <span style={{ fontWeight:600, color:C.text }}>{d.total.toLocaleString()}</span> visits</div>
+                    ) : (
+                      <div style={{ color: d.raw >= 0 ? '#34d399' : '#f87171' }}>
+                        {d.raw >= 0 ? '+' : ''}{d.raw.toLocaleString()} visits
+                      </div>
+                    )}
+                  </div>
+                );
+              }} />
+              <Bar dataKey="base" stackId="a" fill="transparent" />
+              <Bar dataKey="total" stackId="a" radius={[4,4,0,0]} maxBarSize={40}
+                fill="#38bdf8"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.text}>{value >= 1000 ? (value/1000).toFixed(1) + 'K' : value}</text> : null} />
+              <Bar dataKey="up" stackId="a" radius={[4,4,0,0]} maxBarSize={40}
+                fill="#34d399"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 6} textAnchor="middle" fontSize={9} fontWeight={700} fill="#34d399">+{value >= 1000 ? (value/1000).toFixed(1) + 'K' : value}</text> : null} />
+              <Bar dataKey="down" stackId="a" radius={[4,4,0,0]} maxBarSize={40}
+                fill="#f87171"
+                label={({ x, y, width, value, index }) => {
+                  const d = volumeBridgeData[index];
+                  return value > 0 ? <text x={x + width/2} y={y - 6} textAnchor="middle" fontSize={9} fontWeight={700} fill="#f87171">-{value >= 1000 ? (value/1000).toFixed(1) + 'K' : value}</text> : null;
+                }} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        )}
 
         {/* CLINIC PPC COMPARISON */}
         <div style={{ ...card, padding:28, marginTop:20 }}>
