@@ -997,6 +997,12 @@ function parseExcelFile(data) {
         if (cell && !['op','pharmacy','ip','total','for the day','actual','last year','volume',''].includes(cell) && !/month|date|budget/i.test(cell)) break;
         volStartRow = i + 1;
       }
+      console.log('[VOL DEBUG] volHeaderRow:', volHeaderRow, 'volStartRow:', volStartRow, 'totalRows:', dsRows2.length);
+      for (let vdi = volStartRow; vdi < Math.min(volStartRow + 25, dsRows2.length); vdi++) {
+        const vdr = dsRows2[vdi]; if (!vdr) continue;
+        const vdn = (vdr[0] && typeof vdr[0] === 'string' ? vdr[0] : '') || (vdr[1] && typeof vdr[1] === 'string' ? vdr[1] : '');
+        console.log('[VOL DEBUG] row', vdi, 'name:', JSON.stringify(vdn.trim()), 'col6:', JSON.stringify((vdr[6]||'').toString().trim()), 'col12:', vdr[12], 'col37:', vdr[37], 'col42:', vdr[42]);
+      }
       for (let i = volStartRow; i < volStartRow + 25; i++) {
         const r = dsRows2[i]; if (!r) continue;
         const name = (r[0] && typeof r[0] === 'string' ? r[0] : null) || (r[1] && typeof r[1] === 'string' ? r[1] : null);
