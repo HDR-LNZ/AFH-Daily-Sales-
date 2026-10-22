@@ -3382,6 +3382,16 @@ function App() {
         ytdLYByClinic[l.location] = (ytdLYByClinic[l.location] || 0) + (l.mtdLY || 0);
       });
     }
+    // Override with Location sheet's actual YTD when available (more accurate than archived sums)
+    locations.forEach(l => {
+      if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
+      if (l.totalRevenueYTD && l.totalRevenueYTD > (l.totalRevenueMTD || 0)) {
+        ytdByClinic[l.location] = l.totalRevenueYTD;
+      }
+      if (l.ytdLY && l.ytdLY > (l.mtdLY || 0)) {
+        ytdLYByClinic[l.location] = l.ytdLY;
+      }
+    });
     // Merge Karama + UW Mall: combine 2026 revenue, use Karama's LY as the baseline
     if (ytdByClinic["Karama"] || ytdByClinic["UW Mall"]) {
       ytdByClinic["UW Mall"] = (ytdByClinic["UW Mall"] || 0) + (ytdByClinic["Karama"] || 0);
@@ -3425,18 +3435,18 @@ function App() {
         const hasRevLY = c["2025"] > 0;
         const revenueVar = hasRevLY ? Number(((c["2026"] - c["2025"]) / c["2025"] * 100).toFixed(1)) : 0;
         const loc = locations.find(l => l.location === c.code || (CLINIC_COORDS[l.location]?.label || l.location) === c.name);
-        const volMTD = loc?.opVolMTD || 0;
-        const volLY = loc?.opVolMTDLY || 0;
-        const hasVolLY = volLY > 0;
-        const volumeVar = hasVolLY ? Number(((volMTD - volLY) / volLY * 100).toFixed(1)) : 0;
+        const volYTD = loc?.opVolYTD || loc?.opVolMTD || 0;
+        const volYTDLY = loc?.opVolYTDLY || loc?.opVolMTDLY || 0;
+        const hasVolLY = volYTDLY > 0;
+        const volumeVar = hasVolLY ? Number(((volYTD - volYTDLY) / volYTDLY * 100).toFixed(1)) : 0;
         return {
           name: c.name,
           code: c.code,
           revenueVar, volumeVar, hasRevLY, hasVolLY,
           revenueMTD: c["2026"],
           revenueLY: c["2025"],
-          volumeMTD: volMTD,
-          volumeLY: volLY,
+          volumeMTD: volYTD,
+          volumeLY: volYTDLY,
         };
       })
       .sort((a, b) => b.revenueVar - a.revenueVar);
