@@ -3444,10 +3444,13 @@ function App() {
       .map(c => {
         const hasRevLY = c["2025"] > 0;
         const revenueVar = hasRevLY ? Number(((c["2026"] - c["2025"]) / c["2025"] * 100).toFixed(1)) : 0;
+        // YTD volume from archives is unreliable (old archives have zero volLY)
+        // Only show volume variance if the ratio is reasonable (within -80% to +100%)
         const volYTD = c.vol2026 || 0;
         const volYTDLY = c.vol2025 || 0;
-        const hasVolLY = volYTDLY > 0;
-        const volumeVar = hasVolLY ? Number(((volYTD - volYTDLY) / volYTDLY * 100).toFixed(1)) : 0;
+        const rawVolVar = volYTDLY > 0 ? ((volYTD - volYTDLY) / volYTDLY * 100) : 0;
+        const hasVolLY = volYTDLY > 0 && Math.abs(rawVolVar) < 100;
+        const volumeVar = hasVolLY ? Number(rawVolVar.toFixed(1)) : 0;
         return {
           name: c.name,
           code: c.code,
