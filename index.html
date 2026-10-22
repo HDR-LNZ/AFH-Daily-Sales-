@@ -1101,10 +1101,30 @@ function parseExcelFile(data) {
       if (clinicVolLYSum > 0 && !dsrTotals.opMtdLYVolume) {
         dsrTotals.opMtdLYVolume = clinicVolLYSum;
       }
+      // If Location sheet produced no data, build locations from DSR clinic data
+      if (!locations || locations.length === 0) {
+        locations = Object.keys(dsrClinicMap)
+          .filter(loc => !EXCLUDED_MAP_LOCATIONS.has(loc))
+          .map(loc => ({
+            location: loc,
+            totalToday: dsrClinicMap[loc].totalToday || 0,
+            totalRevenueMTD: dsrClinicMap[loc].totalRevenueMTD || 0,
+            mtdBudget: dsrClinicMap[loc].mtdBudget || 0,
+            mtdLY: dsrClinicMap[loc].mtdLY || 0,
+            totalRevenueYTD: dsrClinicMap[loc].totalRevenueYTD || 0,
+            ytdBudget: 0,
+            ytdLY: dsrClinicMap[loc].ytdLY || 0,
+            specialties: [],
+          }));
+        // Enrich with volume
+        locations.forEach(loc => {
+          const vol = dsrVolMap[loc.location];
+          if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; loc.opVolYTD = vol.opVolYTD; loc.opVolYTDLY = vol.opVolYTDLY; loc.opVolToday = vol.opVolToday || 0; }
+        });
+        locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
+      }
     }
   }
-
-  // Parse IP Analysis
   let ipSpecialties = null;
   const ipAnalysisName = wb.SheetNames.find(n => n.toLowerCase().includes("ip analysis"));
   if (ipAnalysisName) {
