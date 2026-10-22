@@ -905,23 +905,38 @@ function parseExcelFile(data) {
       // Find "Total" column indices from the sub-header row (For the Day Total, MTD Total, LY Total)
       let todayTotalCol = 10, mtdTotalCol = 15, mtdLYTotalCol = 20, budgetCol = 30, ytdTotalCol = 40, ytdLYCol = 45;
       if (revStartRow >= 0) {
-        // Scan the header rows for "Total" columns to map them
+        // Scan the header rows for "Total" columns — only use the first 3 for Today/MTD/LY MTD
         const totalCols = [];
         for (let hdrOff = 0; hdrOff <= 3; hdrOff++) {
           const hdr = dsRows2[revStartRow + hdrOff] || [];
-          for (let c = 0; c < Math.max(hdr.length, 50); c++) {
+          for (let c = 0; c < Math.max(hdr.length, 55); c++) {
             const h = (hdr[c] || '').toString().toLowerCase().trim();
             if (h === 'total' && !totalCols.includes(c)) totalCols.push(c);
           }
-          if (totalCols.length >= 3) break;
         }
         totalCols.sort((a,b) => a - b);
         if (totalCols.length >= 3) {
           todayTotalCol = totalCols[0];
           mtdTotalCol = totalCols[1];
           mtdLYTotalCol = totalCols[2];
-          if (totalCols.length >= 4) ytdTotalCol = totalCols[3];
-          if (totalCols.length >= 5) ytdLYCol = totalCols[4];
+        }
+        // For YTD, find "Year to Date" or "Actual Year" in headers and locate the Total columns near it
+        for (let hdrOff = 0; hdrOff <= 3; hdrOff++) {
+          const hdr = dsRows2[revStartRow + hdrOff] || [];
+          for (let c = 0; c < Math.max(hdr.length, 55); c++) {
+            const h = (hdr[c] || '').toString().toLowerCase().trim();
+            if (/actual.*year|year.*to.*date/i.test(h) && !/last|budget|variance/i.test(h)) {
+              // Find the "Total" column within 5 positions after this header
+              for (let tc = c; tc < c + 6; tc++) {
+                if (totalCols.includes(tc)) { ytdTotalCol = tc; break; }
+              }
+            }
+            if (/last.*year.*to|last year.*year/i.test(h)) {
+              for (let tc = c; tc < c + 6; tc++) {
+                if (totalCols.includes(tc)) { ytdLYCol = tc; break; }
+              }
+            }
+          }
         }
       }
       // Find first data row (skip all header rows — look for a row with a clinic name)
@@ -1067,8 +1082,8 @@ function parseExcelFile(data) {
           loc.totalRevenueMTD = dsr.totalRevenueMTD;
           loc.mtdLY = dsr.mtdLY;
           if (dsr.mtdBudget) loc.mtdBudget = dsr.mtdBudget;
-          if (dsr.totalRevenueYTD) loc.totalRevenueYTD = dsr.totalRevenueYTD;
-          if (dsr.ytdLY) loc.ytdLY = dsr.ytdLY;
+          loc.totalRevenueYTD = dsr.totalRevenueYTD || loc.totalRevenueYTD;
+          loc.ytdLY = dsr.ytdLY || loc.ytdLY;
         }
         const ppc = dsrPPCMap[loc.location];
         if (ppc) { loc.ppcYTD = ppc.ppcYTD; loc.ppcYTDLY = ppc.ppcYTDLY; }
