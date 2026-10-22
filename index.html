@@ -95,8 +95,8 @@ const pct = (n) => {
   const v = (n * 100).toFixed(1);
   return `${v > 0 ? "+" : ""}${v}%`;
 };
-const varColor = (n) => (n == null || isNaN(n)) ? "#64748b" : n >= 0 ? "#10b981" : "#ef4444";
-const varBg = (n) => (n == null || isNaN(n)) ? "transparent" : n >= 0 ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)";
+const varColor = (n) => (n == null || isNaN(n)) ? "#898781" : n >= 0 ? "#0ca30c" : "#e66767";
+const varBg = (n) => (n == null || isNaN(n)) ? "transparent" : n >= 0 ? "rgba(12,163,12,0.12)" : "rgba(230,103,103,0.12)";
 
 // Actual full-month company-wide Gross Revenue (AED). Used by the executive summary's
 // "projected month vs LY same month" comparison. Source: finance team's "Revenue
@@ -307,27 +307,30 @@ const MONTHLY_HISTORY = [
 ];
 
 const C = {
-  pageBg: "#1e2230",
-  sidebarBg: "#171b26",
-  cardBg: "#252a3a",
-  cardBorder: "#2f3548",
-  cardHover: "#2d3347",
-  primary: "#3b82f6",
-  primaryLight: "#60a5fa",
+  pageBg: "#141413",
+  sidebarBg: "#0d0d0d",
+  cardBg: "#1a1a19",
+  cardBorder: "#2c2c2a",
+  cardHover: "#242422",
+  primary: "#3987e5",
+  primaryLight: "#5ba3f5",
   primaryDark: "#2563eb",
-  accent: "#06b6d4",
-  success: "#10b981",
-  successLight: "#34d399",
-  danger: "#ef4444",
-  dangerLight: "#f87171",
-  warning: "#f59e0b",
+  accent: "#199e70",
+  success: "#0ca30c",
+  successLight: "#2ec92e",
+  danger: "#d03b3b",
+  dangerLight: "#e66767",
+  warning: "#fab219",
   warningLight: "#fbbf24",
-  text: "#e2e8f0",
-  textSecondary: "#94a3b8",
-  textMuted: "#64748b",
-  border: "#2f3548",
+  text: "#f0efec",
+  textSecondary: "#c3c2b7",
+  textMuted: "#898781",
+  border: "#2c2c2a",
+  grid: "#2c2c2a",
+  axis: "#383835",
+  surface: "#1a1a19",
 };
-const PALETTE = ["#3b82f6","#06b6d4","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#14b8a6","#6366f1","#f97316","#84cc16","#0ea5e9","#d946ef","#a855f7","#22d3ee","#fb923c","#a3e635","#2dd4bf","#818cf8","#fb7185","#facc15","#4ade80","#38bdf8","#c084fc"];
+const PALETTE = ["#3987e5","#d95926","#199e70","#c98500","#d55181","#008300","#9085e9","#e66767"];
 
 // ─── Doctor Profile Links ───────────────────────────────────────────────────
 
@@ -1499,13 +1502,13 @@ function ChartTooltip({ active, payload, label }) {
   // Series whose values are counts (visits, cases, volume) get no "AED" prefix
   const isCount = (name) => /visit|case|count|volume|patient/i.test(name || "");
   return (
-    <div style={{ background:"#1e293b", borderRadius:10, padding:"14px 18px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548", borderLeft:"3px solid " + accentColor }}>
-      <div style={{ fontWeight:700, fontSize:13, color:"#e2e8f0", marginBottom:8, borderBottom:"1px solid #2f3548", paddingBottom:6 }}>{label}</div>
+    <div style={{ background:C.surface, borderRadius:10, padding:"14px 18px", boxShadow:"0 4px 20px rgba(0,0,0,0.5)", border:"1px solid rgba(255,255,255,0.10)", borderLeft:"3px solid " + accentColor }}>
+      <div style={{ fontWeight:700, fontSize:13, color:C.text, marginBottom:8, borderBottom:"1px solid " + C.border, paddingBottom:6 }}>{label}</div>
       {payload.map((p,i) => (
         <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
           <div style={{ width:10, height:10, borderRadius:3, background:p.color }} />
-          <span style={{ fontSize:12, color:"#94a3b8", flex:1 }}>{p.name}</span>
-          <span style={{ fontSize:13, fontWeight:600, color:"#e2e8f0", fontVariantNumeric:"tabular-nums" }}>{isCount(p.name) ? fmt(p.value) : "AED " + fmt(p.value)}</span>
+          <span style={{ fontSize:12, color:C.textSecondary, flex:1 }}>{p.name}</span>
+          <span style={{ fontSize:13, fontWeight:600, color:C.text, fontVariantNumeric:"tabular-nums" }}>{isCount(p.name) ? fmt(p.value) : "AED " + fmt(p.value)}</span>
         </div>
       ))}
     </div>
@@ -1516,9 +1519,9 @@ function PieTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0];
   return (
-    <div style={{ background:"#1e293b", borderRadius:10, padding:"12px 16px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548", borderLeft:"3px solid " + (d.payload?.fill || C.primary) }}>
-      <div style={{ fontWeight:700, fontSize:13, color:"#e2e8f0", marginBottom:4 }}>{d.name}</div>
-      <div style={{ fontSize:13, color:"#94a3b8" }}>AED {fmt(d.value)} ({(d.payload.pctShare*100).toFixed(1)}%)</div>
+    <div style={{ background:C.surface, borderRadius:10, padding:"12px 16px", boxShadow:"0 4px 20px rgba(0,0,0,0.5)", border:"1px solid rgba(255,255,255,0.10)", borderLeft:"3px solid " + (d.payload?.fill || C.primary) }}>
+      <div style={{ fontWeight:700, fontSize:13, color:C.text, marginBottom:4 }}>{d.name}</div>
+      <div style={{ fontSize:13, color:C.textSecondary }}>AED {fmt(d.value)} ({(d.payload.pctShare*100).toFixed(1)}%)</div>
     </div>
   );
 }
@@ -1529,23 +1532,23 @@ function PctVarianceTooltip({ active, payload, label }) {
   if (!d) return null;
   const fmtPct = (v) => (v > 0 ? "+" : "") + v.toFixed(1) + "%";
   return (
-    <div style={{ background:"#1e293b", borderRadius:10, padding:"14px 18px", boxShadow:"0 8px 30px rgba(0,0,0,0.4)", border:"1px solid #2f3548", borderLeft:"3px solid " + C.accent }}>
-      <div style={{ fontWeight:700, fontSize:13, color:"#e2e8f0", marginBottom:8, borderBottom:"1px solid #2f3548", paddingBottom:6 }}>{label}</div>
+    <div style={{ background:C.surface, borderRadius:10, padding:"14px 18px", boxShadow:"0 4px 20px rgba(0,0,0,0.5)", border:"1px solid rgba(255,255,255,0.10)", borderLeft:"3px solid " + C.accent }}>
+      <div style={{ fontWeight:700, fontSize:13, color:C.text, marginBottom:8, borderBottom:"1px solid " + C.border, paddingBottom:6 }}>{label}</div>
       <div style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
-        <div style={{ width:10, height:10, borderRadius:3, background:C.accent }} />
-        <span style={{ fontSize:12, color:"#94a3b8", flex:1 }}>Revenue vs LY</span>
+        <div style={{ width:10, height:10, borderRadius:3, background:C.primary }} />
+        <span style={{ fontSize:12, color:C.textSecondary, flex:1 }}>Revenue vs LY</span>
         <span style={{ fontSize:13, fontWeight:600, color: d.hasRevLY ? varColor(d.revenueVar) : C.textMuted, fontVariantNumeric:"tabular-nums" }}>
           {d.hasRevLY ? fmtPct(d.revenueVar) : "\u2014"}
         </span>
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0" }}>
-        <div style={{ width:10, height:10, borderRadius:3, background:"#8b5cf6" }} />
-        <span style={{ fontSize:12, color:"#94a3b8", flex:1 }}>OP Volume vs LY</span>
+        <div style={{ width:10, height:10, borderRadius:3, background:"#9085e9" }} />
+        <span style={{ fontSize:12, color:C.textSecondary, flex:1 }}>OP Volume vs LY</span>
         <span style={{ fontSize:13, fontWeight:600, color: d.hasVolLY ? varColor(d.volumeVar) : C.textMuted, fontVariantNumeric:"tabular-nums" }}>
           {d.hasVolLY ? fmtPct(d.volumeVar) : "\u2014"}
         </span>
       </div>
-      <div style={{ marginTop:8, paddingTop:6, borderTop:"1px solid #2f3548", fontSize:11, color:C.textMuted, lineHeight:1.5 }}>
+      <div style={{ marginTop:8, paddingTop:6, borderTop:"1px solid " + C.border, fontSize:11, color:C.textMuted, lineHeight:1.5 }}>
         Revenue: AED {fmt(d.revenueMTD)} vs {fmt(d.revenueLY)} LY<br/>
         Volume: {fmt(d.volumeMTD)} vs {fmt(d.volumeLY)} LY
       </div>
@@ -1590,7 +1593,7 @@ function BudgetGauge({ label, actual, comparison, size = 120 }) {
     <div style={{ textAlign:"center" }}>
       <svg width={w} height={h} viewBox={"0 0 "+w+" "+h}>
         {/* Track */}
-        <path d={arcD(startDeg, endDeg, arcR)} fill="none" stroke="#2f3548" strokeWidth={trackW} strokeLinecap="round" />
+        <path d={arcD(startDeg, endDeg, arcR)} fill="none" stroke={C.border} strokeWidth={trackW} strokeLinecap="round" />
         {/* Red zone 0-80% */}
         <path d={arcD(startDeg, startDeg-0.8*sweep, arcR)} fill="none" stroke="rgba(239,68,68,0.25)" strokeWidth={trackW} strokeLinecap="round" />
         {/* Amber 80-100% */}
@@ -1665,8 +1668,8 @@ function UploadZone({ onFileLoaded, compact }) {
 
 // ─── Table & Card Styles ────────────────────────────────────────────────────
 
-const thS = { padding:"10px 14px", textAlign:"left", fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.05em", borderBottom:"2px solid "+C.border, background:"#1e293b" };
-const thSub = { padding:"6px 14px", textAlign:"right", fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.04em", borderBottom:"2px solid "+C.border, background:"#1e293b" };
+const thS = { padding:"10px 14px", textAlign:"left", fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.05em", borderBottom:"2px solid "+C.border, background:C.pageBg };
+const thSub = { padding:"6px 14px", textAlign:"right", fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.04em", borderBottom:"2px solid "+C.border, background:C.pageBg };
 const tdS = { padding:"10px 14px", fontSize:13, color:C.text };
 const tdN = { padding:"10px 14px", textAlign:"right", fontSize:13, fontVariantNumeric:"tabular-nums", color:C.text };
 const dth = { padding:"8px 14px", textAlign:"left", fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.04em", borderBottom:"2px solid "+C.border };
@@ -2092,18 +2095,18 @@ function DoctorMonthlyHistory({ doctor, monthlyLog, onClose }) {
                 </div>
                 <div style={{ ...card, padding:14 }}>
                   <div style={{ fontSize:10, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>IP / Daycare</div>
-                  <div style={{ fontSize:18, fontWeight:800, color:"#ec4899", marginTop:4 }}>AED {fmt(ipTotal)}</div>
+                  <div style={{ fontSize:18, fontWeight:800, color:"#d55181", marginTop:4 }}>AED {fmt(ipTotal)}</div>
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={modalMobile ? 240 : 280}>
                 <BarChart data={data} margin={{ top:24, right:8, left:0, bottom:5 }} barCategoryGap="22%">
-                  <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
+                  <CartesianGrid stroke={C.grid} strokeWidth={1} vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize:10, fill:C.textMuted }} axisLine={{ stroke:C.border }} tickLine={false} />
                   <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.05)" }} />
                   <Legend wrapperStyle={{ fontSize:11, color:C.textSecondary }} iconType="circle" iconSize={8} />
-                  <Bar dataKey="opMtd" stackId="m" fill="#3b82f6" maxBarSize={44} name="OP MTD (AED)" isAnimationActive={true} animationDuration={800} />
-                  <Bar dataKey="ipMtd" stackId="m" fill="#ec4899" radius={[4,4,0,0]} maxBarSize={44} name="IP MTD (AED)" isAnimationActive={true} animationDuration={800} />
+                  <Bar dataKey="opMtd" stackId="m" fill={C.primary} maxBarSize={24} name="OP MTD (AED)" isAnimationActive={true} animationDuration={800} />
+                  <Bar dataKey="ipMtd" stackId="m" fill="#d55181" radius={[4,4,0,0]} maxBarSize={24} name="IP MTD (AED)" isAnimationActive={true} animationDuration={800} />
                 </BarChart>
               </ResponsiveContainer>
               <div style={{ fontSize:10, color:C.textMuted, marginTop:14, fontStyle:"italic" }}>
@@ -2173,7 +2176,7 @@ function ClinicDrillDown({ clinic, onClose }) {
         <div style={{ padding: modalMobile ? "0 12px 16px" : "0 28px 24px", overflowX:"auto" }}>
           <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap", borderCollapse:"collapse" }}>
             <thead>
-              <tr style={{ background:"#1e293b" }}>
+              <tr style={{ background:C.pageBg }}>
                 <th style={dth}>Specialty / Doctor</th>
                 <th style={{ ...dth, textAlign:"right" }}>Today</th>
                 <th style={{ ...dth, textAlign:"right" }}>MTD Actual</th>
@@ -4140,10 +4143,10 @@ function App() {
             <ResponsiveContainer width="100%" height={isMobile ? 420 : 520}>
               <BarChart data={varianceData} margin={{ top:10, right:50, left:0, bottom:10 }} layout="vertical">
                 <defs>
-                  <linearGradient id="varGreenGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#059669" stopOpacity={0.85}/><stop offset="100%" stopColor="#34d399" stopOpacity={0.85}/></linearGradient>
-                  <linearGradient id="varRedGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#ef4444" stopOpacity={0.85}/><stop offset="100%" stopColor="#f87171" stopOpacity={0.85}/></linearGradient>
+                  <linearGradient id="varGreenGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#0ca30c" stopOpacity={0.9}/><stop offset="100%" stopColor="#2ec92e" stopOpacity={0.8}/></linearGradient>
+                  <linearGradient id="varRedGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#d03b3b" stopOpacity={0.9}/><stop offset="100%" stopColor="#e66767" stopOpacity={0.8}/></linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" horizontal={false} />
+                <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
                 <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:C.textSecondary }} width={100} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.04)" }} />
@@ -4174,19 +4177,19 @@ function App() {
             <ComposedChart data={dailyWithTrend.map(d => ({ ...d, vol: d.volume || 0 }))} margin={{ top:20, right:55, left:5, bottom:5 }}>
               <defs>
                 <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={C.primary} stopOpacity={0.35} />
-                  <stop offset="95%" stopColor={C.primary} stopOpacity={0.02} />
+                  <stop offset="5%" stopColor={C.primary} stopOpacity={0.12} />
+                  <stop offset="95%" stopColor={C.primary} stopOpacity={0.01} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
+              <CartesianGrid stroke={C.grid} strokeWidth={1} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize:10, fill:C.textSecondary }} axisLine={{ stroke:C.border }} tickLine={false} />
               <YAxis yAxisId="rev" tick={{ fontSize:10, fill:C.primary }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="vol" orientation="right" tick={{ fontSize:10, fill:"#f59e0b" }} axisLine={false} tickLine={false} domain={[0, (dataMax) => Math.round(dataMax * 2.5)]} />
-              <Tooltip content={<ChartTooltip />} cursor={{ stroke:C.primary, strokeDasharray:"4 4" }} />
+              <YAxis yAxisId="vol" orientation="right" tick={{ fontSize:11, fill:C.textMuted }} axisLine={false} tickLine={false} domain={[0, (dataMax) => Math.round(dataMax * 2.5)]} />
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke:C.textMuted, strokeDasharray:"4 4" }} />
               {dailyAvg > 0 && <ReferenceLine yAxisId="rev" y={dailyAvg} stroke={C.textMuted} strokeDasharray="6 4" strokeWidth={1} label={{ value:"Avg: " + fmtK(dailyAvg), position:"insideTopRight", fontSize:10, fill:C.textMuted, fontWeight:600 }} />}
-              <Bar yAxisId="vol" dataKey="vol" fill="rgba(245,158,11,0.35)" radius={[3,3,0,0]} maxBarSize={20} name="OP Visits" label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y + 14} textAnchor="middle" fontSize={8} fontWeight={700} fill="#fbbf24">{value}</text> : null} />
-              <Area yAxisId="rev" type="natural" dataKey="total" stroke={C.primary} strokeWidth={2.5} fill="url(#dailyGrad)" name="Revenue (AED)" dot={{ r:4, fill:C.primary, stroke:"#fff", strokeWidth:2 }} activeDot={{ r:6, fill:C.primary, stroke:"#fff", strokeWidth:2 }} label={({ x, y, value }) => value > 0 ? <text x={x} y={y - 12} textAnchor="middle" fontSize={9} fontWeight={700} fill={C.primaryLight}>{fmtK(value)}</text> : null} />
-              {(() => { const vols = dailyWithTrend.map(d => d.volume||0).filter(v => v > 0); const volAvg = vols.length ? Math.round(vols.reduce((a,v) => a+v, 0) / vols.length) : 0; return volAvg > 0 ? <ReferenceLine yAxisId="vol" y={volAvg} stroke="#f59e0b" strokeDasharray="6 4" strokeWidth={1.5} label={{ value:"Avg: " + volAvg, position:"insideBottomRight", fontSize:9, fill:"#f59e0b", fontWeight:600 }} /> : null; })()}
+              <Bar yAxisId="vol" dataKey="vol" fill="rgba(201,133,0,0.35)" radius={[4,4,0,0]} maxBarSize={20} name="OP Visits" />
+              <Area yAxisId="rev" type="natural" dataKey="total" stroke={C.primary} strokeWidth={2} fill="url(#dailyGrad)" name="Revenue (AED)" dot={{ r:4, fill:C.primary, stroke:C.surface, strokeWidth:2 }} activeDot={{ r:6, fill:C.primary, stroke:C.surface, strokeWidth:2 }} />
+              {(() => { const vols = dailyWithTrend.map(d => d.volume||0).filter(v => v > 0); const volAvg = vols.length ? Math.round(vols.reduce((a,v) => a+v, 0) / vols.length) : 0; return volAvg > 0 ? <ReferenceLine yAxisId="vol" y={volAvg} stroke={C.textMuted} strokeDasharray="6 4" strokeWidth={1} label={{ value:"Avg: " + volAvg, position:"insideBottomRight", fontSize:10, fill:C.textMuted, fontWeight:600 }} /> : null; })()}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -4202,10 +4205,10 @@ function App() {
           </div>
           <ResponsiveContainer width="100%" height={Math.max(pieData.length * 32 + 20, 300)}>
             <BarChart data={pieData} layout="horizontal" margin={{ top:10, right:60, left: isMobile ? 0 : 10, bottom:0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={true} vertical={false} />
+              <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={true} vertical={false} />
               <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize: isMobile ? 9 : 11 }} tickLine={false} angle={isMobile ? -45 : -35} textAnchor="end" height={isMobile ? 80 : 70} interval={0} />
               <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:8, fontSize:12 }} itemStyle={{ color:C.text }} formatter={(v, n, props) => [fmt(v) + " AED (" + (props.payload.pctShare * 100).toFixed(1) + "%)", "YTD Revenue"]} labelStyle={{ color:C.text, fontWeight:600, marginBottom:4 }} />
+              <Tooltip contentStyle={{ background:C.surface, border:"1px solid rgba(255,255,255,0.10)", borderRadius:8, fontSize:12, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }} itemStyle={{ color:C.text }} formatter={(v, n, props) => [fmt(v) + " AED (" + (props.payload.pctShare * 100).toFixed(1) + "%)", "YTD Revenue"]} labelStyle={{ color:C.text, fontWeight:600, marginBottom:4 }} />
               <Bar dataKey="value" name="YTD Revenue" radius={[4,4,0,0]} barSize={isMobile ? 16 : 24} cursor="pointer" onClick={(d) => setSelectedSpecialty(d.name)}>
                 {pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}
                 <LabelList dataKey="value" position="top" formatter={fmtK} style={{ fill:C.textSecondary, fontSize: isMobile ? 8 : 10, fontWeight:600 }} />
@@ -4269,10 +4272,10 @@ function App() {
               <ResponsiveContainer width="100%" height={Math.max(400, ppcYTDData.length * 38)}>
                 <BarChart data={ppcYTDData} layout="vertical" margin={{ top:5, right:50, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
                   <defs>
-                    <linearGradient id="ppcYTD2026Grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.9} /><stop offset="100%" stopColor="#c084fc" stopOpacity={0.9} /></linearGradient>
-                    <linearGradient id="ppcYTD2025Grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#64748b" stopOpacity={0.5} /><stop offset="100%" stopColor="#94a3b8" stopOpacity={0.4} /></linearGradient>
+                    <linearGradient id="ppcYTD2026Grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#9085e9" stopOpacity={0.9} /><stop offset="100%" stopColor="#a89ef0" stopOpacity={0.8} /></linearGradient>
+                    <linearGradient id="ppcYTD2025Grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor={C.textMuted} stopOpacity={0.4} /><stop offset="100%" stopColor={C.textSecondary} stopOpacity={0.3} /></linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" horizontal={false} />
+                  <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
                   <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={(v) => "AED " + fmtK(v)} axisLine={{ stroke:C.border }} tickLine={false} />
                   <YAxis type="category" dataKey="name" tick={{ fill:C.textSecondary, fontSize:11 }} tickLine={false} axisLine={false} width={isMobile ? 80 : 120} />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(168,85,247,0.04)" }} />
@@ -4393,11 +4396,11 @@ function App() {
             <BarChart data={clinicChartData} layout="vertical" margin={{ top:5, right:50, left:10, bottom:5 }}>
               <defs>
                 <linearGradient id="clinicMtdGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.9} />
+                  <stop offset="0%" stopColor={C.primary} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={C.primaryLight} stopOpacity={0.8} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" horizontal={false} />
+              <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
               <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
                 const item = clinicChartData.find(d => d.name === payload.value);
@@ -4407,7 +4410,7 @@ function App() {
                   : <text x={x-4} y={y} textAnchor="end" fontSize={11} fill={C.textSecondary}>{payload.value}</text>;
               }} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(59,130,246,0.06)" }} />
-              <Bar dataKey="revenue" fill="url(#clinicMtdGrad)" radius={[0,4,4,0]} maxBarSize={18} name="MTD Revenue" label={{ position:"right", fontSize:10, fontWeight:600, fill:C.textSecondary, formatter:(v) => fmtK(v) }} />
+              <Bar dataKey="revenue" fill="url(#clinicMtdGrad)" radius={[0,4,4,0]} maxBarSize={24} name="MTD Revenue" label={{ position:"right", fontSize:11, fontWeight:600, fill:C.textSecondary, formatter:(v) => fmtK(v) }} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -4425,15 +4428,15 @@ function App() {
             <BarChart data={clinicYTDChartData} layout="vertical" margin={{ top:5, right:30, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
               <defs>
                 <linearGradient id="ytd2026Grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.9} />
+                  <stop offset="0%" stopColor={C.primary} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={C.primaryLight} stopOpacity={0.8} />
                 </linearGradient>
                 <linearGradient id="ytd2025Grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#64748b" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#94a3b8" stopOpacity={0.4} />
+                  <stop offset="0%" stopColor={C.textMuted} stopOpacity={0.4} />
+                  <stop offset="100%" stopColor={C.textSecondary} stopOpacity={0.3} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+              <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
               <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
                 const item = clinicYTDChartData.find(d => d.name === payload.value);
@@ -4465,15 +4468,15 @@ function App() {
             <BarChart data={clinicVarianceChartData} layout="vertical" margin={{ top:5, right:60, left:10, bottom:5 }} barGap={3} barCategoryGap="22%">
               <defs>
                 <linearGradient id="revVarGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.9} />
+                  <stop offset="0%" stopColor={C.primary} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={C.primaryLight} stopOpacity={0.8} />
                 </linearGradient>
                 <linearGradient id="volVarGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.9} />
+                  <stop offset="0%" stopColor="#9085e9" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#a89ef0" stopOpacity={0.8} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" horizontal={false} />
+              <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
               <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={(v) => v + "%"} axisLine={false} tickLine={false} domain={["dataMin - 10", "dataMax + 10"]} />
               <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
                 const item = clinicVarianceChartData.find(d => d.name === payload.value);
@@ -4485,19 +4488,19 @@ function App() {
               <Tooltip content={<PctVarianceTooltip />} cursor={{ fill:"rgba(148,163,184,0.06)" }} />
               <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
               <ReferenceLine x={0} stroke={C.textMuted} strokeWidth={1.5} />
-              <Bar dataKey="revenueVar" fill="url(#revVarGrad)" radius={[4,4,4,4]} maxBarSize={14} name="Revenue % vs LY"
+              <Bar dataKey="revenueVar" fill="url(#revVarGrad)" radius={[0,4,4,0]} maxBarSize={14} name="Revenue % vs LY"
                 label={({ x, y, width, height, value, index }) => {
                   const d = clinicVarianceChartData[index];
                   if (!d?.hasRevLY) return null;
                   const txt = (value > 0 ? "+" : "") + value.toFixed(1) + "%";
-                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={700} fill={varColor(value)}>{txt}</text>;
+                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={600} fill={C.text}>{txt}</text>;
                 }} />
-              <Bar dataKey="volumeVar" fill="url(#volVarGrad)" radius={[4,4,4,4]} maxBarSize={14} name="OP Volume % vs LY"
+              <Bar dataKey="volumeVar" fill="url(#volVarGrad)" radius={[0,4,4,0]} maxBarSize={14} name="OP Volume % vs LY"
                 label={({ x, y, width, height, value, index }) => {
                   const d = clinicVarianceChartData[index];
                   if (!d?.hasVolLY) return null;
                   const txt = (value > 0 ? "+" : "") + value.toFixed(1) + "%";
-                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={700} fill={varColor(value)}>{txt}</text>;
+                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={600} fill={C.text}>{txt}</text>;
                 }} />
             </BarChart>
           </ResponsiveContainer>
@@ -4516,15 +4519,15 @@ function App() {
             <BarChart data={clinicYTDVarianceChartData} layout="vertical" margin={{ top:5, right:60, left:10, bottom:5 }} barGap={3} barCategoryGap="22%">
               <defs>
                 <linearGradient id="revVarYTDGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.9} />
+                  <stop offset="0%" stopColor={C.primary} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={C.primaryLight} stopOpacity={0.8} />
                 </linearGradient>
                 <linearGradient id="volVarYTDGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.9} />
+                  <stop offset="0%" stopColor="#9085e9" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#a89ef0" stopOpacity={0.8} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" horizontal={false} />
+              <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
               <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={(v) => v + "%"} axisLine={false} tickLine={false} domain={["dataMin - 10", "dataMax + 10"]} />
               <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
                 const item = clinicYTDVarianceChartData.find(d => d.name === payload.value);
@@ -4536,19 +4539,19 @@ function App() {
               <Tooltip content={<PctVarianceTooltip />} cursor={{ fill:"rgba(148,163,184,0.06)" }} />
               <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
               <ReferenceLine x={0} stroke={C.textMuted} strokeWidth={1.5} />
-              <Bar dataKey="revenueVar" fill="url(#revVarYTDGrad)" radius={[4,4,4,4]} maxBarSize={14} name="Revenue % vs LY (YTD)"
+              <Bar dataKey="revenueVar" fill="url(#revVarYTDGrad)" radius={[0,4,4,0]} maxBarSize={14} name="Revenue % vs LY (YTD)"
                 label={({ x, y, width, height, value, index }) => {
                   const d = clinicYTDVarianceChartData[index];
                   if (!d?.hasRevLY) return null;
                   const txt = (value > 0 ? "+" : "") + value.toFixed(1) + "%";
-                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={700} fill={varColor(value)}>{txt}</text>;
+                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={600} fill={C.text}>{txt}</text>;
                 }} />
-              <Bar dataKey="volumeVar" fill="url(#volVarYTDGrad)" radius={[4,4,4,4]} maxBarSize={14} name="OP Volume % vs LY (YTD)"
+              <Bar dataKey="volumeVar" fill="url(#volVarYTDGrad)" radius={[0,4,4,0]} maxBarSize={14} name="OP Volume % vs LY (YTD)"
                 label={({ x, y, width, height, value, index }) => {
                   const d = clinicYTDVarianceChartData[index];
                   if (!d?.hasVolLY) return null;
                   const txt = (value > 0 ? "+" : "") + value.toFixed(1) + "%";
-                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={700} fill={varColor(value)}>{txt}</text>;
+                  return <text x={value >= 0 ? x + width + 5 : x - 5} y={y + height/2 + 3} textAnchor={value >= 0 ? "start" : "end"} fontSize={10} fontWeight={600} fill={C.text}>{txt}</text>;
                 }} />
             </BarChart>
           </ResponsiveContainer>
@@ -4557,66 +4560,76 @@ function App() {
         {/* VOLUME BRIDGE CHART — YTD */}
         {volumeBridgeData.length > 2 && (
         <div style={{ ...card, padding:28, marginTop:20 }}>
-          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #06b6d4", display:"flex", alignItems:"center", gap:10 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid " + C.accent, display:"flex", alignItems:"center", gap:10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
             <div>
               <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>OP Volume Bridge — YTD</h2>
               <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>
                 Each clinic's contribution to the total OP volume change from 2025 to 2026 YTD
-                <span style={{ marginLeft:12, fontWeight:700, color: volumeBridgeData.netChange >= 0 ? '#34d399' : '#f87171' }}>
+                <span style={{ marginLeft:12, fontWeight:700, color: volumeBridgeData.netChange >= 0 ? C.success : C.dangerLight }}>
                   Net: {volumeBridgeData.netChange >= 0 ? '+' : ''}{(volumeBridgeData.netChange || 0).toLocaleString()} visits ({volumeBridgeData.netPct}%)
                 </span>
               </p>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={500}>
-            <BarChart data={volumeBridgeData} margin={{ top:30, right:20, left:20, bottom:80 }} barCategoryGap="15%">
-              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.4)" vertical={false} />
+          <ResponsiveContainer width="100%" height={520}>
+            <BarChart data={volumeBridgeData} margin={{ top:30, right:20, left:20, bottom:80 }} barCategoryGap="18%">
+              <defs>
+                <linearGradient id="bridgeTotalGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={C.primary} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={C.primaryLight} stopOpacity={0.75} />
+                </linearGradient>
+                <linearGradient id="bridgeUpGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={C.success} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={C.successLight} stopOpacity={0.75} />
+                </linearGradient>
+                <linearGradient id="bridgeDownGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={C.danger} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={C.dangerLight} stopOpacity={0.75} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke={C.grid} strokeWidth={1} vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize:11, fill:C.textSecondary, fontWeight:500 }} angle={-40} textAnchor="end" interval={0} height={80} />
-              <YAxis domain={[volumeBridgeData.yMin || 0, volumeBridgeData.yMax || 'auto']} tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={v => (v/1000).toFixed(0) + 'K'} axisLine={false} tickLine={false} />
+              <YAxis domain={[volumeBridgeData.yMin || 0, volumeBridgeData.yMax || 'auto']} allowDataOverflow={true} tick={{ fontSize:11, fill:C.textMuted }} tickFormatter={v => (v/1000).toFixed(0) + 'K'} axisLine={false} tickLine={false} />
               <Tooltip content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0]?.payload;
                 if (!d) return null;
                 return (
-                  <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"12px 16px", fontSize:13, minWidth:160 }}>
+                  <div style={{ background:C.surface, borderRadius:10, padding:"12px 16px", boxShadow:"0 4px 20px rgba(0,0,0,0.5)", border:"1px solid rgba(255,255,255,0.10)", borderLeft:"3px solid " + (d.isTotal ? C.primary : d.raw >= 0 ? C.success : C.dangerLight), fontSize:13, minWidth:160 }}>
                     <div style={{ fontWeight:700, color:C.text, marginBottom:6, fontSize:14 }}>{d.name}</div>
                     {d.isTotal ? (
                       <div style={{ color:C.textSecondary }}>Total OP Visits: <span style={{ fontWeight:700, color:C.text }}>{d.total.toLocaleString()}</span></div>
                     ) : (
-                      <div>
-                        <div style={{ color: d.raw >= 0 ? '#34d399' : '#f87171', fontWeight:600 }}>
-                          {d.raw >= 0 ? '+' : ''}{d.raw.toLocaleString()} visits
-                        </div>
+                      <div style={{ color: d.raw >= 0 ? C.success : C.dangerLight, fontWeight:600 }}>
+                        {d.raw >= 0 ? '+' : ''}{d.raw.toLocaleString()} visits
                       </div>
                     )}
                   </div>
                 );
               }} />
               <Bar dataKey="base" stackId="a" fill="transparent" isAnimationActive={false} />
-              <Bar dataKey="total" stackId="a" radius={[4,4,0,0]} maxBarSize={52} isAnimationActive={true} animationDuration={800}
+              <Bar dataKey="total" stackId="a" radius={[4,4,0,0]} maxBarSize={32} isAnimationActive={true} animationDuration={800}
                 fill="url(#bridgeTotalGrad)"
-                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 8} textAnchor="middle" fontSize={12} fontWeight={700} fill="#38bdf8">{(value/1000).toFixed(1) + 'K'}</text> : null} />
-              <Bar dataKey="up" stackId="a" radius={[4,4,0,0]} maxBarSize={52} isAnimationActive={true} animationDuration={800}
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 8} textAnchor="middle" fontSize={12} fontWeight={700} fill={C.textSecondary}>{(value/1000).toFixed(1) + 'K'}</text> : null} />
+              <Bar dataKey="up" stackId="a" radius={[4,4,0,0]} maxBarSize={32} isAnimationActive={true} animationDuration={800}
                 fill="url(#bridgeUpGrad)"
-                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 8} textAnchor="middle" fontSize={11} fontWeight={700} fill="#34d399">+{value.toLocaleString()}</text> : null} />
-              <Bar dataKey="down" stackId="a" radius={[0,0,4,4]} maxBarSize={52} isAnimationActive={true} animationDuration={800}
+                label={({ x, y, width, value, index }) => {
+                  if (value <= 0) return null;
+                  const sorted = volumeBridgeData.filter(d => d.up > 0).sort((a,b) => b.up - a.up);
+                  if (sorted.length > 5 && sorted.indexOf(volumeBridgeData[index]) >= 5) return null;
+                  const label = value >= 1000 ? '+' + (value/1000).toFixed(1) + 'K' : '+' + value;
+                  return <text x={x + width/2} y={y - 8} textAnchor="middle" fontSize={11} fontWeight={600} fill={C.textSecondary}>{label}</text>;
+                }} />
+              <Bar dataKey="down" stackId="a" radius={[0,0,4,4]} maxBarSize={32} isAnimationActive={true} animationDuration={800}
                 fill="url(#bridgeDownGrad)"
-                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y + (value > 500 ? 16 : -8)} textAnchor="middle" fontSize={11} fontWeight={700} fill="#f87171">{'-' + value.toLocaleString()}</text> : null} />
-              <defs>
-                <linearGradient id="bridgeTotalGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.95} />
-                  <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0.8} />
-                </linearGradient>
-                <linearGradient id="bridgeUpGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#34d399" stopOpacity={0.95} />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.8} />
-                </linearGradient>
-                <linearGradient id="bridgeDownGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f87171" stopOpacity={0.95} />
-                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.8} />
-                </linearGradient>
-              </defs>
+                label={({ x, y, width, height, value, index }) => {
+                  if (value <= 0) return null;
+                  const sorted = volumeBridgeData.filter(d => d.down > 0).sort((a,b) => b.down - a.down);
+                  if (sorted.length > 5 && sorted.indexOf(volumeBridgeData[index]) >= 5) return null;
+                  const label = value >= 1000 ? '-' + (value/1000).toFixed(1) + 'K' : '-' + value;
+                  return <text x={x + width/2} y={y + Math.min(height, 16) + 2} textAnchor="middle" fontSize={11} fontWeight={600} fill={C.textSecondary}>{label}</text>;
+                }} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -4624,9 +4637,9 @@ function App() {
 
         {/* CLINIC PPC COMPARISON */}
         <div style={{ ...card, padding:28, marginTop:20 }}>
-          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #8b5cf6" }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #9085e9" }}>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9085e9" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Avg Revenue per Patient by Clinic — MTD</h2>
             </div>
             <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>MTD revenue / MTD OP visits per clinic — 2026 vs 2025 (AED)</p>
@@ -4635,15 +4648,15 @@ function App() {
             <BarChart data={clinicPPCChartData} layout="vertical" margin={{ top:5, right:40, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
               <defs>
                 <linearGradient id="ppc2026Grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.9} />
+                  <stop offset="0%" stopColor="#9085e9" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#a89ef0" stopOpacity={0.8} />
                 </linearGradient>
                 <linearGradient id="ppc2025Grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#64748b" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#94a3b8" stopOpacity={0.4} />
+                  <stop offset="0%" stopColor={C.textMuted} stopOpacity={0.4} />
+                  <stop offset="100%" stopColor={C.textSecondary} stopOpacity={0.3} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 6" stroke={C.border} horizontal={false} />
+              <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
               <XAxis type="number" tick={false} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
                 const item = clinicPPCChartData.find(d => d.name === payload.value);
@@ -4675,15 +4688,15 @@ function App() {
             <BarChart data={clinicVolChartData} layout="vertical" margin={{ top:5, right:50, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
               <defs>
                 <linearGradient id="vol2026Grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.9} />
+                  <stop offset="0%" stopColor="#c98500" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#dea020" stopOpacity={0.8} />
                 </linearGradient>
                 <linearGradient id="vol2025Grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#64748b" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#94a3b8" stopOpacity={0.4} />
+                  <stop offset="0%" stopColor={C.textMuted} stopOpacity={0.4} />
+                  <stop offset="100%" stopColor={C.textSecondary} stopOpacity={0.3} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 6" stroke={C.border} horizontal={false} />
+              <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
               <XAxis type="number" tick={false} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
                 const item = clinicVolChartData.find(d => d.name === payload.value);
@@ -4715,15 +4728,15 @@ function App() {
             <BarChart data={clinicDailyRevChartData} layout="vertical" margin={{ top:5, right:50, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
               <defs>
                 <linearGradient id="dailyRev2026Grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.9} />
+                  <stop offset="0%" stopColor={C.accent} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#2ec08a" stopOpacity={0.8} />
                 </linearGradient>
                 <linearGradient id="dailyRev2025Grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#64748b" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#94a3b8" stopOpacity={0.4} />
+                  <stop offset="0%" stopColor={C.textMuted} stopOpacity={0.4} />
+                  <stop offset="100%" stopColor={C.textSecondary} stopOpacity={0.3} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 6" stroke={C.border} horizontal={false} />
+              <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
               <XAxis type="number" tick={false} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={({ x, y, payload }) => {
                 const item = clinicDailyRevChartData.find(d => d.name === payload.value);
@@ -4751,13 +4764,13 @@ function App() {
           <div style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", fontSize:13, whiteSpace:"nowrap" }}>
               <thead>
-                <tr style={{ background:"#1e293b" }}>
+                <tr style={{ background:C.pageBg }}>
                   <th style={thS} rowSpan={2}>Specialty</th><th style={thS} rowSpan={2}>Today</th>
                   <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={3}>Month-to-Date (MTD)</th>
-                  <th style={{ width:8, background:"#1e293b", borderBottom:"none" }} rowSpan={2}></th>
+                  <th style={{ width:8, background:C.pageBg, borderBottom:"none" }} rowSpan={2}></th>
                   <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={3}>Year-to-Date (YTD)</th>
                 </tr>
-                <tr style={{ background:"#1e293b" }}>
+                <tr style={{ background:C.pageBg }}>
                   {["Actual","LY","vs LY"].map(h=><th key={"m"+h} style={thSub}>{h}</th>)}
                   {["Actual","LY","vs LY"].map(h=><th key={"y"+h} style={thSub}>{h}</th>)}
                 </tr>
@@ -4806,7 +4819,7 @@ function App() {
             </div>
             <div style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", fontSize:12 }}>
-              <thead><tr style={{ background:"#1e293b" }}>
+              <thead><tr style={{ background:C.pageBg }}>
                 <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={dth}>Location(s)</th>
                 <th style={{ ...dth, textAlign:"right" }}>Today</th><th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>MTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th>
               </tr></thead>
@@ -4838,7 +4851,7 @@ function App() {
             </div>
             <div style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", fontSize:12 }}>
-              <thead><tr style={{ background:"#1e293b" }}>
+              <thead><tr style={{ background:C.pageBg }}>
                 <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={dth}>Location(s)</th>
                 <th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>YTD</th><th style={{ ...dth, textAlign:"right" }}>YTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th>
               </tr></thead>
@@ -4870,7 +4883,7 @@ function App() {
               {needsAttention.length > 0 && <div style={{ marginLeft:"auto", background:"rgba(255,255,255,0.3)", borderRadius:20, padding:"3px 12px", fontSize:12, fontWeight:700, color:"#fff" }}>{needsAttention.length}</div>}
             </div>
             <table style={{ width:"100%", fontSize:12 }}>
-              <thead><tr style={{ background:"#1e293b" }}>
+              <thead><tr style={{ background:C.pageBg }}>
                 <th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={dth}>Location(s)</th>
                 <th style={{ ...dth, textAlign:"right" }}>Today</th><th style={{ ...dth, textAlign:"right" }}>MTD</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th><th style={{ ...dth, textAlign:"right" }}>YTD</th><th style={{ ...dth, textAlign:"right" }}>YoY</th>
               </tr></thead>
@@ -4900,7 +4913,7 @@ function App() {
             <div><div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>Bottom Performers</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>Lowest YTD variance vs last year (LY &gt; AED 50K)</div></div>
           </div>
           <table style={{ width:"100%", fontSize:12 }}>
-            <thead><tr style={{ background:"#1e293b" }}>
+            <thead><tr style={{ background:C.pageBg }}>
               <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={dth}>Location(s)</th><th style={{ ...dth, textAlign:"right" }}>YTD Actual</th><th style={{ ...dth, textAlign:"right" }}>YTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th>
             </tr></thead>
             <tbody>
@@ -4935,7 +4948,7 @@ function App() {
             </div>
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap", borderCollapse:"collapse" }}>
-                <thead><tr style={{ background:"#1e293b" }}>
+                <thead><tr style={{ background:C.pageBg }}>
                   <th style={dth}>Specialty / Doctor</th>
                   <th style={dth}>Status</th>
                   <th style={{ ...dth, textAlign:"right" }}>YTD Actual</th>
@@ -5053,13 +5066,13 @@ function App() {
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
                 <thead>
-                  <tr style={{ background:"#1e293b" }}>
+                  <tr style={{ background:C.pageBg }}>
                     <th style={thS} rowSpan={2}>Specialty</th>
                     <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={5}>Month-to-Date (MTD)</th>
-                    <th style={{ width:8, background:"#1e293b", borderBottom:"none" }} rowSpan={2}></th>
+                    <th style={{ width:8, background:C.pageBg, borderBottom:"none" }} rowSpan={2}></th>
                     <th style={{ ...thS, textAlign:"center", borderBottom:"1px solid "+C.border }} colSpan={5}>Year-to-Date (YTD)</th>
                   </tr>
-                  <tr style={{ background:"#1e293b" }}>
+                  <tr style={{ background:C.pageBg }}>
                     <th style={thSub}>Revenue</th><th style={thSub}>LY</th><th style={thSub}>vs LY</th><th style={thSub}>Cases</th><th style={thSub}>Cases LY</th>
                     <th style={thSub}>Revenue</th><th style={thSub}>LY</th><th style={thSub}>vs LY</th><th style={thSub}>Cases</th><th style={thSub}>Cases LY</th>
                   </tr>
@@ -5111,7 +5124,7 @@ function App() {
             </div>
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
-                <thead><tr style={{ background:"#1e293b" }}>
+                <thead><tr style={{ background:C.pageBg }}>
                   <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>MTD Revenue</th><th style={{ ...dth, textAlign:"right" }}>Cases</th>
                 </tr></thead>
                 <tbody>
@@ -5138,7 +5151,7 @@ function App() {
               </div>
               <div style={{ overflowX:"auto" }}>
                 <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
-                  <thead><tr style={{ background:"#1e293b" }}>
+                  <thead><tr style={{ background:C.pageBg }}>
                     <th style={dth}>#</th><th style={dth}>Doctor</th><th style={dth}>Specialty</th><th style={{ ...dth, textAlign:"right" }}>YTD Revenue</th><th style={{ ...dth, textAlign:"right" }}>YTD Cases</th>
                   </tr></thead>
                   <tbody>
@@ -5172,7 +5185,7 @@ function App() {
               </div>
               <div style={{ overflowX:"auto" }}>
                 <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
-                  <thead><tr style={{ background:"#1e293b" }}>
+                  <thead><tr style={{ background:C.pageBg }}>
                     <th style={dth}>Specialty</th><th style={dth}>Doctor</th><th style={{ ...dth, textAlign:"right" }}>YTD Revenue</th><th style={{ ...dth, textAlign:"right" }}>MTD Revenue</th><th style={{ ...dth, textAlign:"right" }}>Cases MTD</th>
                   </tr></thead>
                   <tbody>
@@ -5214,7 +5227,7 @@ function App() {
           <div style={{ ...card, overflow:"hidden" }}>
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", fontSize:12, whiteSpace:"nowrap" }}>
-                <thead><tr style={{ background:"#1e293b" }}>
+                <thead><tr style={{ background:C.pageBg }}>
                   <th style={dth}>Specialty / Doctor</th><th style={dth}>Location(s)</th><th style={{ ...dth, textAlign:"right" }}>MTD Actual</th><th style={{ ...dth, textAlign:"right" }}>MTD LY</th><th style={{ ...dth, textAlign:"right" }}>vs LY</th><th style={{ ...dth, textAlign:"right" }}>YTD Actual</th><th style={{ ...dth, textAlign:"right" }}>YTD LY</th><th style={{ ...dth, textAlign:"right" }}>YTD vs LY</th>
                 </tr></thead>
                 <tbody>
@@ -5270,11 +5283,11 @@ function App() {
               return (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData} margin={{ top:10, right:10, left:0, bottom:10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                    <CartesianGrid stroke={C.grid} strokeWidth={1} vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize:12, fill:C.textSecondary }} axisLine={{ stroke:C.border }} tickLine={false} />
                     <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
                     <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.05)" }} />
-                    <Bar dataKey="avg" fill="#8b5cf6" radius={[5,5,0,0]} maxBarSize={48} name="Avg Revenue" />
+                    <Bar dataKey="avg" fill={C.primary} radius={[4,4,0,0]} maxBarSize={24} name="Avg Revenue" />
                   </BarChart>
                 </ResponsiveContainer>
               );
@@ -5335,7 +5348,7 @@ function App() {
               (m.clinics || []).forEach(c => { if (clinicNames.includes(c.loc)) row[c.loc] = Math.round((c.mtd || 0) / days); });
               return row;
             });
-            const ttStyle = { background:C.cardBg, border:"1px solid "+C.border, borderRadius:8, fontSize:12 };
+            const ttStyle = { background:C.surface, border:"1px solid rgba(255,255,255,0.10)", borderRadius:8, fontSize:12, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" };
             const ttLabel = { color:C.text, fontWeight:600, marginBottom:4 };
 
             return (
@@ -5345,15 +5358,15 @@ function App() {
                   <h3 style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:12 }}>Combined Revenue Trend (AED)</h3>
                   <ResponsiveContainer width="100%" height={isMobile ? 250 : 320}>
                     <ComposedChart data={chartData} margin={{ top:24, right:10, left:0, bottom:0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <CartesianGrid stroke={C.grid} strokeWidth={1} />
                       <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
                       <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={ttStyle} formatter={(v, n) => [fmt(v) + " AED", n === "revenue" ? "Revenue" : n === "lyRevenue" ? "LY Revenue" : "Budget"]} labelStyle={ttLabel} />
                       <Legend wrapperStyle={{ fontSize:11 }} />
-                      <Bar dataKey="revenue" name="Revenue" fill={C.primary} radius={[4,4,0,0]} barSize={isMobile ? 20 : 32}>
-                        <LabelList dataKey="revenue" position="top" formatter={fmtK} style={{ fill:C.primaryLight, fontSize:isMobile ? 8 : 10, fontWeight:600 }} />
+                      <Bar dataKey="revenue" name="Revenue" fill={C.primary} radius={[4,4,0,0]} barSize={isMobile ? 18 : 24}>
+                        <LabelList dataKey="revenue" position="top" formatter={fmtK} style={{ fill:C.textSecondary, fontSize:isMobile ? 8 : 10, fontWeight:600 }} />
                       </Bar>
-                      <Bar dataKey="lyRevenue" name="LY Revenue" fill="rgba(100,116,139,0.5)" radius={[4,4,0,0]} barSize={isMobile ? 20 : 32}>
+                      <Bar dataKey="lyRevenue" name="LY Revenue" fill="rgba(137,135,129,0.4)" radius={[4,4,0,0]} barSize={isMobile ? 18 : 24}>
                         <LabelList dataKey="lyRevenue" position="top" formatter={fmtK} style={{ fill:C.textMuted, fontSize:isMobile ? 8 : 10 }} />
                       </Bar>
                       <Line dataKey="budget" name="Budget" type="monotone" stroke={C.warning} strokeWidth={2} strokeDasharray="5 5" dot={{ r:3, fill:C.warning }} />
@@ -5379,15 +5392,15 @@ function App() {
                   })()}
                   <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
                     <ComposedChart data={chartData} margin={{ top:24, right:10, left:0, bottom:0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <CartesianGrid stroke={C.grid} strokeWidth={1} />
                       <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} />
                       <YAxis tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:11 }} tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={ttStyle} itemStyle={{ color:C.text }} formatter={(v, n) => [fmt(v) + " visits", n === "volume" ? "2026 Volume" : "2025 Volume"]} labelStyle={ttLabel} />
                       <Legend wrapperStyle={{ fontSize:11 }} />
-                      <Area dataKey="volume" name="2026 Volume" type="monotone" stroke={C.accent} fill="rgba(6,182,212,0.15)" strokeWidth={2} dot={{ r:4, fill:C.accent }}>
-                        <LabelList dataKey="volume" position="top" formatter={fmtK} style={{ fill:C.accent, fontSize:isMobile ? 8 : 10, fontWeight:600 }} />
+                      <Area dataKey="volume" name="2026 Volume" type="monotone" stroke={C.accent} fill="rgba(25,158,112,0.10)" strokeWidth={2} dot={{ r:4, fill:C.accent, stroke:C.surface, strokeWidth:2 }}>
+                        <LabelList dataKey="volume" position="top" formatter={fmtK} style={{ fill:C.textSecondary, fontSize:isMobile ? 8 : 10, fontWeight:600 }} />
                       </Area>
-                      <Line dataKey="volumeLY" name="2025 Volume" type="monotone" stroke="rgba(148,163,184,0.6)" strokeWidth={2} strokeDasharray="5 5" dot={{ r:3, fill:"#94a3b8" }} />
+                      <Line dataKey="volumeLY" name="2025 Volume" type="monotone" stroke="rgba(137,135,129,0.5)" strokeWidth={2} strokeDasharray="5 5" dot={{ r:3, fill:C.textMuted }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -5417,18 +5430,16 @@ function App() {
                         </div>
                         <ResponsiveContainer width="100%" height={160}>
                           <ComposedChart data={clinicChart} margin={{ top:16, right:4, left:-20, bottom:0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                            <CartesianGrid stroke={C.grid} strokeWidth={1} vertical={false} />
                             <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} />
                             <YAxis yAxisId="rev" tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} axisLine={false} />
                             <YAxis yAxisId="vol" orientation="right" tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} axisLine={false} hide />
                             <Tooltip contentStyle={ttStyle} itemStyle={{ color:C.text }} formatter={(v, n) => { const labels = { rev:["Revenue", " AED"], ly:["LY Revenue", " AED"], vol:["OP Volume", " visits"] }; const l = labels[n] || [n,""]; return [fmt(v) + l[1], l[0]]; }} labelStyle={ttLabel} />
-                            <Bar yAxisId="rev" dataKey="rev" name="Revenue" fill={color} radius={[3,3,0,0]} barSize={isMobile ? 12 : 16} opacity={0.9}>
-                              <LabelList dataKey="rev" position="top" formatter={fmtK} style={{ fill:color, fontSize:8, fontWeight:600 }} />
+                            <Bar yAxisId="rev" dataKey="rev" name="Revenue" fill={color} radius={[4,4,0,0]} barSize={isMobile ? 12 : 16} opacity={0.9}>
+                              <LabelList dataKey="rev" position="top" formatter={fmtK} style={{ fill:C.textSecondary, fontSize:8, fontWeight:600 }} />
                             </Bar>
-                            <Bar yAxisId="rev" dataKey="ly" name="LY Revenue" fill="rgba(148,163,184,0.5)" radius={[3,3,0,0]} barSize={isMobile ? 12 : 16}>
-                              <LabelList dataKey="ly" position="center" formatter={fmtK} style={{ fill:"#cbd5e1", fontSize:7, fontWeight:600 }} />
-                            </Bar>
-                            <Line yAxisId="vol" dataKey="vol" name="OP Volume" type="monotone" stroke={C.accent} strokeWidth={1.5} dot={{ r:2, fill:C.accent }} />
+                            <Bar yAxisId="rev" dataKey="ly" name="LY Revenue" fill="rgba(137,135,129,0.4)" radius={[4,4,0,0]} barSize={isMobile ? 12 : 16} />
+                            <Line yAxisId="vol" dataKey="vol" name="OP Volume" type="monotone" stroke={C.accent} strokeWidth={2} dot={{ r:4, fill:C.accent, stroke:C.surface, strokeWidth:2 }} />
                           </ComposedChart>
                         </ResponsiveContainer>
                         <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, fontSize:10, color:C.textMuted }}>
@@ -5553,15 +5564,13 @@ function App() {
                       </div>
                       <ResponsiveContainer width="100%" height={160}>
                         <ComposedChart data={chartDays} margin={{ top:16, right:4, left:-20, bottom:0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                          <CartesianGrid stroke={C.grid} strokeWidth={1} vertical={false} />
                           <XAxis dataKey="name" tick={{ fill:C.textMuted, fontSize:8 }} tickLine={false} interval={isMobile ? 3 : 1} angle={-45} textAnchor="end" height={40} />
                           <YAxis yAxisId="rev" tickFormatter={fmtK} tick={{ fill:C.textMuted, fontSize:9 }} tickLine={false} axisLine={false} />
                           <YAxis yAxisId="vol" orientation="right" hide />
-                          <Tooltip contentStyle={{ background:C.cardBg, border:"1px solid "+C.border, borderRadius:8, fontSize:12 }} itemStyle={{ color:C.text }} formatter={(v, n) => [fmt(v) + (n === "vol" ? " visits" : " AED"), n === "rev" ? "Revenue" : "Volume"]} labelStyle={{ color:C.text, fontWeight:600, marginBottom:4 }} />
-                          <Bar yAxisId="rev" dataKey="rev" fill={color} radius={[2,2,0,0]} barSize={isMobile ? 8 : 14} opacity={0.85}>
-                            <LabelList dataKey="rev" position="top" formatter={fmtK} style={{ fill:color, fontSize:7, fontWeight:600 }} />
-                          </Bar>
-                          <Line yAxisId="vol" dataKey="vol" type="monotone" stroke={C.accent} strokeWidth={1.5} dot={{ r:2, fill:C.accent }} />
+                          <Tooltip contentStyle={{ background:C.surface, border:"1px solid rgba(255,255,255,0.10)", borderRadius:8, fontSize:12, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }} itemStyle={{ color:C.text }} formatter={(v, n) => [fmt(v) + (n === "vol" ? " visits" : " AED"), n === "rev" ? "Revenue" : "Volume"]} labelStyle={{ color:C.text, fontWeight:600, marginBottom:4 }} />
+                          <Bar yAxisId="rev" dataKey="rev" fill={color} radius={[4,4,0,0]} barSize={isMobile ? 8 : 14} opacity={0.85} />
+                          <Line yAxisId="vol" dataKey="vol" type="monotone" stroke={C.accent} strokeWidth={2} dot={{ r:4, fill:C.accent, stroke:C.surface, strokeWidth:2 }} />
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>
