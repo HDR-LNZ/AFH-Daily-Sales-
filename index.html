@@ -3360,12 +3360,16 @@ function App() {
       .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, []);
     const ytdByClinic = {};
     const ytdLYByClinic = {};
+    const ytdVolByClinic = {};
+    const ytdVolLYByClinic = {};
     allMonths.forEach(m => {
       (m.clinics || []).forEach(c => {
         const loc = normLoc(c.loc);
         if (EXCLUDED_MAP_LOCATIONS.has(loc)) return;
         ytdByClinic[loc] = (ytdByClinic[loc] || 0) + (c.mtd || 0);
         ytdLYByClinic[loc] = (ytdLYByClinic[loc] || 0) + (c.mtdLY || 0);
+        ytdVolByClinic[loc] = (ytdVolByClinic[loc] || 0) + (c.vol || 0);
+        ytdVolLYByClinic[loc] = (ytdVolLYByClinic[loc] || 0) + (c.volLY || 0);
       });
     });
     // Also add current month from locations state (if not already archived)
@@ -3380,6 +3384,8 @@ function App() {
         if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
         ytdByClinic[l.location] = (ytdByClinic[l.location] || 0) + (l.totalRevenueMTD || 0);
         ytdLYByClinic[l.location] = (ytdLYByClinic[l.location] || 0) + (l.mtdLY || 0);
+        ytdVolByClinic[l.location] = (ytdVolByClinic[l.location] || 0) + (l.opVolMTD || 0);
+        ytdVolLYByClinic[l.location] = (ytdVolLYByClinic[l.location] || 0) + (l.opVolMTDLY || 0);
       });
     }
     // Override with Location sheet's actual YTD when available (more accurate than archived sums)
@@ -3396,8 +3402,10 @@ function App() {
     if (ytdByClinic["Karama"] || ytdByClinic["UW Mall"]) {
       ytdByClinic["UW Mall"] = (ytdByClinic["UW Mall"] || 0) + (ytdByClinic["Karama"] || 0);
       ytdLYByClinic["UW Mall"] = (ytdLYByClinic["UW Mall"] || 0) + (ytdLYByClinic["Karama"] || 0);
-      delete ytdByClinic["Karama"];
-      delete ytdLYByClinic["Karama"];
+      ytdVolByClinic["UW Mall"] = (ytdVolByClinic["UW Mall"] || 0) + (ytdVolByClinic["Karama"] || 0);
+      ytdVolLYByClinic["UW Mall"] = (ytdVolLYByClinic["UW Mall"] || 0) + (ytdVolLYByClinic["Karama"] || 0);
+      delete ytdByClinic["Karama"]; delete ytdLYByClinic["Karama"];
+      delete ytdVolByClinic["Karama"]; delete ytdVolLYByClinic["Karama"];
     }
     return Object.keys(ytdByClinic)
       .filter(loc => ytdByClinic[loc] > 0)
@@ -3407,6 +3415,8 @@ function App() {
         code: loc,
         "2026": ytdByClinic[loc],
         "2025": ytdLYByClinic[loc] || 0,
+        vol2026: ytdVolByClinic[loc] || 0,
+        vol2025: ytdVolLYByClinic[loc] || 0,
       }));
   }, [locations, userMonthlyHistory, reportDate]);
 
@@ -3434,9 +3444,8 @@ function App() {
       .map(c => {
         const hasRevLY = c["2025"] > 0;
         const revenueVar = hasRevLY ? Number(((c["2026"] - c["2025"]) / c["2025"] * 100).toFixed(1)) : 0;
-        const loc = locations.find(l => l.location === c.code || (CLINIC_COORDS[l.location]?.label || l.location) === c.name);
-        const volYTD = loc?.opVolYTD || loc?.opVolMTD || 0;
-        const volYTDLY = loc?.opVolYTDLY || loc?.opVolMTDLY || 0;
+        const volYTD = c.vol2026 || 0;
+        const volYTDLY = c.vol2025 || 0;
         const hasVolLY = volYTDLY > 0;
         const volumeVar = hasVolLY ? Number(((volYTD - volYTDLY) / volYTDLY * 100).toFixed(1)) : 0;
         return {
