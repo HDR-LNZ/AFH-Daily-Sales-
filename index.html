@@ -4180,6 +4180,79 @@ function App() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        {/* YTD Avg Revenue per Patient by Clinic */}
+        <div style={{ ...card, padding:28, marginTop:20 }}>
+          <div style={{ marginBottom:20, paddingBottom:12, borderBottom:"2px solid #a855f7" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>Avg Revenue per Patient by Clinic — YTD</h2>
+            </div>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>YTD revenue / YTD OP visits per clinic — 2026 vs 2025 (AED)</p>
+          </div>
+          {(() => {
+            const allHistMonths = [...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
+              .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, []);
+            const ytdRevByClinic = {}, ytdVolByClinic = {}, ytdRevLYByClinic = {}, ytdVolLYByClinic = {};
+            allHistMonths.forEach(m => {
+              (m.clinics || []).forEach(c => {
+                const loc = normLoc(c.loc);
+                if (EXCLUDED_MAP_LOCATIONS.has(loc)) return;
+                const effectiveLoc = loc === "Karama" ? "UW Mall" : loc;
+                ytdRevByClinic[effectiveLoc] = (ytdRevByClinic[effectiveLoc] || 0) + (c.mtd || 0);
+                ytdVolByClinic[effectiveLoc] = (ytdVolByClinic[effectiveLoc] || 0) + (c.vol || 0);
+                ytdRevLYByClinic[effectiveLoc] = (ytdRevLYByClinic[effectiveLoc] || 0) + (c.mtdLY || 0);
+                ytdVolLYByClinic[effectiveLoc] = (ytdVolLYByClinic[effectiveLoc] || 0) + (c.volLY || 0);
+              });
+            });
+            const currentInArchive = allHistMonths.some(m => {
+              const rd = new Date(reportDate);
+              if (isNaN(rd.getTime())) return false;
+              const curKey = rd.toLocaleDateString('en-US', {month:'short'}) + "-" + rd.getFullYear();
+              return m.monthKey === curKey || m.monthKey === rd.toLocaleDateString('en-US', {month:'short'});
+            });
+            if (!currentInArchive) {
+              const karamaLoc = locations.find(l => l.location === "Karama");
+              locations.forEach(l => {
+                if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
+                const effectiveLoc = l.location === "Karama" ? "UW Mall" : l.location;
+                ytdRevByClinic[effectiveLoc] = (ytdRevByClinic[effectiveLoc] || 0) + (l.totalRevenueMTD || 0);
+                ytdVolByClinic[effectiveLoc] = (ytdVolByClinic[effectiveLoc] || 0) + (l.opVolMTD || 0);
+                ytdRevLYByClinic[effectiveLoc] = (ytdRevLYByClinic[effectiveLoc] || 0) + (l.mtdLY || 0);
+                ytdVolLYByClinic[effectiveLoc] = (ytdVolLYByClinic[effectiveLoc] || 0) + (l.opVolMTDLY || 0);
+              });
+            }
+            const ppcYTDData = Object.keys(ytdRevByClinic)
+              .filter(loc => ytdVolByClinic[loc] > 0)
+              .map(loc => ({
+                name: CLINIC_COORDS[loc]?.label || loc,
+                code: loc,
+                "2026": Math.round(ytdRevByClinic[loc] / ytdVolByClinic[loc]),
+                "2025": ytdVolLYByClinic[loc] > 0 ? Math.round(ytdRevLYByClinic[loc] / ytdVolLYByClinic[loc]) : 0,
+              }))
+              .sort((a, b) => b["2026"] - a["2026"]);
+            if (ppcYTDData.length === 0) return <div style={{ padding:40, textAlign:"center", color:C.textMuted, fontSize:13 }}>No YTD data available. Archive months to see this chart.</div>;
+            return (
+              <ResponsiveContainer width="100%" height={Math.max(400, ppcYTDData.length * 38)}>
+                <BarChart data={ppcYTDData} layout="vertical" margin={{ top:5, right:50, left:10, bottom:5 }} barGap={2} barCategoryGap="25%">
+                  <defs>
+                    <linearGradient id="ppcYTD2026Grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.9} /><stop offset="100%" stopColor="#c084fc" stopOpacity={0.9} /></linearGradient>
+                    <linearGradient id="ppcYTD2025Grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#64748b" stopOpacity={0.5} /><stop offset="100%" stopColor="#94a3b8" stopOpacity={0.4} /></linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={(v) => "AED " + fmtK(v)} axisLine={{ stroke:C.border }} tickLine={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fill:C.textSecondary, fontSize:11 }} tickLine={false} axisLine={false} width={isMobile ? 80 : 120} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(168,85,247,0.04)" }} />
+                  <Legend wrapperStyle={{ fontSize:11, paddingTop:8, color:C.textSecondary }} iconType="circle" iconSize={8} />
+                  <Bar dataKey="2026" fill="url(#ppcYTD2026Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2026 YTD"
+                    label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 4} fontSize={10} fontWeight={600} fill={C.text}>AED {fmt(value)}</text> : null} />
+                  <Bar dataKey="2025" fill="url(#ppcYTD2025Grad)" radius={[0,4,4,0]} maxBarSize={16} name="2025 YTD"
+                    label={({ x, y, width, value }) => value > 0 ? <text x={x + width + 5} y={y + 12} fontSize={10} fontWeight={600} fill={C.textMuted}>AED {fmt(value)}</text> : null} />
+                </BarChart>
+              </ResponsiveContainer>
+            );
+          })()}
+        </div>
         </AnimatedSection>
 
         {/* CLINIC MAP + REGION PANEL */}
