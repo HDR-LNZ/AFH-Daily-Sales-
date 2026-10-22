@@ -617,7 +617,7 @@ const DEFAULT_DSR_TOTALS = {
   opMtdLYRevenue: 0, opMtdLYVolume: 0, opMtdLYPPC: 0
 };
 
-const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed"]);
+const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed", "Clinic-ENBD", "HealthHub – Clinic-ENBD"]);
 const EXCLUDED_DAILY_LOG = new Set(["Staff DFC", "Staff DIP", "Stationed", "Karama", "Clinic-ENBD", "HealthHub – Clinic-ENBD", "AF Staff Clinic, DIP 1 & DIP 2", "HealthHub – AF Staff Clinic, DIP 1 & DIP 2"]);
 
 const LOCATION_ALIASES = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Festival City":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Day Surgery":"DSU","DSC":"DSU","Barsha Heights":"Tecom","Jumeirah Village Circle":"JVC","Jumeirah Village":"JVC","HealthHub – Tecom":"Tecom","HealthHub – Barsha Heights":"Tecom","HealthHub – Jumeirah Village Circle":"JVC","HealthHub – Al Warqa":"Warqa","HealthHub – Al Karama":"Karama","HealthHub – Al Qusais":"Qusais","HealthHub – Al Nahda":"Nahda","HealthHub – Festival Plaza":"Fest Plaza","HealthHub – Arabian Center":"Arabian","HealthHub – Jumeirah Village":"JVC","HealthHub Jumeirah Village Circle":"JVC","HealthHub – UW Mall":"UW Mall","UW Mall":"UW Mall"};
@@ -2900,7 +2900,7 @@ function App() {
     if (!confirm("Archive " + monthDisplay + " to Monthly History? This stores a snapshot you can revisit from the sidebar.")) return;
 
     const topClinic = locations
-      .filter(l => !["Staff DFC","Staff DIP","Stationed"].includes(l.location))
+      .filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location))
       .reduce((best, l) => l.totalRevenueMTD > (best?.totalRevenueMTD || 0) ? l : best, null);
 
     const opTotal = specialties.reduce((a,s) => a + (s.mtdActual || 0), 0);
