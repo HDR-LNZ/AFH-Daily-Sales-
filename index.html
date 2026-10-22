@@ -1021,26 +1021,17 @@ function parseExcelFile(data) {
           }
         }
         if (mtdVal === 0 && todayOP === 0) continue;
+        const lyVal = Math.round(r[17] || 0);
+        const ytdVal = Math.round(r[37] || 0);
+        const ytdLYVal = Math.round(r[42] || 0);
         if (!dsrVolMap[matchCode]) {
-          dsrVolMap[matchCode] = { opVolMTD: mtdVal || todayVol, opVolMTDLY: 0, opVolYTD: 0, opVolYTDLY: 0, opVolToday: todayVol };
-        }
-      }
-      // Enrich volume entries with LY/YTD from hardcoded column offsets
-      for (let i = volStartRow; i < volStartRow + 25; i++) {
-        const r = dsRows2[i]; if (!r) continue;
-        const name = (r[0] && typeof r[0] === 'string' ? r[0] : null) || (r[1] && typeof r[1] === 'string' ? r[1] : null);
-        if (!name || /total|grand|corporate/i.test(name.trim())) continue;
-        const lyCol6 = (r[6] || '').toString().toLowerCase().trim();
-        if (/corporate|gatekeep|homecare|closed|total\s*(care|revenue|volume)|muteena|sonapur/i.test(lyCol6)) continue;
-        const matchCode = _matchClinic(name.trim(), dsrClinicMap) || normLoc(name.trim());
-        if (matchCode && dsrVolMap[matchCode]) {
-          const lyVal = Math.round(r[17] || 0);
-          const ytdVal = Math.round(r[37] || 0);
-          const ytdLYVal = Math.round(r[42] || 0);
+          dsrVolMap[matchCode] = { opVolMTD: mtdVal || todayVol, opVolMTDLY: lyVal, opVolYTD: ytdVal, opVolYTDLY: ytdLYVal, opVolToday: todayVol };
+        } else {
           if (lyVal) dsrVolMap[matchCode].opVolMTDLY = lyVal;
           if (ytdVal) dsrVolMap[matchCode].opVolYTD = ytdVal;
           if (ytdLYVal) dsrVolMap[matchCode].opVolYTDLY = ytdLYVal;
         }
+        if (/fest/i.test(matchCode)) console.log('[VOL DEBUG] Festival Plaza:', matchCode, 'row', i, 'mtd:', mtdVal, 'lyMTD:', lyVal, 'ytd:', ytdVal, 'ytdLY:', ytdLYVal, 'raw37:', r[37], 'raw42:', r[42]);
       }
       locations.forEach(loc => {
         const dsr = dsrClinicMap[loc.location];
