@@ -3451,18 +3451,27 @@ function App() {
       .map(c => ({ name: c.name, delta: (c.vol2026 || 0) - (c.vol2025 || 0) }))
       .filter(d => d.delta !== 0)
       .sort((a, b) => b.delta - a.delta);
-    const result = [{ name: '2025 YTD', base: 0, total: total2025, up: 0, down: 0, isTotal: true, raw: total2025 }];
+    const result = [{ name: '2025 YTD', base: 0, total: total2025, up: 0, down: 0, isTotal: true, raw: total2025, top: total2025 }];
     let running = total2025;
+    let minTop = Math.min(total2025, total2026);
+    let maxTop = Math.max(total2025, total2026);
     deltas.forEach(d => {
+      const top = d.delta >= 0 ? running + d.delta : running;
       if (d.delta >= 0) {
-        result.push({ name: d.name, base: running, up: d.delta, down: 0, total: 0, raw: d.delta });
-        running += d.delta;
+        result.push({ name: d.name, base: running, up: d.delta, down: 0, total: 0, raw: d.delta, top });
       } else {
-        result.push({ name: d.name, base: running + d.delta, up: 0, down: -d.delta, total: 0, raw: d.delta });
-        running += d.delta;
+        result.push({ name: d.name, base: running + d.delta, up: 0, down: -d.delta, total: 0, raw: d.delta, top });
       }
+      running += d.delta;
+      minTop = Math.min(minTop, running);
+      maxTop = Math.max(maxTop, running);
     });
-    result.push({ name: '2026 YTD', base: 0, total: total2026, up: 0, down: 0, isTotal: true, raw: total2026 });
+    result.push({ name: '2026 YTD', base: 0, total: total2026, up: 0, down: 0, isTotal: true, raw: total2026, top: total2026 });
+    const pad = (maxTop - minTop) * 0.15;
+    result.yMin = Math.max(0, Math.floor((minTop - pad) / 1000) * 1000);
+    result.yMax = Math.ceil((maxTop + pad) / 1000) * 1000;
+    result.netChange = total2026 - total2025;
+    result.netPct = total2025 > 0 ? ((total2026 - total2025) / total2025 * 100).toFixed(1) : 0;
     return result;
   }, [clinicYTDChartData]);
 
@@ -4552,44 +4561,62 @@ function App() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
             <div>
               <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:C.text }}>OP Volume Bridge — YTD</h2>
-              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>Each clinic's contribution to the total OP volume change from 2025 to 2026 YTD</p>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:C.textMuted }}>
+                Each clinic's contribution to the total OP volume change from 2025 to 2026 YTD
+                <span style={{ marginLeft:12, fontWeight:700, color: volumeBridgeData.netChange >= 0 ? '#34d399' : '#f87171' }}>
+                  Net: {volumeBridgeData.netChange >= 0 ? '+' : ''}{(volumeBridgeData.netChange || 0).toLocaleString()} visits ({volumeBridgeData.netPct}%)
+                </span>
+              </p>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={420}>
-            <BarChart data={volumeBridgeData} margin={{ top:20, right:30, left:10, bottom:60 }} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.6)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize:10, fill:C.textMuted }} angle={-35} textAnchor="end" interval={0} height={70} />
-              <YAxis tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={v => v >= 1000 ? (v/1000).toFixed(0) + 'K' : v} axisLine={false} tickLine={false} />
+          <ResponsiveContainer width="100%" height={500}>
+            <BarChart data={volumeBridgeData} margin={{ top:30, right:20, left:20, bottom:80 }} barCategoryGap="15%">
+              <CartesianGrid strokeDasharray="3 6" stroke="rgba(47,53,72,0.4)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize:11, fill:C.textSecondary, fontWeight:500 }} angle={-40} textAnchor="end" interval={0} height={80} />
+              <YAxis domain={[volumeBridgeData.yMin || 0, volumeBridgeData.yMax || 'auto']} tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={v => (v/1000).toFixed(0) + 'K'} axisLine={false} tickLine={false} />
               <Tooltip content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0]?.payload;
                 if (!d) return null;
                 return (
-                  <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"10px 14px", fontSize:12 }}>
-                    <div style={{ fontWeight:700, color:C.text, marginBottom:4 }}>{d.name}</div>
+                  <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"12px 16px", fontSize:13, minWidth:160 }}>
+                    <div style={{ fontWeight:700, color:C.text, marginBottom:6, fontSize:14 }}>{d.name}</div>
                     {d.isTotal ? (
-                      <div style={{ color:C.textSecondary }}>Total: <span style={{ fontWeight:600, color:C.text }}>{d.total.toLocaleString()}</span> visits</div>
+                      <div style={{ color:C.textSecondary }}>Total OP Visits: <span style={{ fontWeight:700, color:C.text }}>{d.total.toLocaleString()}</span></div>
                     ) : (
-                      <div style={{ color: d.raw >= 0 ? '#34d399' : '#f87171' }}>
-                        {d.raw >= 0 ? '+' : ''}{d.raw.toLocaleString()} visits
+                      <div>
+                        <div style={{ color: d.raw >= 0 ? '#34d399' : '#f87171', fontWeight:600 }}>
+                          {d.raw >= 0 ? '+' : ''}{d.raw.toLocaleString()} visits
+                        </div>
                       </div>
                     )}
                   </div>
                 );
               }} />
-              <Bar dataKey="base" stackId="a" fill="transparent" />
-              <Bar dataKey="total" stackId="a" radius={[4,4,0,0]} maxBarSize={40}
-                fill="#38bdf8"
-                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.text}>{value >= 1000 ? (value/1000).toFixed(1) + 'K' : value}</text> : null} />
-              <Bar dataKey="up" stackId="a" radius={[4,4,0,0]} maxBarSize={40}
-                fill="#34d399"
-                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 6} textAnchor="middle" fontSize={9} fontWeight={700} fill="#34d399">+{value >= 1000 ? (value/1000).toFixed(1) + 'K' : value}</text> : null} />
-              <Bar dataKey="down" stackId="a" radius={[4,4,0,0]} maxBarSize={40}
-                fill="#f87171"
-                label={({ x, y, width, value, index }) => {
-                  const d = volumeBridgeData[index];
-                  return value > 0 ? <text x={x + width/2} y={y - 6} textAnchor="middle" fontSize={9} fontWeight={700} fill="#f87171">-{value >= 1000 ? (value/1000).toFixed(1) + 'K' : value}</text> : null;
-                }} />
+              <Bar dataKey="base" stackId="a" fill="transparent" isAnimationActive={false} />
+              <Bar dataKey="total" stackId="a" radius={[4,4,0,0]} maxBarSize={52} isAnimationActive={true} animationDuration={800}
+                fill="url(#bridgeTotalGrad)"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 8} textAnchor="middle" fontSize={12} fontWeight={700} fill="#38bdf8">{(value/1000).toFixed(1) + 'K'}</text> : null} />
+              <Bar dataKey="up" stackId="a" radius={[4,4,0,0]} maxBarSize={52} isAnimationActive={true} animationDuration={800}
+                fill="url(#bridgeUpGrad)"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 8} textAnchor="middle" fontSize={11} fontWeight={700} fill="#34d399">+{value.toLocaleString()}</text> : null} />
+              <Bar dataKey="down" stackId="a" radius={[0,0,4,4]} maxBarSize={52} isAnimationActive={true} animationDuration={800}
+                fill="url(#bridgeDownGrad)"
+                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y + (value > 500 ? 16 : -8)} textAnchor="middle" fontSize={11} fontWeight={700} fill="#f87171">{'-' + value.toLocaleString()}</text> : null} />
+              <defs>
+                <linearGradient id="bridgeTotalGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.95} />
+                  <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0.8} />
+                </linearGradient>
+                <linearGradient id="bridgeUpGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#34d399" stopOpacity={0.95} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.8} />
+                </linearGradient>
+                <linearGradient id="bridgeDownGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f87171" stopOpacity={0.95} />
+                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.8} />
+                </linearGradient>
+              </defs>
             </BarChart>
           </ResponsiveContainer>
         </div>
