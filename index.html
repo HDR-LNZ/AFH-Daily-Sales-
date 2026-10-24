@@ -3451,28 +3451,28 @@ function App() {
     const total2025 = clinicYTDChartData.reduce((s, c) => s + (c.vol2025 || 0), 0);
     const total2026 = clinicYTDChartData.reduce((s, c) => s + (c.vol2026 || 0), 0);
     const deltas = clinicYTDChartData
-      .map(c => ({ name: c.name, delta: (c.vol2026 || 0) - (c.vol2025 || 0) }))
-      .filter(d => d.delta !== 0)
+      .map(c => ({ name: c.name, delta: (c.vol2026 || 0) - (c.vol2025 || 0), v26: c.vol2026 || 0, v25: c.vol2025 || 0 }))
+      .filter(d => d.v26 > 0 || d.v25 > 0)
       .sort((a, b) => b.delta - a.delta);
-    const result = [{ name: '2025 YTD', base: 0, total: total2025, up: 0, down: 0, isTotal: true, raw: total2025, top: total2025 }];
+    const result = [{ name: '2025 YTD', base: 0, val: total2025, isTotal: true, delta: 0 }];
     let running = total2025;
-    let minTop = Math.min(total2025, total2026);
-    let maxTop = Math.max(total2025, total2026);
+    let minRun = total2025, maxRun = total2025;
     deltas.forEach(d => {
-      const top = d.delta >= 0 ? running + d.delta : running;
       if (d.delta >= 0) {
-        result.push({ name: d.name, base: running, up: d.delta, down: 0, total: 0, raw: d.delta, top });
+        result.push({ name: d.name, base: running, val: d.delta, isTotal: false, delta: d.delta });
+        running += d.delta;
       } else {
-        result.push({ name: d.name, base: running + d.delta, up: 0, down: -d.delta, total: 0, raw: d.delta, top });
+        running += d.delta;
+        result.push({ name: d.name, base: running, val: -d.delta, isTotal: false, delta: d.delta });
       }
-      running += d.delta;
-      minTop = Math.min(minTop, running);
-      maxTop = Math.max(maxTop, running);
+      minRun = Math.min(minRun, running);
+      maxRun = Math.max(maxRun, running);
     });
-    result.push({ name: '2026 YTD', base: 0, total: total2026, up: 0, down: 0, isTotal: true, raw: total2026, top: total2026 });
-    const pad = (maxTop - minTop) * 0.15;
-    result.yMin = Math.max(0, Math.floor((minTop - pad) / 1000) * 1000);
-    result.yMax = Math.ceil((maxTop + pad) / 1000) * 1000;
+    result.push({ name: '2026 YTD', base: 0, val: total2026, isTotal: true, delta: 0 });
+    const range = maxRun - minRun;
+    const pad = range * 0.18;
+    result.yMin = Math.max(0, Math.floor((minRun - pad) / 1000) * 1000);
+    result.yMax = Math.ceil((maxRun + pad) / 1000) * 1000;
     result.netChange = total2026 - total2025;
     result.netPct = total2025 > 0 ? ((total2026 - total2025) / total2025 * 100).toFixed(1) : 0;
     return result;
@@ -4574,20 +4574,6 @@ function App() {
           </div>
           <ResponsiveContainer width="100%" height={520}>
             <BarChart data={volumeBridgeData} margin={{ top:30, right:20, left:20, bottom:80 }} barCategoryGap="18%">
-              <defs>
-                <linearGradient id="bridgeTotalGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.primary} stopOpacity={0.9} />
-                  <stop offset="100%" stopColor={C.primaryLight} stopOpacity={0.75} />
-                </linearGradient>
-                <linearGradient id="bridgeUpGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.success} stopOpacity={0.9} />
-                  <stop offset="100%" stopColor={C.successLight} stopOpacity={0.75} />
-                </linearGradient>
-                <linearGradient id="bridgeDownGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.danger} stopOpacity={0.9} />
-                  <stop offset="100%" stopColor={C.dangerLight} stopOpacity={0.75} />
-                </linearGradient>
-              </defs>
               <CartesianGrid stroke={C.grid} strokeWidth={1} vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize:11, fill:C.textSecondary, fontWeight:500 }} angle={-40} textAnchor="end" interval={0} height={80} />
               <YAxis domain={[volumeBridgeData.yMin || 0, volumeBridgeData.yMax || 'auto']} allowDataOverflow={true} tick={{ fontSize:11, fill:C.textMuted }} tickFormatter={v => (v/1000).toFixed(0) + 'K'} axisLine={false} tickLine={false} />
@@ -4595,40 +4581,37 @@ function App() {
                 if (!active || !payload?.length) return null;
                 const d = payload[0]?.payload;
                 if (!d) return null;
+                const accent = d.isTotal ? C.primary : d.delta >= 0 ? C.success : C.dangerLight;
                 return (
-                  <div style={{ background:C.surface, borderRadius:10, padding:"12px 16px", boxShadow:"0 4px 20px rgba(0,0,0,0.5)", border:"1px solid rgba(255,255,255,0.10)", borderLeft:"3px solid " + (d.isTotal ? C.primary : d.raw >= 0 ? C.success : C.dangerLight), fontSize:13, minWidth:160 }}>
+                  <div style={{ background:C.surface, borderRadius:10, padding:"12px 16px", boxShadow:"0 4px 20px rgba(0,0,0,0.5)", border:"1px solid rgba(255,255,255,0.10)", borderLeft:"3px solid " + accent, fontSize:13, minWidth:160 }}>
                     <div style={{ fontWeight:700, color:C.text, marginBottom:6, fontSize:14 }}>{d.name}</div>
                     {d.isTotal ? (
-                      <div style={{ color:C.textSecondary }}>Total OP Visits: <span style={{ fontWeight:700, color:C.text }}>{d.total.toLocaleString()}</span></div>
+                      <div style={{ color:C.textSecondary }}>Total OP Visits: <span style={{ fontWeight:700, color:C.text }}>{d.val.toLocaleString()}</span></div>
                     ) : (
-                      <div style={{ color: d.raw >= 0 ? C.success : C.dangerLight, fontWeight:600 }}>
-                        {d.raw >= 0 ? '+' : ''}{d.raw.toLocaleString()} visits
+                      <div style={{ color: accent, fontWeight:600 }}>
+                        {d.delta >= 0 ? '+' : ''}{d.delta.toLocaleString()} visits
                       </div>
                     )}
                   </div>
                 );
               }} />
               <Bar dataKey="base" stackId="a" fill="transparent" isAnimationActive={false} />
-              <Bar dataKey="total" stackId="a" radius={[4,4,0,0]} maxBarSize={32} isAnimationActive={true} animationDuration={800}
-                fill="url(#bridgeTotalGrad)"
-                label={({ x, y, width, value }) => value > 0 ? <text x={x + width/2} y={y - 8} textAnchor="middle" fontSize={12} fontWeight={700} fill={C.textSecondary}>{(value/1000).toFixed(1) + 'K'}</text> : null} />
-              <Bar dataKey="up" stackId="a" radius={[4,4,0,0]} maxBarSize={32} isAnimationActive={true} animationDuration={800}
-                fill="url(#bridgeUpGrad)"
-                label={({ x, y, width, value, index }) => {
-                  if (value <= 0) return null;
-                  const sorted = volumeBridgeData.filter(d => d.up > 0).sort((a,b) => b.up - a.up);
-                  if (sorted.length > 5 && sorted.indexOf(volumeBridgeData[index]) >= 5) return null;
-                  const label = value >= 1000 ? '+' + (value/1000).toFixed(1) + 'K' : '+' + value;
-                  return <text x={x + width/2} y={y - 8} textAnchor="middle" fontSize={11} fontWeight={600} fill={C.textSecondary}>{label}</text>;
-                }} />
-              <Bar dataKey="down" stackId="a" radius={[0,0,4,4]} maxBarSize={32} isAnimationActive={true} animationDuration={800}
-                fill="url(#bridgeDownGrad)"
+              <Bar dataKey="val" stackId="a" maxBarSize={36} isAnimationActive={true} animationDuration={800}
+                shape={({ x, y, width, height, payload }) => {
+                  const clr = payload.isTotal ? C.primary : payload.delta >= 0 ? C.success : C.dangerLight;
+                  const r = 4;
+                  const isUp = payload.isTotal || payload.delta >= 0;
+                  return <rect x={x} y={y} width={width} height={Math.max(height, 2)} rx={r} ry={r} fill={clr} fillOpacity={0.85} />;
+                }}
                 label={({ x, y, width, height, value, index }) => {
-                  if (value <= 0) return null;
-                  const sorted = volumeBridgeData.filter(d => d.down > 0).sort((a,b) => b.down - a.down);
-                  if (sorted.length > 5 && sorted.indexOf(volumeBridgeData[index]) >= 5) return null;
-                  const label = value >= 1000 ? '-' + (value/1000).toFixed(1) + 'K' : '-' + value;
-                  return <text x={x + width/2} y={y + Math.min(height, 16) + 2} textAnchor="middle" fontSize={11} fontWeight={600} fill={C.textSecondary}>{label}</text>;
+                  const d = volumeBridgeData[index];
+                  if (!d) return null;
+                  if (d.isTotal) {
+                    return <text x={x + width/2} y={y - 8} textAnchor="middle" fontSize={12} fontWeight={700} fill={C.text}>{(d.val/1000).toFixed(1) + 'K'}</text>;
+                  }
+                  const sign = d.delta >= 0 ? '+' : '';
+                  const label = Math.abs(d.delta) >= 1000 ? sign + (d.delta/1000).toFixed(1) + 'K' : sign + d.delta.toLocaleString();
+                  return <text x={x + width/2} y={y - 6} textAnchor="middle" fontSize={10} fontWeight={600} fill={C.textSecondary}>{label}</text>;
                 }} />
             </BarChart>
           </ResponsiveContainer>
