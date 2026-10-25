@@ -1837,20 +1837,6 @@ function Sidebar({ activeSection, onNavigate, reportDate, onFileLoaded, sidebarO
         )}
       </div>
 
-      {/* Nav Items */}
-      <div style={{ flex:1, padding:"12px 8px", display:"flex", flexDirection:"column", gap:4 }}>
-        {navItems.map((item) => {
-          const isActive = activeSection === item.id;
-          return (
-            <button key={item.id} onClick={() => onNavigate(item.id)}
-              style={{ display:"flex", alignItems:"center", gap:12, padding: sidebarOpen ? "10px 14px" : "10px 14px", borderRadius:10, border:"none", cursor:"pointer", transition:"all 0.2s", background: isActive ? C.primary : "transparent", color: isActive ? "#fff" : C.textMuted, width:"100%", textAlign:"left", fontSize:13, fontWeight: isActive ? 600 : 500 }}>
-              <span style={{ flexShrink:0, display:"flex", alignItems:"center" }}>{item.icon}</span>
-              {sidebarOpen && <span style={{ overflow:"hidden", whiteSpace:"nowrap" }}>{item.label}</span>}
-            </button>
-          );
-        })}
-      </div>
-
       {/* No Data — Upload Prompt (desktop sidebar) */}
       {sidebarOpen && !hasData && (
         <div style={{ padding:"16px 12px", borderTop:"1px solid "+C.border, textAlign:"center" }}>
@@ -4169,7 +4155,7 @@ function App() {
                   <linearGradient id="varRedGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#d03b3b" stopOpacity={0.9}/><stop offset="100%" stopColor="#e66767" stopOpacity={0.8}/></linearGradient>
                 </defs>
                 <CartesianGrid stroke={C.grid} strokeWidth={1} horizontal={false} />
-                <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} />
+                <XAxis type="number" tick={{ fontSize:10, fill:C.textMuted }} tickFormatter={fmtK} axisLine={false} tickLine={false} domain={[dataMin => Math.min(dataMin * 1.15, dataMin - 20000), dataMax => Math.min(dataMax * 1.15, dataMax + 20000)]} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:C.textSecondary }} width={100} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill:"rgba(148,163,184,0.04)" }} />
                 <Bar dataKey="variance" radius={[0,4,4,0]} maxBarSize={14} name="Variance (AED)" label={{ position:"right", fontSize:10, fontWeight:600, fill:C.textSecondary, formatter:(v) => fmtK(v) }}>
