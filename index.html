@@ -3485,6 +3485,7 @@ function App() {
     result.yMax = Math.ceil((maxRun + pad) / 1000) * 1000;
     result.netChange = total2026 - total2025;
     result.netPct = total2025 > 0 ? ((total2026 - total2025) / total2025 * 100).toFixed(1) : 0;
+    console.log('[BRIDGE] total2025:', total2025, 'total2026:', total2026, 'net:', total2026 - total2025, 'clinics:', entries.length);
     return result;
   }, [locations]);
 
