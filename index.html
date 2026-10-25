@@ -2262,7 +2262,7 @@ function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
           </div>
           <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"12px 16px" }}>
             <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase" }}>Doctors</div>
-            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>{doctors.length}</div>
+            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>{doctors.filter(d => !isResigned(d.name)).length}</div>
           </div>
         </div>
 
@@ -2284,27 +2284,52 @@ function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
               </tr>
             </thead>
             <tbody>
-              {doctors.map((d, i) => {
-                const dMtdVarLY = d.mtdLY ? (d.mtdActual - d.mtdLY) / d.mtdLY : 0;
-                const dYtdVarLY = d.ytdLY ? (d.ytdActual - d.ytdLY) / d.ytdLY : 0;
-                const locs = d.locations || (doctorLocations && doctorLocations[d.name]) || "";
-                const locsStr = typeof locs === "string" ? locs : Array.from(locs).sort().join(", ");
-                const shortLocs = locsStr.split(", ").length > 3 ? locsStr.split(", ").slice(0,3).join(", ") + " +" + (locsStr.split(", ").length - 3) : locsStr;
-                return (
-                  <tr key={d.name + i} style={{ background: i % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid " + C.border }}>
-                    <td style={dtd}>{i + 1}</td>
-                    <td style={{ ...dtd }}><DoctorName name={d.name} /></td>
-                    <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis" }} title={locsStr}>{shortLocs || "\u2014"}</td>
-                    <td style={dtn}>{fmt(d.today)}</td>
-                    <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.mtdActual)}</td>
-                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
-                    <td style={{ ...dtn, color:varColor(dMtdVarLY), fontWeight:600 }}>{pct(dMtdVarLY)}</td>
-                    <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.ytdActual)}{d._ipYtdEst > 0 && <span title={"Includes estimated IP YTD AED " + fmt(d._ipYtdEst) + " distributed from specialty total"} style={{ fontSize:9, color:"#94a3b8", marginLeft:4 }}>~</span>}</td>
-                    <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
-                    <td style={{ ...dtn, color:varColor(dYtdVarLY), fontWeight:600 }}>{pct(dYtdVarLY)}</td>
-                  </tr>
-                );
-              })}
+              {(() => {
+                const active = doctors.filter(d => !isResigned(d.name));
+                const resigned = doctors.filter(d => isResigned(d.name));
+                const rows = active.map((d, i) => {
+                  const dMtdVarLY = d.mtdLY ? (d.mtdActual - d.mtdLY) / d.mtdLY : 0;
+                  const dYtdVarLY = d.ytdLY ? (d.ytdActual - d.ytdLY) / d.ytdLY : 0;
+                  const locs = d.locations || (doctorLocations && doctorLocations[d.name]) || "";
+                  const locsStr = typeof locs === "string" ? locs : Array.from(locs).sort().join(", ");
+                  const shortLocs = locsStr.split(", ").length > 3 ? locsStr.split(", ").slice(0,3).join(",") + ",+" + (locsStr.split(", ").length - 3) : locsStr;
+                  return (
+                    <tr key={d.name + i} style={{ background: i % 2 ? C.cardHover : C.cardBg, borderBottom:"1px solid " + C.border }}>
+                      <td style={dtd}>{i + 1}</td>
+                      <td style={{ ...dtd }}><DoctorName name={d.name} /></td>
+                      <td style={{ ...dtd, color:C.textMuted, fontSize:10, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis" }} title={locsStr}>{shortLocs || "\u2014"}</td>
+                      <td style={dtn}>{fmt(d.today)}</td>
+                      <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.mtdActual)}</td>
+                      <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.mtdLY)}</td>
+                      <td style={{ ...dtn, color:varColor(dMtdVarLY), fontWeight:600 }}>{pct(dMtdVarLY)}</td>
+                      <td style={{ ...dtn, fontWeight:600 }}>{fmt(d.ytdActual)}</td>
+                      <td style={{ ...dtn, color:C.textMuted }}>{fmt(d.ytdLY)}</td>
+                      <td style={{ ...dtn, color:varColor(dYtdVarLY), fontWeight:600 }}>{pct(dYtdVarLY)}</td>
+                    </tr>
+                  );
+                });
+                if (resigned.length > 0) {
+                  const rTot = { today: 0, mtdActual: 0, mtdLY: 0, ytdActual: 0, ytdLY: 0 };
+                  resigned.forEach(d => { rTot.today += (d.today||0); rTot.mtdActual += (d.mtdActual||0); rTot.mtdLY += (d.mtdLY||0); rTot.ytdActual += (d.ytdActual||0); rTot.ytdLY += (d.ytdLY||0); });
+                  const rMtdVar = rTot.mtdLY ? (rTot.mtdActual - rTot.mtdLY) / rTot.mtdLY : 0;
+                  const rYtdVar = rTot.ytdLY ? (rTot.ytdActual - rTot.ytdLY) / rTot.ytdLY : 0;
+                  rows.push(
+                    <tr key="resigned-total" style={{ background: "rgba(239,68,68,0.06)", borderBottom:"1px solid " + C.border, borderTop:"2px solid " + C.border }}>
+                      <td style={{ ...dtd, color:C.textMuted }}></td>
+                      <td style={{ ...dtd, color:C.dangerLight, fontWeight:600 }}>Resigned Doctors ({resigned.length})</td>
+                      <td style={{ ...dtd, color:C.textMuted, fontSize:10 }} title={resigned.map(d => d.name).join(", ")}>{resigned.map(d => d.name.replace(/^(Dr\.\s*|Ms\.\s*|Prof\.\s*Dr\.\s*)/i, "").split(" ")[0]).join(", ")}</td>
+                      <td style={dtn}>{fmt(rTot.today)}</td>
+                      <td style={{ ...dtn, fontWeight:600 }}>{fmt(rTot.mtdActual)}</td>
+                      <td style={{ ...dtn, color:C.textMuted }}>{fmt(rTot.mtdLY)}</td>
+                      <td style={{ ...dtn, color:varColor(rMtdVar), fontWeight:600 }}>{pct(rMtdVar)}</td>
+                      <td style={{ ...dtn, fontWeight:600 }}>{fmt(rTot.ytdActual)}</td>
+                      <td style={{ ...dtn, color:C.textMuted }}>{fmt(rTot.ytdLY)}</td>
+                      <td style={{ ...dtn, color:varColor(rYtdVar), fontWeight:600 }}>{pct(rYtdVar)}</td>
+                    </tr>
+                  );
+                }
+                return rows;
+              })()}
               {!doctors.length && <tr><td colSpan={10} style={{ ...dtd, textAlign:"center", color:C.textMuted, padding:28 }}>Upload Excel data to see all doctors in this specialty.</td></tr>}
             </tbody>
           </table>
@@ -3570,22 +3595,9 @@ function App() {
         };
       }
     }
-    // Distribute the specialty's IP YTD across doctors proportionally to each
-    // doctor's IP MTD share. IP Dr Wise Daily doesn't carry per-doctor YTD, so
-    // this is an estimate — accurate when the doctor's IP mix is stable through
-    // the year, approximate otherwise. Marked with a small "~" badge in the UI.
-    const specIpYtd = spec?.ipYtd || 0;
-    const totalDocIpMtd = Object.values(byName).reduce((a, d) => a + (d._ipMtd || 0), 0);
-    if (specIpYtd > 0 && totalDocIpMtd > 0) {
-      for (const name in byName) {
-        const d = byName[name];
-        if (d._ipMtd > 0) {
-          const share = d._ipMtd / totalDocIpMtd;
-          d._ipYtdEst = Math.round(share * specIpYtd);
-          d.ytdActual = (d.ytdActual || 0) + d._ipYtdEst;
-        }
-      }
-    }
+    // Doctor YTD shows OP actuals only (from DSR). IP YTD is not distributed
+    // per-doctor because the DSR's IP Dr Wise Daily sheet has no per-doctor YTD
+    // and proportional estimation from MTD share is inaccurate for mid-year joiners.
     const allDoctors = Object.values(byName).sort((a, b) => (b.mtdActual||0) - (a.mtdActual||0));
 
     return { spec: spec || null, doctors: allDoctors, isIP: !!spec && spec.opMtd === 0 && spec.ipMtd > 0 };
