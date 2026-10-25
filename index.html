@@ -2262,7 +2262,7 @@ function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
           </div>
           <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"12px 16px" }}>
             <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase" }}>Doctors</div>
-            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>{doctors.filter(d => !isResigned(d.name)).length}</div>
+            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>{doctors.filter(d => !isResignedDoctor(d.name)).length}</div>
           </div>
         </div>
 
@@ -2285,8 +2285,8 @@ function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
             </thead>
             <tbody>
               {(() => {
-                const active = doctors.filter(d => !isResigned(d.name));
-                const resigned = doctors.filter(d => isResigned(d.name));
+                const active = doctors.filter(d => !isResignedDoctor(d.name));
+                const resigned = doctors.filter(d => isResignedDoctor(d.name));
                 const rows = active.map((d, i) => {
                   const dMtdVarLY = d.mtdLY ? (d.mtdActual - d.mtdLY) / d.mtdLY : 0;
                   const dYtdVarLY = d.ytdLY ? (d.ytdActual - d.ytdLY) / d.ytdLY : 0;
