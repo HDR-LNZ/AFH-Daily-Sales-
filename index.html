@@ -3389,24 +3389,33 @@ function App() {
       }));
   }, [locations, userMonthlyHistory, reportDate]);
 
-  const clinicVarianceChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && ((l.mtdLY || 0) > 0 || (l.opVolMTDLY || 0) > 0))
-      .map(l => {
-        const hasRevLY = (l.mtdLY || 0) > 0;
-        const hasVolLY = (l.opVolMTDLY || 0) > 0;
-        const revenueVar = hasRevLY ? Number((((l.totalRevenueMTD || 0) - l.mtdLY) / l.mtdLY * 100).toFixed(1)) : 0;
-        const volumeVar = hasVolLY ? Number((((l.opVolMTD || 0) - l.opVolMTDLY) / l.opVolMTDLY * 100).toFixed(1)) : 0;
+  const clinicVarianceChartData = useMemo(() => {
+    const merged = {};
+    locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && ((l.mtdLY || 0) > 0 || (l.opVolMTDLY || 0) > 0 || (l.totalRevenueMTD || 0) > 0 || (l.opVolMTD || 0) > 0))
+      .forEach(l => {
+        const key = l.location === "Karama" ? "UW Mall" : l.location;
+        if (!merged[key]) merged[key] = { revMTD: 0, revLY: 0, volMTD: 0, volLY: 0 };
+        merged[key].revMTD += (l.totalRevenueMTD || 0);
+        merged[key].revLY += (l.mtdLY || 0);
+        merged[key].volMTD += (l.opVolMTD || 0);
+        merged[key].volLY += (l.opVolMTDLY || 0);
+      });
+    return Object.entries(merged)
+      .filter(([, d]) => d.revLY > 0 || d.volLY > 0)
+      .map(([code, d]) => {
+        const hasRevLY = d.revLY > 0;
+        const hasVolLY = d.volLY > 0;
+        const revenueVar = hasRevLY ? Number(((d.revMTD - d.revLY) / d.revLY * 100).toFixed(1)) : 0;
+        const volumeVar = hasVolLY ? Number(((d.volMTD - d.volLY) / d.volLY * 100).toFixed(1)) : 0;
         return {
-          name: CLINIC_COORDS[l.location]?.label || l.location,
-          code: l.location,
+          name: CLINIC_COORDS[code]?.label || code, code,
           revenueVar, volumeVar, hasRevLY, hasVolLY,
-          revenueMTD: l.totalRevenueMTD || 0,
-          revenueLY: l.mtdLY || 0,
-          volumeMTD: l.opVolMTD || 0,
-          volumeLY: l.opVolMTDLY || 0,
+          revenueMTD: d.revMTD, revenueLY: d.revLY,
+          volumeMTD: d.volMTD, volumeLY: d.volLY,
         };
       })
-      .sort((a, b) => b.revenueVar - a.revenueVar), [locations]);
+      .sort((a, b) => b.revenueVar - a.revenueVar);
+  }, [locations]);
 
   const clinicYTDVarianceChartData = useMemo(() => {
     return clinicYTDChartData
