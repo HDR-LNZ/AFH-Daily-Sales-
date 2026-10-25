@@ -3448,16 +3448,22 @@ function App() {
   }, [clinicYTDChartData]);
 
   const volumeBridgeData = useMemo(() => {
-    // Use DSR actual YTD values (same source as executive summary card)
-    const clinics = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location));
-    // Merge Karama into UW Mall
+    // Use DSR actual YTD values from ALL locations (including excluded ones for accurate totals)
     const merged = {};
-    clinics.forEach(l => {
+    let otherV26 = 0, otherV25 = 0;
+    locations.forEach(l => {
+      const v26 = l.opVolYTD || l.opVolMTD || 0;
+      const v25 = l.opVolYTDLY || l.opVolMTDLY || 0;
+      if (EXCLUDED_MAP_LOCATIONS.has(l.location)) {
+        otherV26 += v26; otherV25 += v25;
+        return;
+      }
       const key = l.location === "Karama" ? "UW Mall" : l.location;
       if (!merged[key]) merged[key] = { name: CLINIC_COORDS[key]?.label || key, v26: 0, v25: 0 };
-      merged[key].v26 += (l.opVolYTD || l.opVolMTD || 0);
-      merged[key].v25 += (l.opVolYTDLY || l.opVolMTDLY || 0);
+      merged[key].v26 += v26;
+      merged[key].v25 += v25;
     });
+    if (otherV26 > 0 || otherV25 > 0) merged["__other"] = { name: "Other", v26: otherV26, v25: otherV25 };
     const entries = Object.values(merged).filter(d => d.v26 > 0 || d.v25 > 0);
     const total2025 = entries.reduce((s, d) => s + d.v25, 0);
     const total2026 = entries.reduce((s, d) => s + d.v26, 0);
@@ -3485,7 +3491,6 @@ function App() {
     result.yMax = Math.ceil((maxRun + pad) / 1000) * 1000;
     result.netChange = total2026 - total2025;
     result.netPct = total2025 > 0 ? ((total2026 - total2025) / total2025 * 100).toFixed(1) : 0;
-    console.log('[BRIDGE] total2025:', total2025, 'total2026:', total2026, 'net:', total2026 - total2025, 'clinics:', entries.length);
     return result;
   }, [locations]);
 
