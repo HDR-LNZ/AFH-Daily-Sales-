@@ -3448,32 +3448,38 @@ function App() {
   }, [clinicYTDChartData]);
 
   const volumeBridgeData = useMemo(() => {
-    // Use DSR actual YTD values from ALL locations (including excluded ones for accurate totals)
-    const merged = {};
-    let otherV26 = 0, otherV25 = 0;
-    locations.forEach(l => {
-      const v26 = l.opVolYTD || l.opVolMTD || 0;
-      const v25 = l.opVolYTDLY || l.opVolMTDLY || 0;
-      if (EXCLUDED_MAP_LOCATIONS.has(l.location)) {
-        otherV26 += v26; otherV25 += v25;
-        return;
-      }
-      const key = l.location === "Karama" ? "UW Mall" : l.location;
-      if (!merged[key]) merged[key] = { name: CLINIC_COORDS[key]?.label || key, v26: 0, v25: 0 };
-      merged[key].v26 += v26;
-      merged[key].v25 += v25;
+    // Compute totals from archived monthly history (same as exec summary narrative)
+    const allHist = [...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
+      .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, []);
+    let grandV26 = allHist.reduce((a, m) => a + (m.dsr?.opMtdVolume || 0), 0);
+    let grandV25 = allHist.reduce((a, m) => a + (m.clinics || []).reduce((s, c) => s + (c.volLY || 0), 0), 0);
+    const curInArchive = allHist.some(m => {
+      const rd = new Date(reportDate); if (isNaN(rd.getTime())) return false;
+      const ck = rd.toLocaleDateString('en-US', {month:'short'}) + "-" + rd.getFullYear();
+      return m.monthKey === ck || m.monthKey === rd.toLocaleDateString('en-US', {month:'short'});
     });
-    if (otherV26 > 0 || otherV25 > 0) merged["__other"] = { name: "Other", v26: otherV26, v25: otherV25 };
-    const entries = Object.values(merged).filter(d => d.v26 > 0 || d.v25 > 0);
-    const total2025 = entries.reduce((s, d) => s + d.v25, 0);
-    const total2026 = entries.reduce((s, d) => s + d.v26, 0);
-    const deltas = entries
-      .map(d => ({ name: d.name, delta: d.v26 - d.v25 }))
-      .sort((a, b) => b.delta - a.delta);
-    const result = [{ name: '2025 YTD', base: 0, val: total2025, isTotal: true, delta: 0 }];
-    let running = total2025;
-    let minRun = total2025, maxRun = total2025;
-    deltas.forEach(d => {
+    if (!curInArchive && dsrTotals.opMtdVolume) {
+      grandV26 += dsrTotals.opMtdVolume;
+      grandV25 += dsrTotals.opMtdLYVolume || 0;
+    }
+    // Per-clinic breakdown from clinicYTDChartData
+    const clinicDeltas = clinicYTDChartData
+      .map(c => ({ name: c.name, delta: (c.vol2026 || 0) - (c.vol2025 || 0), v26: c.vol2026 || 0, v25: c.vol2025 || 0 }))
+      .filter(d => d.v26 > 0 || d.v25 > 0);
+    const clinicSumV26 = clinicDeltas.reduce((s, d) => s + d.v26, 0);
+    const clinicSumV25 = clinicDeltas.reduce((s, d) => s + d.v25, 0);
+    // "Other" captures the gap (excluded clinics, rounding, etc.)
+    const otherV26 = grandV26 - clinicSumV26;
+    const otherV25 = grandV25 - clinicSumV25;
+    const allDeltas = [...clinicDeltas];
+    if (Math.abs(otherV26 - otherV25) > 0 || otherV26 > 0 || otherV25 > 0) {
+      allDeltas.push({ name: "Other", delta: otherV26 - otherV25, v26: otherV26, v25: otherV25 });
+    }
+    allDeltas.sort((a, b) => b.delta - a.delta);
+    const result = [{ name: '2025 YTD', base: 0, val: grandV25, isTotal: true, delta: 0 }];
+    let running = grandV25;
+    let minRun = grandV25, maxRun = grandV25;
+    allDeltas.forEach(d => {
       if (d.delta >= 0) {
         result.push({ name: d.name, base: running, val: d.delta, isTotal: false, delta: d.delta });
         running += d.delta;
@@ -3484,15 +3490,15 @@ function App() {
       minRun = Math.min(minRun, running);
       maxRun = Math.max(maxRun, running);
     });
-    result.push({ name: '2026 YTD', base: 0, val: total2026, isTotal: true, delta: 0 });
+    result.push({ name: '2026 YTD', base: 0, val: grandV26, isTotal: true, delta: 0 });
     const range = maxRun - minRun;
     const pad = range * 0.18;
     result.yMin = Math.max(0, Math.floor((minRun - pad) / 1000) * 1000);
     result.yMax = Math.ceil((maxRun + pad) / 1000) * 1000;
-    result.netChange = total2026 - total2025;
-    result.netPct = total2025 > 0 ? ((total2026 - total2025) / total2025 * 100).toFixed(1) : 0;
+    result.netChange = grandV26 - grandV25;
+    result.netPct = grandV25 > 0 ? ((grandV26 - grandV25) / grandV25 * 100).toFixed(1) : 0;
     return result;
-  }, [locations]);
+  }, [clinicYTDChartData, userMonthlyHistory, reportDate, dsrTotals]);
 
   // Filter out minor specialties (< AED 10K MTD and < AED 50K YTD) from charts
   const chartSpecialties = useMemo(() => sorted.filter(s => s.mtdActual >= 10000 || s.ytdActual >= 50000), [sorted]);
