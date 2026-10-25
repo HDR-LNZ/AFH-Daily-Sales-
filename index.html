@@ -554,20 +554,24 @@ function isAlliedNonDoctor(name) {
   return norm.startsWith('mr ') || norm.startsWith('ms ') || norm.startsWith('mrs ');
 }
 
+function isShownAsResigned(name) {
+  if (isResignedDoctor(name)) return true;
+  const url = getDoctorProfileUrl(name);
+  if (url) return false;
+  if (isAlliedNonDoctor(name)) return false;
+  if (isActiveOverride(name)) return false;
+  return true;
+}
+
 function DoctorName({ name }) {
-  // Explicit resignation overrides everything: no link, no CBD badge, plain text + Resigned tag
-  if (isResignedDoctor(name)) {
+  if (isShownAsResigned(name)) {
     return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span> <span style={{ fontSize:9, color:"#ef4444", fontWeight:600, opacity:0.8 }}>Resigned</span></span>;
   }
   const url = getDoctorProfileUrl(name);
   const cbd = isCBD(name);
-  const allied = !url && isAlliedNonDoctor(name);
-  // Newly joined doctor without a website profile yet — keep active classification
-  const activeOverride = !url && !allied && isActiveOverride(name);
   const cbdLabel = cbd ? <span style={{ fontSize:9, color:"#f59e0b", fontWeight:600, marginLeft:4 }}>CBD</span> : null;
   if (url) return <span><a href={url} target="_blank" rel="noopener noreferrer" style={{ color:C.primaryLight, textDecoration:"none", fontWeight:600 }} onMouseEnter={(e) => e.target.style.textDecoration="underline"} onMouseLeave={(e) => e.target.style.textDecoration="none"}>{name}</a>{cbdLabel}</span>;
-  if (allied || activeOverride) return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span>{cbdLabel}</span>;
-  return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span> <span style={{ fontSize:9, color:"#ef4444", fontWeight:600, opacity:0.8 }}>Resigned</span>{cbdLabel}</span>;
+  return <span><span style={{ fontWeight:600, color:C.text }}>{name}</span>{cbdLabel}</span>;
 }
 
 // ─── Dubai Map Constants ────────────────────────────────────────────────────
@@ -2262,7 +2266,7 @@ function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
           </div>
           <div style={{ background:C.cardBg, border:"1px solid " + C.border, borderRadius:10, padding:"12px 16px" }}>
             <div style={{ fontSize:10, fontWeight:600, color:C.textMuted, textTransform:"uppercase" }}>Doctors</div>
-            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>{doctors.filter(d => !isResignedDoctor(d.name)).length}</div>
+            <div style={{ fontSize:18, fontWeight:800, color:C.text, marginTop:4 }}>{doctors.filter(d => !isShownAsResigned(d.name)).length}</div>
           </div>
         </div>
 
@@ -2285,8 +2289,8 @@ function SpecialtyDrillDown({ data, doctorLocations, onClose }) {
             </thead>
             <tbody>
               {(() => {
-                const active = doctors.filter(d => !isResignedDoctor(d.name));
-                const resigned = doctors.filter(d => isResignedDoctor(d.name));
+                const active = doctors.filter(d => !isShownAsResigned(d.name));
+                const resigned = doctors.filter(d => isShownAsResigned(d.name));
                 const rows = active.map((d, i) => {
                   const dMtdVarLY = d.mtdLY ? (d.mtdActual - d.mtdLY) / d.mtdLY : 0;
                   const dYtdVarLY = d.ytdLY ? (d.ytdActual - d.ytdLY) / d.ytdLY : 0;
