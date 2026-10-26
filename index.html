@@ -5555,28 +5555,28 @@ function App() {
               <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:16 }}>
                 {sortedClinics.map((clinic, ci) => {
                   const color = PALETTE[ci % PALETTE.length];
-                  const entries = mergedLog.filter(e => e.clinic === clinic);
+                  const rawEntries = mergedLog.filter(e => e.clinic === clinic);
+                  // Pre-merge entries per date so delta calc uses consistent sums
+                  const byDate = {};
+                  rawEntries.forEach(e => {
+                    if (!byDate[e.date]) byDate[e.date] = { rev: 0, vol: 0, mtdRev: null, mtdVol: null };
+                    byDate[e.date].rev += (e.rev || 0);
+                    byDate[e.date].vol += (e.vol || 0);
+                    if (e.mtdRev != null) byDate[e.date].mtdRev = (byDate[e.date].mtdRev || 0) + e.mtdRev;
+                    if (e.mtdVol != null) byDate[e.date].mtdVol = (byDate[e.date].mtdVol || 0) + e.mtdVol;
+                  });
                   const chartDays = dates.map((d, di) => {
-                    const dayEntries = entries.filter(e => e.date === d);
-                    if (dayEntries.length === 0) return null;
-                    const entry = dayEntries.length === 1 ? dayEntries[0] : {
-                      date: d, clinic,
-                      rev: dayEntries.reduce((a,e) => a + (e.rev||0), 0),
-                      vol: dayEntries.reduce((a,e) => a + (e.vol||0), 0),
-                      mtdRev: dayEntries.some(e => e.mtdRev != null) ? dayEntries.reduce((a,e) => a + (e.mtdRev||0), 0) : null,
-                      mtdVol: dayEntries.some(e => e.mtdVol != null) ? dayEntries.reduce((a,e) => a + (e.mtdVol||0), 0) : null,
-                    };
+                    const entry = byDate[d];
+                    if (!entry) return null;
                     const dt = new Date(d);
                     const valid = !isNaN(dt.getTime());
                     const dow = valid ? dayNames[dt.getDay()] : "";
                     const dayNum = valid ? dt.getDate() : "";
                     const label = (dow && dayNum) ? dow + " " + dayNum : d;
-                    // New format (mtdRev): compute daily as delta between consecutive MTDs
-                    // If there's a gap between dates, distribute the delta evenly
                     let rev, vol;
                     if (entry.mtdRev != null) {
                       const prevDate = dates[di - 1];
-                      const prevEntry = prevDate ? entries.find(e => e.date === prevDate) : null;
+                      const prevEntry = prevDate ? byDate[prevDate] : null;
                       if (prevEntry && prevEntry.mtdRev != null) {
                         const totalDelta = Math.max(0, entry.mtdRev - prevEntry.mtdRev);
                         const totalVolDelta = Math.max(0, (entry.mtdVol || 0) - (prevEntry.mtdVol || 0));
@@ -5586,8 +5586,8 @@ function App() {
                         rev = Math.round(totalDelta / daysBetween);
                         vol = Math.round(totalVolDelta / daysBetween);
                       } else {
-                        const dt = new Date(d);
-                        const dayOfMonth = !isNaN(dt.getTime()) ? dt.getDate() : (di + 1);
+                        const dt2 = new Date(d);
+                        const dayOfMonth = !isNaN(dt2.getTime()) ? dt2.getDate() : (di + 1);
                         rev = Math.round(entry.mtdRev / dayOfMonth);
                         vol = Math.round((entry.mtdVol || 0) / dayOfMonth);
                       }
@@ -5598,9 +5598,10 @@ function App() {
                     return { name: label, rev, vol };
                   }).filter(d => d && (d.rev > 0 || d.vol > 0));
                   if (chartDays.length === 0) return null;
-                  const lastEntry = entries[entries.length - 1];
-                  const totalRev = lastEntry?.mtdRev || chartDays.reduce((a,d) => a + (d.rev || 0), 0);
-                  const totalVol = lastEntry?.mtdVol || chartDays.reduce((a,d) => a + (d.vol || 0), 0);
+                  const lastDate = dates[dates.length - 1];
+                  const lastMerged = lastDate ? byDate[lastDate] : null;
+                  const totalRev = lastMerged?.mtdRev || chartDays.reduce((a,d) => a + (d.rev || 0), 0);
+                  const totalVol = lastMerged?.mtdVol || chartDays.reduce((a,d) => a + (d.vol || 0), 0);
                   const avgVol = chartDays.length ? Math.round(totalVol / chartDays.length) : 0;
                   const avgRev = chartDays.length ? Math.round(totalRev / chartDays.length) : 0;
                   const label = CLINIC_COORDS[clinic]?.label || clinic;
