@@ -1015,6 +1015,8 @@ function parseExcelFile(data) {
         if (cell && !['op','pharmacy','ip','total','for the day','actual','last year','volume',''].includes(cell) && !/month|date|budget/i.test(cell)) break;
         volStartRow = i + 1;
       }
+      // Track the largest MTD row as the volume total (DSR mislabels the total row)
+      let volTotalCandidate = null;
       for (let i = volStartRow; i < volStartRow + 25; i++) {
         const r = dsRows2[i]; if (!r) continue;
         const name = (r[0] && typeof r[0] === 'string' ? r[0] : null) || (r[1] && typeof r[1] === 'string' ? r[1] : null);
@@ -1026,12 +1028,10 @@ function parseExcelFile(data) {
         if (/corporate|gatekeep|homecare|closed|total\s*(care|revenue|volume)|muteena|sonapur/i.test(vCol6)) continue;
         if (/corporate|gatekeep|homecare|closed/i.test(vCol2)) continue;
         const matchCode = _matchClinic(trimmed, dsrClinicMap) || normLoc(trimmed);
-        if (EXCLUDED_MAP_LOCATIONS.has(matchCode)) continue;
         const todayOP = volTodayOPCol >= 0 ? Math.round(r[volTodayOPCol] || 0) : Math.round(r[7] || 0);
         const todayTotal = Math.round(r[10] || 0);
         const todayVol = todayOP || todayTotal;
         const mtdOP = Math.round(r[12] || 0);
-        // Fallback: scan for MTD value
         let mtdVal = mtdOP;
         if (mtdVal === 0) {
           for (let c = volTodayTotalCol + 1; c <= volTodayTotalCol + 10; c++) {
@@ -1042,6 +1042,11 @@ function parseExcelFile(data) {
         const lyVal = Math.round(r[17] || 0);
         const ytdVal = Math.round(r[37] || 0);
         const ytdLYVal = Math.round(r[42] || 0);
+        // Detect the volume total row: its MTD is much larger than any single clinic
+        if (mtdVal > 10000 && (!volTotalCandidate || mtdVal > volTotalCandidate.mtd)) {
+          volTotalCandidate = { mtd: mtdVal, mtdLY: lyVal, ytd: ytdVal, ytdLY: ytdLYVal, today: todayVol };
+        }
+        // Store ALL clinics including excluded ones (for bridge "Other")
         if (!dsrVolMap[matchCode]) {
           dsrVolMap[matchCode] = { opVolMTD: mtdVal || todayVol, opVolMTDLY: lyVal, opVolYTD: ytdVal, opVolYTDLY: ytdLYVal, opVolToday: todayVol };
         } else {
@@ -1049,7 +1054,13 @@ function parseExcelFile(data) {
           if (ytdVal) dsrVolMap[matchCode].opVolYTD = ytdVal;
           if (ytdLYVal) dsrVolMap[matchCode].opVolYTDLY = ytdLYVal;
         }
-
+      }
+      // Use volume total row for authoritative YTD totals
+      if (volTotalCandidate) {
+        dsrTotals.opMtdVolume = volTotalCandidate.mtd;
+        dsrTotals.opMtdLYVolume = volTotalCandidate.mtdLY;
+        dsrTotals.opYtdVolume = volTotalCandidate.ytd;
+        dsrTotals.opYtdLYVolume = volTotalCandidate.ytdLY;
       }
       locations.forEach(loc => {
         const dsr = dsrClinicMap[loc.location];
@@ -3491,34 +3502,39 @@ function App() {
   }, [clinicYTDChartData]);
 
   const volumeBridgeData = useMemo(() => {
-    // Compute totals from archived monthly history (same as exec summary narrative)
-    const allHist = [...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
-      .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, []);
-    let grandV26 = allHist.reduce((a, m) => a + (m.dsr?.opMtdVolume || 0), 0);
-    let grandV25 = allHist.reduce((a, m) => a + (m.clinics || []).reduce((s, c) => s + (c.volLY || 0), 0), 0);
-    const curInArchive = allHist.some(m => {
-      const rd = new Date(reportDate); if (isNaN(rd.getTime())) return false;
-      const ck = rd.toLocaleDateString('en-US', {month:'short'}) + "-" + rd.getFullYear();
-      return m.monthKey === ck || m.monthKey === rd.toLocaleDateString('en-US', {month:'short'});
+    // Use DSR's authoritative YTD volume per clinic (opVolYTD from col 37, opVolYTDLY from col 42)
+    const merged = {};
+    let otherV26 = 0, otherV25 = 0;
+    locations.forEach(l => {
+      const v26 = l.opVolYTD || l.opVolMTD || 0;
+      const v25 = l.opVolYTDLY || l.opVolMTDLY || 0;
+      if (v26 === 0 && v25 === 0) return;
+      if (EXCLUDED_MAP_LOCATIONS.has(l.location)) {
+        otherV26 += v26; otherV25 += v25;
+        return;
+      }
+      const key = l.location === "Karama" ? "UW Mall" : l.location;
+      if (!merged[key]) merged[key] = { name: CLINIC_COORDS[key]?.label || key, v26: 0, v25: 0 };
+      merged[key].v26 += v26;
+      merged[key].v25 += v25;
     });
-    if (!curInArchive && dsrTotals.opMtdVolume) {
-      grandV26 += dsrTotals.opMtdVolume;
-      grandV25 += dsrTotals.opMtdLYVolume || 0;
+    if (otherV26 > 0 || otherV25 > 0) merged["__other"] = { name: "Other", v26: otherV26, v25: otherV25 };
+    const entries = Object.values(merged).filter(d => d.v26 > 0 || d.v25 > 0);
+    // Use DSR total row for authoritative grand totals (falls back to per-clinic sum)
+    const clinicSum26 = entries.reduce((s, d) => s + d.v26, 0);
+    const clinicSum25 = entries.reduce((s, d) => s + d.v25, 0);
+    const grandV26 = dsrTotals.opYtdVolume || clinicSum26;
+    const grandV25 = dsrTotals.opYtdLYVolume || clinicSum25;
+    // If DSR total differs from clinic sum, adjust "Other" to absorb the gap
+    if (grandV26 !== clinicSum26 || grandV25 !== clinicSum25) {
+      const gap26 = grandV26 - clinicSum26;
+      const gap25 = grandV25 - clinicSum25;
+      if (merged["__other"]) { merged["__other"].v26 += gap26; merged["__other"].v25 += gap25; }
+      else if (gap26 !== 0 || gap25 !== 0) merged["__other"] = { name: "Other", v26: otherV26 + gap26, v25: otherV25 + gap25 };
     }
-    // Per-clinic breakdown from clinicYTDChartData
-    const clinicDeltas = clinicYTDChartData
-      .map(c => ({ name: c.name, delta: (c.vol2026 || 0) - (c.vol2025 || 0), v26: c.vol2026 || 0, v25: c.vol2025 || 0 }))
-      .filter(d => d.v26 > 0 || d.v25 > 0);
-    const clinicSumV26 = clinicDeltas.reduce((s, d) => s + d.v26, 0);
-    const clinicSumV25 = clinicDeltas.reduce((s, d) => s + d.v25, 0);
-    // "Other" captures the gap (excluded clinics, rounding, etc.)
-    const otherV26 = grandV26 - clinicSumV26;
-    const otherV25 = grandV25 - clinicSumV25;
-    const allDeltas = [...clinicDeltas];
-    if (Math.abs(otherV26 - otherV25) > 0 || otherV26 > 0 || otherV25 > 0) {
-      allDeltas.push({ name: "Other", delta: otherV26 - otherV25, v26: otherV26, v25: otherV25 });
-    }
-    allDeltas.sort((a, b) => b.delta - a.delta);
+    const allDeltas = Object.values(merged).filter(d => d.v26 > 0 || d.v25 > 0)
+      .map(d => ({ name: d.name, delta: d.v26 - d.v25 }))
+      .sort((a, b) => b.delta - a.delta);
     const result = [{ name: '2025 YTD', base: 0, val: grandV25, isTotal: true, delta: 0 }];
     let running = grandV25;
     let minRun = grandV25, maxRun = grandV25;
@@ -3541,7 +3557,7 @@ function App() {
     result.netChange = grandV26 - grandV25;
     result.netPct = grandV25 > 0 ? ((grandV26 - grandV25) / grandV25 * 100).toFixed(1) : 0;
     return result;
-  }, [clinicYTDChartData, userMonthlyHistory, reportDate, dsrTotals]);
+  }, [locations, dsrTotals]);
 
   // Filter out minor specialties (< AED 10K MTD and < AED 50K YTD) from charts
   const chartSpecialties = useMemo(() => sorted.filter(s => s.mtdActual >= 10000 || s.ytdActual >= 50000), [sorted]);
@@ -3634,20 +3650,24 @@ function App() {
     if (totals.ytdVarLY < 0) lines.push("YTD revenue of AED " + fmtK(totals.ytdActual) + " is " + ytdVarLY + "% below last year (AED " + fmtK(totals.ytdLY) + "), indicating a need for focused recovery strategies.");
     else lines.push("YTD revenue of AED " + fmtK(totals.ytdActual) + " is +" + ytdVarLY + "% above last year.");
 
-    // YTD OP Volume from archived months + current
-    const allHistMonths = [...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
-      .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, []);
-    let ytdOpVol = allHistMonths.reduce((a, m) => a + (m.dsr?.opMtdVolume || 0), 0);
-    let ytdOpVolLY = allHistMonths.reduce((a, m) => a + (m.clinics || []).reduce((s, c) => s + (c.volLY || 0), 0), 0);
-    const currentMonthInArchive = allHistMonths.some(m => {
-      const rd = new Date(reportDate);
-      if (isNaN(rd.getTime())) return false;
-      const curKey = rd.toLocaleDateString('en-US', {month:'short'}) + "-" + rd.getFullYear();
-      return m.monthKey === curKey || m.monthKey === rd.toLocaleDateString('en-US', {month:'short'});
-    });
-    if (!currentMonthInArchive && dsrTotals.opMtdVolume) {
-      ytdOpVol += dsrTotals.opMtdVolume;
-      ytdOpVolLY += dsrTotals.opMtdLYVolume || 0;
+    // YTD OP Volume — prefer DSR's authoritative total row, fall back to archived sums
+    let ytdOpVol = dsrTotals.opYtdVolume || 0;
+    let ytdOpVolLY = dsrTotals.opYtdLYVolume || 0;
+    if (!ytdOpVol) {
+      const allHistMonths = [...(userMonthlyHistory || []), ...MONTHLY_HISTORY]
+        .reduce((acc, m) => { if (!acc.find(x => x.month === m.month || x.monthKey === m.monthKey)) acc.push(m); return acc; }, []);
+      ytdOpVol = allHistMonths.reduce((a, m) => a + (m.dsr?.opMtdVolume || 0), 0);
+      ytdOpVolLY = allHistMonths.reduce((a, m) => a + (m.clinics || []).reduce((s, c) => s + (c.volLY || 0), 0), 0);
+      const currentMonthInArchive = allHistMonths.some(m => {
+        const rd = new Date(reportDate);
+        if (isNaN(rd.getTime())) return false;
+        const curKey = rd.toLocaleDateString('en-US', {month:'short'}) + "-" + rd.getFullYear();
+        return m.monthKey === curKey || m.monthKey === rd.toLocaleDateString('en-US', {month:'short'});
+      });
+      if (!currentMonthInArchive && dsrTotals.opMtdVolume) {
+        ytdOpVol += dsrTotals.opMtdVolume;
+        ytdOpVolLY += dsrTotals.opMtdLYVolume || 0;
+      }
     }
     if (ytdOpVol > 0) {
       const ytdVolVar = ytdOpVolLY ? ((ytdOpVol - ytdOpVolLY) / ytdOpVolLY * 100).toFixed(1) : null;
@@ -4128,8 +4148,8 @@ function App() {
             );
           })()}
           {(() => {
-            const ytdVol = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolYTD || l.opVolMTD || 0), 0);
-            const ytdVolLY = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolYTDLY || l.opVolMTDLY || 0), 0);
+            const ytdVol = dsrTotals.opYtdVolume || locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolYTD || l.opVolMTD || 0), 0);
+            const ytdVolLY = dsrTotals.opYtdLYVolume || locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).reduce((a,l) => a + (l.opVolYTDLY || l.opVolMTDLY || 0), 0);
             const volVar = ytdVolLY ? (ytdVol - ytdVolLY) / ytdVolLY : 0;
             return (
               <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
