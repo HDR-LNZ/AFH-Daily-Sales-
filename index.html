@@ -4330,7 +4330,6 @@ function App() {
               return m.monthKey === curKey || m.monthKey === rd.toLocaleDateString('en-US', {month:'short'});
             });
             if (!currentInArchive) {
-              const karamaLoc = locations.find(l => l.location === "Karama");
               locations.forEach(l => {
                 if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
                 const effectiveLoc = l.location === "Karama" ? "UW Mall" : l.location;
@@ -4340,6 +4339,28 @@ function App() {
                 ytdVolLYByClinic[effectiveLoc] = (ytdVolLYByClinic[effectiveLoc] || 0) + (l.opVolMTDLY || 0);
               });
             }
+            // Override with DSR's actual YTD volume (authoritative, more accurate than archived sums)
+            locations.forEach(l => {
+              if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
+              const effectiveLoc = l.location === "Karama" ? "UW Mall" : l.location;
+              if (l.opVolYTD && l.opVolYTD > (l.opVolMTD || 0)) {
+                ytdVolByClinic[effectiveLoc] = l.opVolYTD;
+              }
+              if (l.opVolYTDLY && l.opVolYTDLY > (l.opVolMTDLY || 0)) {
+                ytdVolLYByClinic[effectiveLoc] = l.opVolYTDLY;
+              }
+              if (l.totalRevenueYTD && l.totalRevenueYTD > (l.totalRevenueMTD || 0)) {
+                ytdRevByClinic[effectiveLoc] = l.totalRevenueYTD;
+              }
+              if (l.ytdLY && l.ytdLY > (l.mtdLY || 0)) {
+                ytdRevLYByClinic[effectiveLoc] = l.ytdLY;
+              }
+            });
+            // Handle Karama merge for DSR overrides
+            if (ytdVolByClinic["Karama"]) { ytdVolByClinic["UW Mall"] = (ytdVolByClinic["UW Mall"] || 0) + ytdVolByClinic["Karama"]; delete ytdVolByClinic["Karama"]; }
+            if (ytdVolLYByClinic["Karama"]) { ytdVolLYByClinic["UW Mall"] = (ytdVolLYByClinic["UW Mall"] || 0) + ytdVolLYByClinic["Karama"]; delete ytdVolLYByClinic["Karama"]; }
+            if (ytdRevByClinic["Karama"]) { ytdRevByClinic["UW Mall"] = (ytdRevByClinic["UW Mall"] || 0) + ytdRevByClinic["Karama"]; delete ytdRevByClinic["Karama"]; }
+            if (ytdRevLYByClinic["Karama"]) { ytdRevLYByClinic["UW Mall"] = (ytdRevLYByClinic["UW Mall"] || 0) + ytdRevLYByClinic["Karama"]; delete ytdRevLYByClinic["Karama"]; }
             const ppcYTDData = Object.keys(ytdRevByClinic)
               .filter(loc => ytdVolByClinic[loc] > 0)
               .map(loc => ({
