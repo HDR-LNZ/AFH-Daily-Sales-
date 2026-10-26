@@ -3318,12 +3318,16 @@ function App() {
     return { above, below: mtdWithLY.length - above, growingYoY: ytdWithLY.filter(s => s.ytdVarLY > 0).length, total: mtdWithLY.length };
   }, [mergedSpecialties]);
 
-  const clinicChartData = useMemo(() =>
-    [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD).map(l => ({
-      name: CLINIC_COORDS[l.location]?.label || l.location,
-      code: l.location,
-      revenue: l.totalRevenueMTD,
-    })), [locations]);
+  const clinicChartData = useMemo(() => {
+    const merged = {};
+    locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location)).forEach(l => {
+      const key = l.location === "Karama" ? "UW Mall" : l.location;
+      merged[key] = (merged[key] || 0) + (l.totalRevenueMTD || 0);
+    });
+    return Object.entries(merged).sort(([,a],[,b]) => b - a).map(([code, rev]) => ({
+      name: CLINIC_COORDS[code]?.label || code, code, revenue: rev,
+    }));
+  }, [locations]);
 
   const clinicDailyRevChartData = useMemo(() => {
     const days = dsrTotals.daysElapsed || 1;
