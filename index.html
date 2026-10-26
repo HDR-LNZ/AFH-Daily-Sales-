@@ -3654,7 +3654,15 @@ function App() {
       lines.push(clinicalUnder.length + " of " + specialties.length + " specialties are underperforming vs last year at YTD level. Key areas of concern: " + worst.join(', ') + ".");
     }
 
-    const rankedClinics = [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueMTD > 0).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD);
+    // Merge Karama into UW Mall for clinic rankings
+    const mergedClinicMap = {};
+    locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueMTD > 0).forEach(l => {
+      const key = l.location === "Karama" ? "UW Mall" : l.location;
+      if (!mergedClinicMap[key]) mergedClinicMap[key] = { location: key, totalRevenueMTD: 0, mtdLY: 0 };
+      mergedClinicMap[key].totalRevenueMTD += (l.totalRevenueMTD || 0);
+      mergedClinicMap[key].mtdLY += (l.mtdLY || 0);
+    });
+    const rankedClinics = Object.values(mergedClinicMap).sort((a,b) => b.totalRevenueMTD - a.totalRevenueMTD);
     const primaryCareClinics = rankedClinics.filter(l => l.location !== "DSU");
     const top3 = primaryCareClinics.slice(0, 3);
     if (top3.length > 0) {
@@ -3662,7 +3670,7 @@ function App() {
       lines.push("Top performing primary care clinics: " + top3Text + ".");
     }
     if (rankedClinics.length >= 4) {
-      const bottom3 = rankedClinics.slice(-3).reverse(); // worst first
+      const bottom3 = rankedClinics.slice(-3).reverse();
       const txt = bottom3.map(l => (CLINIC_COORDS[l.location]?.label || l.location) + " (AED " + fmt(l.totalRevenueMTD) + ")").join(", ");
       lines.push("Bottom 3 clinics — MTD: " + txt + ".");
     }
@@ -3678,7 +3686,9 @@ function App() {
       const cbdIpMtd = cbdDocs.reduce((a, d) => a + (ipMtdByName[d.name] || 0), 0);
       const cbdMtd = cbdMtdOP + cbdIpMtd;
       const cbdMtdLY = cbdDocs.reduce((a, d) => a + (d.mtdLY || 0), 0);
-      lines.push(cbdDocs.length + " CBD doctors generating AED " + fmt(cbdMtd) + " MTD (vs LY: AED " + fmt(cbdMtdLY) + "). Potential for increased utilization.");
+      const cbdPctOfTotal = totals.mtdActual ? ((cbdMtd / totals.mtdActual) * 100).toFixed(1) : 0;
+      const cbdGrowth = cbdMtdLY > 0 ? (((cbdMtd - cbdMtdLY) / cbdMtdLY) * 100).toFixed(1) : null;
+      lines.push(cbdDocs.length + " CBD doctors generating AED " + fmt(cbdMtd) + " MTD (" + cbdPctOfTotal + "% of total revenue" + (cbdGrowth !== null ? ", " + (cbdGrowth >= 0 ? "+" : "") + cbdGrowth + "% vs LY" : "") + ").");
     }
 
     // Dubai South vs total MTD
@@ -3698,7 +3708,7 @@ function App() {
     const avgVolPerDayLY = Math.round(totalVolLY / days);
     if (totalVolMTD > 0) {
       const volVar = totalVolLY ? ((totalVolMTD - totalVolLY) / totalVolLY * 100).toFixed(1) : 0;
-      const growingClinics = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.opVolMTD > 0 && l.opVolMTDLY > 0 && l.opVolMTD > l.opVolMTDLY).map(l => CLINIC_COORDS[l.location]?.label || l.location);
+      const growingClinics = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.location !== "Karama" && l.opVolMTD > 0 && l.opVolMTDLY > 0 && l.opVolMTD > l.opVolMTDLY).map(l => CLINIC_COORDS[l.location]?.label || l.location);
       lines.push("OP volume: " + fmt(totalVolMTD) + " visits MTD (" + avgVolPerDay + " avg/day), " + (totalVolLY ? volVar + "% vs LY (" + fmt(totalVolLY) + " visits, " + avgVolPerDayLY + " avg/day)" : "no LY data") + "." + (growingClinics.length > 0 ? " Volume growth at: " + growingClinics.join(", ") + "." : ""));
     }
 
@@ -3708,7 +3718,7 @@ function App() {
     // TODAY'S OUTLIERS
     if (doctors.length > 0 && totals.todayRev > 0) {
       // Today's avg revenue per doctor (for doctors who worked today)
-      const docsWithToday = doctors.filter(d => (d.today||0) > 0);
+      const docsWithToday = doctors.filter(d => (d.today||0) > 0 && !isShownAsResigned(d.name));
       if (docsWithToday.length > 0) {
         const todayAvg = docsWithToday.reduce((a,d) => a + d.today, 0) / docsWithToday.length;
         // Doctors with today's revenue >3x the daily doctor average
