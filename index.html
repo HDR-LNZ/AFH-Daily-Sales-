@@ -55,7 +55,8 @@
     font-family: Inter, -apple-system, sans-serif;
   }
   .rev-tooltip::before { display: none; }
-  .leaflet-container { background: #1e2230 !important; }
+  .leaflet-container { background: #141413 !important; }
+  .dark-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.6) contrast(1.2) saturate(0.3); }
   @media (max-width: 768px) {
     .leaflet-control-zoom { transform: scale(0.8); }
     html, body { overflow-x: hidden; width: 100%; }
@@ -1961,8 +1962,9 @@ function DubaiMap({ locations, onClinicClick, isMobile }) {
         attributionControl: false,
         doubleClickZoom: false,
       });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        className: 'dark-tiles',
       }).addTo(map);
       mapInstanceRef.current = map;
     }
