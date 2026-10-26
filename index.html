@@ -3315,13 +3315,20 @@ function App() {
 
   const clinicDailyRevChartData = useMemo(() => {
     const days = dsrTotals.daysElapsed || 1;
-    return [...locations].filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueMTD > 0)
-      .sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD)
-      .map(l => ({
-        name: CLINIC_COORDS[l.location]?.label || l.location,
-        code: l.location,
-        "2026": Math.round(l.totalRevenueMTD / days),
-        "2025": Math.round((l.mtdLY || 0) / days),
+    const merged = {};
+    locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.totalRevenueMTD > 0).forEach(l => {
+      const key = l.location === "Karama" ? "UW Mall" : l.location;
+      if (!merged[key]) merged[key] = { mtd: 0, ly: 0 };
+      merged[key].mtd += (l.totalRevenueMTD || 0);
+      merged[key].ly += (l.mtdLY || 0);
+    });
+    return Object.entries(merged)
+      .sort(([,a], [,b]) => b.mtd - a.mtd)
+      .map(([code, d]) => ({
+        name: CLINIC_COORDS[code]?.label || code,
+        code,
+        "2026": Math.round(d.mtd / days),
+        "2025": Math.round(d.ly / days),
       }));
   }, [locations, dsrTotals]);
 
