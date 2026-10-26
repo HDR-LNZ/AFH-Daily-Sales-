@@ -4194,6 +4194,47 @@ function App() {
               </div>
             );
           })()}
+          {(() => {
+            const daysElapsed = dsrTotals.daysElapsed || 1;
+            const rd = new Date(reportDate);
+            const daysInMonth = !isNaN(rd.getTime()) ? new Date(rd.getFullYear(), rd.getMonth() + 1, 0).getDate() : 30;
+            const projRev = Math.round(totals.mtdActual / daysElapsed * daysInMonth);
+            const projVol = Math.round((dsrTotals.opMtdVolume || 0) / daysElapsed * daysInMonth);
+            const projVolLY = dsrTotals.opMtdLYVolume ? Math.round(dsrTotals.opMtdLYVolume / daysElapsed * daysInMonth) : 0;
+            const budgetVar = totals.mtdBudget ? (projRev - totals.mtdBudget) / totals.mtdBudget : 0;
+            return (
+              <React.Fragment>
+                <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
+                  <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #8b5cf6, #a78bfa)" }} />
+                  <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Projected Revenue (Month)</div>
+                  <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
+                    <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>AED {fmtK(projRev)}</div>
+                    <div style={{ fontSize:12, color:C.textMuted }}>{daysElapsed} of {daysInMonth} days</div>
+                  </div>
+                  <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+                    {totals.mtdBudget > 0 && <span style={{ fontSize:10, fontWeight:600, color:varColor(budgetVar), background:varBg(budgetVar), padding:"1px 6px", borderRadius:4 }}>vs Budget {pct(budgetVar)}</span>}
+                  </div>
+                  <div style={{ marginTop:10, background:C.border, borderRadius:6, height:6, overflow:"hidden" }}>
+                    <div style={{ height:"100%", borderRadius:6, background:"linear-gradient(90deg, #8b5cf6, #a78bfa)", width: Math.min(100, daysElapsed / daysInMonth * 100) + "%" }} />
+                  </div>
+                </div>
+                <div style={{ ...card, padding:"18px 24px", position:"relative", overflow:"hidden" }}>
+                  <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, #06b6d4, #22d3ee)" }} />
+                  <div style={{ fontSize:11, fontWeight:600, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em" }}>Projected Volume (Month)</div>
+                  <div style={{ display:"flex", alignItems:"baseline", gap:12, marginTop:8 }}>
+                    <div style={{ fontSize: isMobile ? 18 : 24, fontWeight:800, color:C.text }}>{fmt(projVol)}</div>
+                    <div style={{ fontSize:12, color:C.textMuted }}>visits</div>
+                  </div>
+                  <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+                    {projVolLY > 0 && <span style={{ fontSize:10, fontWeight:600, color:varColor(projVol > projVolLY ? 0.01 : -0.01), background:varBg(projVol > projVolLY ? 0.01 : -0.01), padding:"1px 6px", borderRadius:4 }}>vs LY proj {fmt(projVolLY)}</span>}
+                  </div>
+                  <div style={{ marginTop:10, background:C.border, borderRadius:6, height:6, overflow:"hidden" }}>
+                    <div style={{ height:"100%", borderRadius:6, background:"linear-gradient(90deg, #06b6d4, #22d3ee)", width: Math.min(100, daysElapsed / daysInMonth * 100) + "%" }} />
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })()}
         </div>
 
         {/* INSIGHTS STRIP */}
