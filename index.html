@@ -5545,19 +5545,27 @@ function App() {
           {(() => {
             if (dailyClinicLog.length === 0) return <div style={{ padding:40, textAlign:"center", color:C.textMuted, fontSize:13 }}>No daily log data yet. Upload DSR files day by day to build the chart.</div>;
             const dates = [...new Set(dailyClinicLog.map(e => e.date))].sort((a,b) => new Date(a) - new Date(b));
-            const clinicNames = [...new Set(dailyClinicLog.map(e => e.clinic))].filter(c => !EXCLUDED_DAILY_LOG.has(c));
+            const mergedLog = dailyClinicLog.map(e => e.clinic === "Karama" ? { ...e, clinic: "UW Mall" } : e);
+            const clinicNames = [...new Set(mergedLog.map(e => e.clinic))].filter(c => !EXCLUDED_DAILY_LOG.has(c));
             const clinicTotals = {};
-            clinicNames.forEach(c => { clinicTotals[c] = dailyClinicLog.filter(e => e.clinic === c).reduce((a,e) => a + e.rev, 0); });
+            clinicNames.forEach(c => { clinicTotals[c] = mergedLog.filter(e => e.clinic === c).reduce((a,e) => a + e.rev, 0); });
             const sortedClinics = clinicNames.sort((a,b) => (clinicTotals[b]||0) - (clinicTotals[a]||0));
             const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
             return (
               <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:16 }}>
                 {sortedClinics.map((clinic, ci) => {
                   const color = PALETTE[ci % PALETTE.length];
-                  const entries = dailyClinicLog.filter(e => e.clinic === clinic);
+                  const entries = mergedLog.filter(e => e.clinic === clinic);
                   const chartDays = dates.map((d, di) => {
-                    const entry = entries.find(e => e.date === d);
-                    if (!entry) return null;
+                    const dayEntries = entries.filter(e => e.date === d);
+                    if (dayEntries.length === 0) return null;
+                    const entry = dayEntries.length === 1 ? dayEntries[0] : {
+                      date: d, clinic,
+                      rev: dayEntries.reduce((a,e) => a + (e.rev||0), 0),
+                      vol: dayEntries.reduce((a,e) => a + (e.vol||0), 0),
+                      mtdRev: dayEntries.some(e => e.mtdRev != null) ? dayEntries.reduce((a,e) => a + (e.mtdRev||0), 0) : null,
+                      mtdVol: dayEntries.some(e => e.mtdVol != null) ? dayEntries.reduce((a,e) => a + (e.mtdVol||0), 0) : null,
+                    };
                     const dt = new Date(d);
                     const valid = !isNaN(dt.getTime());
                     const dow = valid ? dayNames[dt.getDay()] : "";
