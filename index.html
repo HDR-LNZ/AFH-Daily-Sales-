@@ -3787,8 +3787,8 @@ function App() {
 
     // MTD OUTLIERS
     if (doctors.length > 0) {
-      const bigGainers = doctors.filter(d => d.mtdLY > 5000 && d.mtdActual > d.mtdLY * 3).sort((a,b) => b.mtdActual - a.mtdActual).slice(0,2);
-      const bigDecliners = doctors.filter(d => d.mtdLY > 30000 && d.mtdActual < d.mtdLY * 0.3 && getDoctorProfileUrl(d.name)).sort((a,b) => a.mtdVarLY - b.mtdVarLY).slice(0,2);
+      const bigGainers = doctors.filter(d => d.mtdLY > 5000 && d.mtdActual > d.mtdLY * 3 && !isShownAsResigned(d.name)).sort((a,b) => b.mtdActual - a.mtdActual).slice(0,2);
+      const bigDecliners = doctors.filter(d => d.mtdLY > 30000 && d.mtdActual < d.mtdLY * 0.3 && getDoctorProfileUrl(d.name) && !isShownAsResigned(d.name)).sort((a,b) => a.mtdVarLY - b.mtdVarLY).slice(0,2);
       bigGainers.forEach(d => outliers.push("MTD outperformer: " + d.name + " (" + d.specialty + ") AED " + fmt(d.mtdActual) + " vs LY " + fmt(d.mtdLY) + " (" + pct(d.mtdVarLY) + ")"));
       bigDecliners.forEach(d => outliers.push("MTD decline: " + d.name + " (" + d.specialty + ") AED " + fmt(d.mtdActual) + " vs LY " + fmt(d.mtdLY) + " (" + pct(d.mtdVarLY) + ")"));
     }
