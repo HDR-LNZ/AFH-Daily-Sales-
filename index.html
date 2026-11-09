@@ -3132,6 +3132,7 @@ function App() {
           if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
           const mtdRev = l.totalRevenueMTD || 0;
           const mtdVol = l.opVolMTD || 0;
+          if (/uw/i.test(l.location)) console.log('[DAILY LOG] UW Mall:', 'opVolMTD=', l.opVolMTD, 'opVolMTDLY=', l.opVolMTDLY, 'opVolToday=', l.opVolToday, 'mtdRev=', mtdRev, 'mtdVol=', mtdVol);
           if (mtdRev === 0 && mtdVol === 0) return;
           next.push({ date: dateKey, clinic: l.location, mtdRev, mtdVol });
         });
