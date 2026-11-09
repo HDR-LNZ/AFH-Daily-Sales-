@@ -5630,7 +5630,7 @@ function App() {
           {(() => {
             if (dailyClinicLog.length === 0) return <div style={{ padding:40, textAlign:"center", color:C.textMuted, fontSize:13 }}>No daily log data yet. Upload DSR files day by day to build the chart.</div>;
             const dates = [...new Set(dailyClinicLog.map(e => e.date))].sort((a,b) => new Date(a) - new Date(b));
-            const mergedLog = dailyClinicLog.map(e => e.clinic === "Karama" ? { ...e, clinic: "UW Mall" } : e);
+            const mergedLog = dailyClinicLog.filter(e => e.clinic !== "Karama");
             const clinicNames = [...new Set(mergedLog.map(e => e.clinic))].filter(c => !EXCLUDED_DAILY_LOG.has(c));
             const clinicTotals = {};
             clinicNames.forEach(c => { clinicTotals[c] = mergedLog.filter(e => e.clinic === c).reduce((a,e) => a + e.rev, 0); });
