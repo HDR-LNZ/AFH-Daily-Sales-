@@ -3463,6 +3463,7 @@ function App() {
         merged[key].volMTD += (l.opVolMTD || 0);
         merged[key].volLY += (l.opVolMTDLY || 0);
       });
+    if (merged["UW Mall"]) console.log("[MTD VAR] UW Mall merged:", JSON.stringify(merged["UW Mall"]));
     return Object.entries(merged)
       .filter(([, d]) => d.revLY > 0 || d.volLY > 0)
       .map(([code, d]) => {
