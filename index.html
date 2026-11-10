@@ -1037,10 +1037,10 @@ function parseExcelFile(data) {
             if (typeof r[c] === 'number' && r[c] > todayTotal) { mtdVal = Math.round(r[c]); break; }
           }
         }
-        if (mtdVal === 0 && todayOP === 0) continue;
         const lyVal = Math.round(r[17] || 0);
         const ytdVal = Math.round(r[37] || 0);
         const ytdLYVal = Math.round(r[42] || 0);
+        if (mtdVal === 0 && todayOP === 0 && lyVal === 0 && ytdVal === 0 && ytdLYVal === 0) continue;
         // Detect the volume total row: its MTD is much larger than any single clinic
         if (mtdVal > 10000 && (!volTotalCandidate || mtdVal > volTotalCandidate.mtd)) {
           volTotalCandidate = { mtd: mtdVal, mtdLY: lyVal, ytd: ytdVal, ytdLY: ytdLYVal, today: todayVol };
@@ -1075,6 +1075,23 @@ function parseExcelFile(data) {
         if (ppc) { loc.ppcYTD = ppc.ppcYTD; loc.ppcYTDLY = ppc.ppcYTDLY; }
         const vol = dsrVolMap[loc.location];
         if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; if (vol.opVolYTD) loc.opVolYTD = vol.opVolYTD; if (vol.opVolYTDLY) loc.opVolYTDLY = vol.opVolYTDLY; loc.opVolToday = vol.opVolToday || 0; }
+      });
+      // Add any DSR clinics not in Location sheet (e.g. closed clinics with LY data)
+      const locSet = new Set(locations.map(l => l.location));
+      Object.keys(dsrClinicMap).forEach(loc => {
+        if (locSet.has(loc)) return;
+        const dsr = dsrClinicMap[loc];
+        if (!dsr.mtdLY && !dsr.ytdLY && !dsr.totalRevenueMTD) return;
+        const vol = dsrVolMap[loc] || {};
+        locations.push({
+          location: loc, totalToday: dsr.totalToday || 0,
+          totalRevenueMTD: dsr.totalRevenueMTD || 0, mtdBudget: dsr.mtdBudget || 0,
+          mtdLY: dsr.mtdLY || 0, totalRevenueYTD: dsr.totalRevenueYTD || 0,
+          ytdBudget: 0, ytdLY: dsr.ytdLY || 0, specialties: [],
+          opVolMTD: vol.opVolMTD || 0, opVolMTDLY: vol.opVolMTDLY || 0,
+          opVolYTD: vol.opVolYTD || 0, opVolYTDLY: vol.opVolYTDLY || 0,
+          opVolToday: vol.opVolToday || 0,
+        });
       });
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
       // Update total OP volume from per-clinic data if hardcoded DSR cell was empty/wrong
@@ -3132,7 +3149,7 @@ function App() {
           if (EXCLUDED_MAP_LOCATIONS.has(l.location)) return;
           const mtdRev = l.totalRevenueMTD || 0;
           const mtdVol = l.opVolMTD || 0;
-          if (/uw/i.test(l.location)) console.log('[DAILY LOG] UW Mall:', 'opVolMTD=', l.opVolMTD, 'opVolMTDLY=', l.opVolMTDLY, 'opVolToday=', l.opVolToday, 'mtdRev=', mtdRev, 'mtdVol=', mtdVol);
+
           if (mtdRev === 0 && mtdVol === 0) return;
           next.push({ date: dateKey, clinic: l.location, mtdRev, mtdVol });
         });
@@ -3463,7 +3480,6 @@ function App() {
         merged[key].volMTD += (l.opVolMTD || 0);
         merged[key].volLY += (l.opVolMTDLY || 0);
       });
-    if (merged["UW Mall"]) console.log("[MTD VAR] UW Mall merged:", JSON.stringify(merged["UW Mall"]));
     return Object.entries(merged)
       .filter(([, d]) => d.revLY > 0 || d.volLY > 0)
       .map(([code, d]) => {
