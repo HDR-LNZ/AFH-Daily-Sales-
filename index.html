@@ -1076,15 +1076,13 @@ function parseExcelFile(data) {
         const vol = dsrVolMap[loc.location];
         if (vol) { loc.opVolMTD = vol.opVolMTD; loc.opVolMTDLY = vol.opVolMTDLY; if (vol.opVolYTD) loc.opVolYTD = vol.opVolYTD; if (vol.opVolYTDLY) loc.opVolYTDLY = vol.opVolYTDLY; loc.opVolToday = vol.opVolToday || 0; }
       });
-      // Add any DSR clinics not in Location sheet (e.g. closed clinics with LY data)
+      // Add Karama to locations if missing (for UW Mall merge in charts)
       const locSet = new Set(locations.map(l => l.location));
-      Object.keys(dsrClinicMap).forEach(loc => {
-        if (locSet.has(loc)) return;
-        const dsr = dsrClinicMap[loc];
-        if (!dsr.mtdLY && !dsr.ytdLY && !dsr.totalRevenueMTD) return;
-        const vol = dsrVolMap[loc] || {};
+      if (!locSet.has("Karama") && dsrClinicMap["Karama"]) {
+        const dsr = dsrClinicMap["Karama"];
+        const vol = dsrVolMap["Karama"] || {};
         locations.push({
-          location: loc, totalToday: dsr.totalToday || 0,
+          location: "Karama", totalToday: dsr.totalToday || 0,
           totalRevenueMTD: dsr.totalRevenueMTD || 0, mtdBudget: dsr.mtdBudget || 0,
           mtdLY: dsr.mtdLY || 0, totalRevenueYTD: dsr.totalRevenueYTD || 0,
           ytdBudget: 0, ytdLY: dsr.ytdLY || 0, specialties: [],
@@ -1092,7 +1090,7 @@ function parseExcelFile(data) {
           opVolYTD: vol.opVolYTD || 0, opVolYTDLY: vol.opVolYTDLY || 0,
           opVolToday: vol.opVolToday || 0,
         });
-      });
+      }
       locations.sort((a, b) => b.totalRevenueMTD - a.totalRevenueMTD);
       // Update total OP volume from per-clinic data if hardcoded DSR cell was empty/wrong
       const clinicVolSum = locations.reduce((a,l) => a + (l.opVolMTD || 0), 0);
@@ -1462,7 +1460,7 @@ function validateData(parsed) {
 
   // 7. Location totals should be close to DSR clinic total (not exceed it)
   if (locations && locations.length > 0) {
-    const locTotal = locations.reduce((a,l) => a + l.totalRevenueMTD, 0);
+    const locTotal = locations.filter(l => !EXCLUDED_MAP_LOCATIONS.has(l.location) && l.location !== "Karama").reduce((a,l) => a + l.totalRevenueMTD, 0);
     if (dsrTotals.mtdActual && locTotal > dsrTotals.mtdActual * 1.1) {
       warnings.push("Location total (" + fmt(locTotal) + ") exceeds DSR total — possible double-counting");
     }
