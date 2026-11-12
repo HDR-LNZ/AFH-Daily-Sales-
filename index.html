@@ -637,7 +637,7 @@ const DEFAULT_DSR_TOTALS = {
 const EXCLUDED_MAP_LOCATIONS = new Set(["Staff DFC", "Staff DIP", "Stationed", "Stationed Clinics", "Clinic-ENBD", "Clinic–ENBD", "HealthHub – Clinic-ENBD", "AF Staff Clinic, DIP 1 & DIP 2", "Al Futtaim Staff Clinic Festival City"]);
 const EXCLUDED_DAILY_LOG = new Set(["Staff DFC", "Staff DIP", "Stationed", "Stationed Clinics", "Karama", "Clinic-ENBD", "Clinic–ENBD", "HealthHub – Clinic-ENBD", "AF Staff Clinic, DIP 1 & DIP 2", "HealthHub – AF Staff Clinic, DIP 1 & DIP 2", "Al Futtaim Staff Clinic Festival City"]);
 
-const LOCATION_ALIASES = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Festival City":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Day Surgery":"DSU","DSC":"DSU","Barsha Heights":"Tecom","Jumeirah Village Circle":"JVC","Jumeirah Village":"JVC","HealthHub – Tecom":"Tecom","HealthHub – Barsha Heights":"Tecom","HealthHub – Jumeirah Village Circle":"JVC","HealthHub – Al Warqa":"Warqa","HealthHub – Al Karama":"Karama","HealthHub – Al Qusais":"Qusais","HealthHub – Al Nahda":"Nahda","HealthHub – Festival Plaza":"Fest Plaza","HealthHub – Arabian Center":"Arabian","HealthHub – Jumeirah Village":"JVC","HealthHub Jumeirah Village Circle":"JVC","HealthHub – UW Mall":"UW Mall","UW Mall":"UW Mall","Stationed Clinics":"Stationed","AF Staff Clinic, DIP 1 & DIP 2":"Staff DIP","Al Futtaim Staff Clinic Festival City":"Staff DFC","Clinic–ENBD":"Clinic-ENBD"};
+const LOCATION_ALIASES = {"International City":"Intl City","Discovery Gardens":"DG","Festival Plaza":"Fest Plaza","Silicon Oasis":"Silicon","Al Warqa":"Warqa","Al Karama":"Karama","Al Qusais":"Qusais","Al Nahda":"Nahda","Arabian Center":"Arabian","Day Surgery Center":"DSU","Day Surgery":"DSU","DSC":"DSU","Barsha Heights":"Tecom","Jumeirah Village Circle":"JVC","Jumeirah Village":"JVC","HealthHub – Tecom":"Tecom","HealthHub – Barsha Heights":"Tecom","HealthHub – Jumeirah Village Circle":"JVC","HealthHub – Al Warqa":"Warqa","HealthHub – Al Karama":"Karama","HealthHub – Al Qusais":"Qusais","HealthHub – Al Nahda":"Nahda","HealthHub – Festival Plaza":"Fest Plaza","HealthHub – Arabian Center":"Arabian","HealthHub – Jumeirah Village":"JVC","HealthHub Jumeirah Village Circle":"JVC","HealthHub – UW Mall":"UW Mall","UW Mall":"UW Mall","Stationed Clinics":"Stationed","AF Staff Clinic, DIP 1 & DIP 2":"Staff DIP","Al Futtaim Staff Clinic Festival City":"Staff DFC","Al Futtaim Staff Clinic, Festival City":"Staff DFC","Staff Clinic Festival City":"Staff DFC","Clinic–ENBD":"Clinic-ENBD"};
 function normLoc(name) {
   if (!name) return name;
   let n = name.trim();
@@ -648,9 +648,10 @@ function normLoc(name) {
     if (LOCATION_ALIASES[stripped]) return LOCATION_ALIASES[stripped];
     if (CLINIC_COORDS[stripped]) return stripped;
   }
-  for (const [k,v] of Object.entries(LOCATION_ALIASES)) { if (n.toLowerCase().includes(k.toLowerCase())) return v; }
+  const _aliasByLen = Object.entries(LOCATION_ALIASES).sort((a,b) => b[0].length - a[0].length);
+  for (const [k,v] of _aliasByLen) { if (n.toLowerCase().includes(k.toLowerCase())) return v; }
   if (stripped !== n) {
-    for (const [k,v] of Object.entries(LOCATION_ALIASES)) { if (stripped.toLowerCase().includes(k.toLowerCase())) return v; }
+    for (const [k,v] of _aliasByLen) { if (stripped.toLowerCase().includes(k.toLowerCase())) return v; }
   }
   return stripped || n;
 }
